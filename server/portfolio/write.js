@@ -46,8 +46,19 @@ export function gravarPortfolio(repo, { json, copias }) {
     rmSync(temporaria, { recursive: true, force: true });
     throw erro;
   }
-  rmSync(final, { recursive: true, force: true });
-  renameSync(temporaria, final);
+  // Troca em duas renomeações: se o Windows recusar (pasta em uso), a pasta anterior volta ao lugar.
+  const anterior = path.join(repo, 'public', '.projects-old');
+  rmSync(anterior, { recursive: true, force: true });
+  const existia = existsSync(final);
+  if (existia) renameSync(final, anterior);
+  try {
+    renameSync(temporaria, final);
+  } catch (erro) {
+    if (existia) renameSync(anterior, final);
+    rmSync(temporaria, { recursive: true, force: true });
+    throw erro;
+  }
+  rmSync(anterior, { recursive: true, force: true });
 
   const arquivoJson = path.join(repo, CAMINHO_JSON);
   mkdirSync(path.dirname(arquivoJson), { recursive: true });

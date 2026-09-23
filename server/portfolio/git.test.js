@@ -49,6 +49,19 @@ describe('commitarPortfolio', () => {
     expect(commitarPortfolio(repo)).toEqual({ commitado: false, saida: 'Nada para commitar: o portfólio já está atualizado.' });
   });
 
+  it('reenvia na próxima tentativa um commit cujo push falhou', () => {
+    escreverSaida();
+    const urlCerta = git(repo, 'remote', 'get-url', 'origin').trim();
+    git(repo, 'remote', 'set-url', 'origin', path.join(remoto, 'nao-existe'));
+    expect(() => commitarPortfolio(repo)).toThrow(/git push falhou/);
+
+    git(repo, 'remote', 'set-url', 'origin', urlCerta);
+    const resultado = commitarPortfolio(repo);
+    expect(resultado.commitado).toBe(false);
+    expect(resultado.saida).toMatch(/enviado/);
+    expect(git(remoto, 'log', '-1', '--format=%s', 'main').trim()).toBe('chore(portfolio): atualiza projetos via CRM');
+  });
+
   it('lança erro 502 com a saída do git quando o push falha', () => {
     escreverSaida();
     git(repo, 'remote', 'set-url', 'origin', path.join(remoto, 'nao-existe'));

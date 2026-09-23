@@ -7,7 +7,7 @@ export class ErroApi extends Error {
 }
 
 export async function api(caminho, { method = 'GET', body } = {}) {
-  const opcoes = { method, headers: {} };
+  const opcoes = { method, headers: { 'X-CRM': '1' } };
   if (body instanceof FormData) {
     opcoes.body = body;
   } else if (body !== undefined) {

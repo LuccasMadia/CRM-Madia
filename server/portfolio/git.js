@@ -14,10 +14,24 @@ function git(repo, args) {
   }
 }
 
+function commitsNaoEnviados(repo) {
+  try {
+    return Number(execFileSync('git', ['rev-list', '--count', '@{u}..HEAD'], { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
+  } catch {
+    return 0; // branch sem upstream configurado: nada a comparar
+  }
+}
+
 export function commitarPortfolio(repo, { push = true } = {}) {
   git(repo, ['add', '-A', '--', ...CAMINHOS]);
   const pendentes = git(repo, ['diff', '--cached', '--name-only', '--', ...CAMINHOS]).trim();
-  if (!pendentes) return { commitado: false, saida: 'Nada para commitar: o portfólio já está atualizado.' };
+  if (!pendentes) {
+    // Um push anterior pode ter falhado depois do commit: envia o que ficou para trás.
+    if (push && commitsNaoEnviados(repo) > 0) {
+      return { commitado: false, saida: `Commit pendente enviado.\n${git(repo, ['push'])}` };
+    }
+    return { commitado: false, saida: 'Nada para commitar: o portfólio já está atualizado.' };
+  }
   // O pathspec no commit garante que só os caminhos do CRM entram, mesmo com outros arquivos no stage.
   let saida = git(repo, ['commit', '-m', MENSAGEM, '--', ...CAMINHOS]);
   if (push) saida += git(repo, ['push']);
