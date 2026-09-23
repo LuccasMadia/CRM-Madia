@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'node:path';
 import { hojeLocal } from './domain/datas.js';
 import { tratarErros } from './http/erros.js';
 import { rotasClientes } from './routes/clientes.js';
@@ -7,6 +8,7 @@ import { rotasParcelas } from './routes/parcelas.js';
 import { rotasTarefas } from './routes/tarefas.js';
 import { rotasConteudos } from './routes/conteudos.js';
 import { rotasPainel } from './routes/painel.js';
+import { rotasPortfolio } from './routes/portfolio.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal() }) {
   const app = express();
@@ -19,6 +21,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal() }) {
   app.use('/api', rotasTarefas(ctx));
   app.use('/api', rotasConteudos(ctx));
   app.use('/api', rotasPainel(ctx));
+  app.use('/api', rotasPortfolio(ctx));
+  app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));
   app.use(tratarErros);
