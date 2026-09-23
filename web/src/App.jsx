@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from 'react-router';
 import { Funil } from './pages/Funil.jsx';
 import { Clientes } from './pages/Clientes.jsx';
 import { ClienteDetalhe } from './pages/ClienteDetalhe.jsx';
+import { Projeto } from './pages/projeto/Projeto.jsx';
 import { Config } from './pages/Config.jsx';
 
 const NAVEGACAO = [
@@ -28,6 +29,7 @@ export function App() {
           <Route path="/funil" element={<Funil />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+          <Route path="/projetos/:id" element={<Projeto />} />
           <Route path="/configuracoes" element={<Config />} />
         </Routes>
       </main>
