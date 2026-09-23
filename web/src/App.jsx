@@ -1,7 +1,12 @@
 import { NavLink, Route, Routes } from 'react-router';
+import { Clientes } from './pages/Clientes.jsx';
+import { ClienteDetalhe } from './pages/ClienteDetalhe.jsx';
 import { Config } from './pages/Config.jsx';
 
-const NAVEGACAO = [{ para: '/configuracoes', rotulo: 'Configurações' }];
+const NAVEGACAO = [
+  { para: '/clientes', rotulo: 'Clientes' },
+  { para: '/configuracoes', rotulo: 'Configurações' },
+];
 
 export function App() {
   return (
@@ -18,6 +23,8 @@ export function App() {
       </nav>
       <main className="conteudo">
         <Routes>
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/clientes/:id" element={<ClienteDetalhe />} />
           <Route path="/configuracoes" element={<Config />} />
         </Routes>
       </main>
