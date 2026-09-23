@@ -8,11 +8,15 @@ import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import { AbaGeral } from './AbaGeral.jsx';
 import { AbaTarefas } from './AbaTarefas.jsx';
 import { AbaFinanceiro } from './AbaFinanceiro.jsx';
+import { AbaPortfolio } from './AbaPortfolio.jsx';
+import { AbaConteudos } from './AbaConteudos.jsx';
 
 const ABAS = [
   ['geral', 'Visão geral'],
   ['tarefas', 'Tarefas'],
   ['financeiro', 'Financeiro'],
+  ['portfolio', 'Portfólio'],
+  ['conteudos', 'Conteúdos'],
 ];
 
 export function Projeto() {
@@ -46,6 +50,8 @@ export function Projeto() {
         {aba === 'geral' && <AbaGeral key={projeto.atualizado_em} projeto={projeto} onSalvo={recarregar} />}
         {aba === 'tarefas' && <AbaTarefas projetoId={projeto.id} />}
         {aba === 'financeiro' && <AbaFinanceiro projeto={projeto} />}
+        {aba === 'portfolio' && <AbaPortfolio projeto={projeto} />}
+        {aba === 'conteudos' && <AbaConteudos projetoId={projeto.id} />}
       </div>
     </section>
   );
