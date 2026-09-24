@@ -54,3 +54,50 @@ describe('parcelas', () => {
     await ctx.http.get('/api/projetos/999/parcelas').expect(404);
   });
 });
+
+describe('parcelamento em lote', () => {
+  it('gera N parcelas mensais com descrição numerada', async () => {
+    const res = await ctx.http
+      .post(`/api/projetos/${projeto.id}/parcelas/lote`)
+      .send({ quantidade: 3, valor_centavos: 50000, primeira_vencimento: '2026-04-10' })
+      .expect(201);
+    expect(res.body.map((p) => [p.descricao, p.vencimento, p.valor_centavos, p.estado])).toEqual([
+      ['Parcela 1/3', '2026-04-10', 50000, 'atrasada'],
+      ['Parcela 2/3', '2026-05-10', 50000, 'atrasada'],
+      ['Parcela 3/3', '2026-06-10', 50000, 'atrasada'],
+    ]);
+    const lista = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(lista.body.parcelas).toHaveLength(3);
+  });
+
+  it('ajusta parcelas para o fim do mês quando o dia não existe', async () => {
+    const res = await ctx.http
+      .post(`/api/projetos/${projeto.id}/parcelas/lote`)
+      .send({ quantidade: 2, valor_centavos: 10000, primeira_vencimento: '2026-01-31' })
+      .expect(201);
+    expect(res.body.map((p) => p.vencimento)).toEqual(['2026-01-31', '2026-02-28']);
+  });
+
+  it('valida quantidade, valor e data', async () => {
+    const res = await ctx.http
+      .post(`/api/projetos/${projeto.id}/parcelas/lote`)
+      .send({ quantidade: 0, valor_centavos: 0, primeira_vencimento: 'x' })
+      .expect(400);
+    expect(res.body.erros.map((e) => e.campo).sort()).toEqual(['primeira_vencimento', 'quantidade', 'valor_centavos']);
+  });
+
+  it('rejeita quantidade acima do limite', async () => {
+    const res = await ctx.http
+      .post(`/api/projetos/${projeto.id}/parcelas/lote`)
+      .send({ quantidade: 61, valor_centavos: 100, primeira_vencimento: '2026-04-10' })
+      .expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'quantidade', mensagem: 'Deve ser no máximo 60' }]);
+  });
+
+  it('404 em projeto inexistente', async () => {
+    await ctx.http
+      .post('/api/projetos/999/parcelas/lote')
+      .send({ quantidade: 1, valor_centavos: 100, primeira_vencimento: '2026-04-10' })
+      .expect(404);
+  });
+});

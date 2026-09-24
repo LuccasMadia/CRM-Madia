@@ -1,16 +1,21 @@
 import { Router } from 'express';
-import { criarRepo, linha } from '../repos/crud.js';
+import { criarRepo, linha, emTransacao } from '../repos/crud.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
 import { estadoParcela, resumoParcelas, recebidoPorMes } from '../domain/financeiro.js';
-import { mesDe } from '../domain/datas.js';
+import { mesDe, somarMeses } from '../domain/datas.js';
 
 const REGRAS_PARCELA = {
   descricao: { tipo: 'texto' },
   valor_centavos: { tipo: 'inteiro', obrigatorio: true, min: 1 },
   vencimento: { tipo: 'data', obrigatorio: true },
   pago_em: { tipo: 'data' },
+};
+const REGRAS_LOTE = {
+  quantidade: { tipo: 'inteiro', obrigatorio: true, min: 1, max: 60 },
+  valor_centavos: { tipo: 'inteiro', obrigatorio: true, min: 1 },
+  primeira_vencimento: { tipo: 'data', obrigatorio: true },
 };
 const ESTADOS = ['paga', 'atrasada', 'pendente'];
 
@@ -39,6 +44,22 @@ export function rotasParcelas({ db, hoje }) {
     const projeto = exigirProjeto(req);
     const criada = parcelas.criar({ ...validar(req.body, REGRAS_PARCELA), projeto_id: projeto.id });
     res.status(201).json(comEstado(criada));
+  });
+
+  r.post('/projetos/:id/parcelas/lote', (req, res) => {
+    const projeto = exigirProjeto(req);
+    const { quantidade, valor_centavos, primeira_vencimento } = validar(req.body, REGRAS_LOTE);
+    const criadas = emTransacao(db, () =>
+      Array.from({ length: quantidade }, (_, i) =>
+        parcelas.criar({
+          projeto_id: projeto.id,
+          descricao: `Parcela ${i + 1}/${quantidade}`,
+          valor_centavos,
+          vencimento: somarMeses(primeira_vencimento, i),
+        }),
+      ),
+    );
+    res.status(201).json(criadas.map(comEstado));
   });
 
   r.put('/parcelas/:id', (req, res) => {
