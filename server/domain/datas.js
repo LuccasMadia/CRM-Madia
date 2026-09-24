@@ -8,6 +8,23 @@ export function somarDias(iso, dias) {
   return d.toISOString().slice(0, 10);
 }
 
+function ultimoDiaDoMes(ano, mesIndex0) {
+  return new Date(Date.UTC(ano, mesIndex0 + 1, 0)).getUTCDate();
+}
+
+export function somarMeses(iso, meses) {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const alvo = new Date(Date.UTC(ano, mes - 1 + meses, 1));
+  alvo.setUTCDate(Math.min(dia, ultimoDiaDoMes(alvo.getUTCFullYear(), alvo.getUTCMonth())));
+  return alvo.toISOString().slice(0, 10);
+}
+
+export function dataNoMes(anoMes, dia) {
+  const [ano, mes] = anoMes.split('-').map(Number);
+  const diaFinal = Math.min(dia, ultimoDiaDoMes(ano, mes - 1));
+  return `${anoMes}-${String(diaFinal).padStart(2, '0')}`;
+}
+
 export const mesDe = (iso) => iso.slice(0, 7);
 
 export function dataValida(texto) {
