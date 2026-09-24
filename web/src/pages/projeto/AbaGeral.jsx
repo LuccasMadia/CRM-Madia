@@ -11,7 +11,7 @@ import { ETAPAS, ROTULO_ETAPA } from '../../lib/rotulos.js';
 export function AbaGeral({ projeto, onSalvo }) {
   const navegar = useNavigate();
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
-  const { valores, campo } = useFormulario({
+  const { valores, campo, setValores } = useFormulario({
     titulo: projeto.titulo,
     cliente_id: String(projeto.cliente_id),
     etapa: projeto.etapa,
@@ -21,6 +21,9 @@ export function AbaGeral({ projeto, onSalvo }) {
     data_entrega: projeto.data_entrega ?? '',
     descricao: projeto.descricao ?? '',
     notas: projeto.notas ?? '',
+    mensalidade_ativa: Boolean(projeto.mensalidade_ativa),
+    mensalidade_valor: centavosParaTexto(projeto.mensalidade_valor_centavos),
+    mensalidade_dia_vencimento: projeto.mensalidade_dia_vencimento ? String(projeto.mensalidade_dia_vencimento) : '',
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
 
@@ -31,11 +34,25 @@ export function AbaGeral({ projeto, onSalvo }) {
       setErros([{ campo: 'valor_total_centavos', mensagem: 'Valor inválido' }]);
       return;
     }
-    const { valor: _valor, ...resto } = valores;
+    const mensalidadeValorCentavos = valores.mensalidade_ativa ? paraCentavos(valores.mensalidade_valor) : 0;
+    if (valores.mensalidade_ativa && (mensalidadeValorCentavos === null || Number.isNaN(mensalidadeValorCentavos))) {
+      setErros([{ campo: 'mensalidade_valor_centavos', mensagem: 'Valor inválido' }]);
+      return;
+    }
+    const { valor: _valor, mensalidade_valor: _mensalidadeValor, ...resto } = valores;
     executar(async () => {
       await api(`/projetos/${projeto.id}`, {
         method: 'PUT',
-        body: { ...resto, cliente_id: Number(resto.cliente_id), valor_total_centavos: valorCentavos ?? 0 },
+        body: {
+          ...resto,
+          cliente_id: Number(resto.cliente_id),
+          valor_total_centavos: valorCentavos ?? 0,
+          mensalidade_ativa: Boolean(valores.mensalidade_ativa),
+          mensalidade_valor_centavos: mensalidadeValorCentavos ?? 0,
+          mensalidade_dia_vencimento: valores.mensalidade_ativa && valores.mensalidade_dia_vencimento
+            ? Number(valores.mensalidade_dia_vencimento)
+            : null,
+        },
       });
       onSalvo();
     });
@@ -74,6 +91,22 @@ export function AbaGeral({ projeto, onSalvo }) {
       <Campo rotulo="Notas" nome="notas" erros={erros}>
         <textarea rows={4} {...campo('notas')} />
       </Campo>
+      <div className="campo">
+        <label>
+          <input
+            type="checkbox"
+            checked={Boolean(valores.mensalidade_ativa)}
+            onChange={(e) => setValores((v) => ({ ...v, mensalidade_ativa: e.target.checked }))}
+          />{' '}
+          Cobra mensalidade
+        </label>
+      </div>
+      {valores.mensalidade_ativa && (
+        <>
+          <Campo rotulo="Valor da mensalidade (R$)" nome="mensalidade_valor_centavos" erros={erros} inputMode="decimal" {...campo('mensalidade_valor')} />
+          <Campo rotulo="Dia de vencimento" nome="mensalidade_dia_vencimento" erros={erros} type="number" min="1" max="31" {...campo('mensalidade_dia_vencimento')} />
+        </>
+      )}
       <Aviso erro={erro} />
       <div className="form--linha">
         <button className="btn btn--primario" disabled={enviando}>Salvar projeto</button>

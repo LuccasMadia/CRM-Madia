@@ -39,4 +39,28 @@ describe('Projeto', () => {
     await userEvent.setup().click(await screen.findByRole('tab', { name: 'Tarefas' }));
     expect(await screen.findByText('Nenhuma tarefa ainda.')).toBeInTheDocument();
   });
+
+  it('ativa mensalidade e envia valor/dia convertidos', async () => {
+    const { chamadas } = mockApi({
+      'GET /projetos/5': projetoExemplo,
+      'GET /clientes': [{ id: 1, nome: 'Ana' }],
+      'PUT /projetos/5': { ...projetoExemplo, mensalidade_ativa: 1, mensalidade_valor_centavos: 20000, mensalidade_dia_vencimento: 10, atualizado_em: 'T2' },
+    });
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('Cobra mensalidade'));
+    await user.type(screen.getByLabelText('Valor da mensalidade (R$)'), '200');
+    await user.type(screen.getByLabelText('Dia de vencimento'), '10');
+    await user.click(screen.getByRole('button', { name: 'Salvar projeto' }));
+    await screen.findByRole('heading', { name: 'Site Ana' });
+    const put = chamadas.find((c) => c.metodo === 'PUT');
+    expect(put.corpo).toMatchObject({ mensalidade_ativa: true, mensalidade_valor_centavos: 20000, mensalidade_dia_vencimento: 10 });
+  });
+
+  it('esconde os campos de mensalidade quando desmarcada', async () => {
+    mockApi({ 'GET /projetos/5': projetoExemplo, 'GET /clientes': [] });
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    await screen.findByLabelText('Cobra mensalidade');
+    expect(screen.queryByLabelText('Valor da mensalidade (R$)')).not.toBeInTheDocument();
+  });
 });
