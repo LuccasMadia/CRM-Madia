@@ -101,3 +101,47 @@ describe('parcelamento em lote', () => {
       .expect(404);
   });
 });
+
+describe('mensalidade automática', () => {
+  async function ativarMensalidade(valor = 20000, dia = 10) {
+    await ctx.http
+      .put(`/api/projetos/${projeto.id}`)
+      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: valor, mensalidade_dia_vencimento: dia })
+      .expect(200);
+  }
+
+  it('gera a parcela do mês atual na primeira consulta e não duplica', async () => {
+    await ativarMensalidade();
+    const res1 = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(res1.body.parcelas).toHaveLength(1);
+    expect(res1.body.parcelas[0]).toMatchObject({ descricao: 'Mensalidade', valor_centavos: 20000, vencimento: '2026-09-10' });
+
+    const res2 = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(res2.body.parcelas).toHaveLength(1);
+  });
+
+  it('não gera quando a mensalidade está desativada', async () => {
+    const res = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(res.body.parcelas).toHaveLength(0);
+  });
+
+  it('desativar para de gerar novas parcelas, mas mantém as já criadas', async () => {
+    await ativarMensalidade();
+    await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send({ mensalidade_ativa: false }).expect(200);
+    const res = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(res.body.parcelas).toHaveLength(1);
+  });
+
+  it('ajusta o dia de vencimento para o fim de um mês curto', async () => {
+    const ctxFevereiro = criarContexto({ hoje: '2026-02-15' });
+    const cli = (await ctxFevereiro.http.post('/api/clientes').send({ nome: 'Bia' })).body;
+    const proj = (await ctxFevereiro.http.post('/api/projetos').send({ cliente_id: cli.id, titulo: 'App' })).body;
+    await ctxFevereiro.http
+      .put(`/api/projetos/${proj.id}`)
+      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: 10000, mensalidade_dia_vencimento: 31 })
+      .expect(200);
+    const res = await ctxFevereiro.http.get(`/api/projetos/${proj.id}/parcelas`).expect(200);
+    expect(res.body.parcelas[0].vencimento).toBe('2026-02-28');
+  });
+});

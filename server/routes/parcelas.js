@@ -4,7 +4,7 @@ import { repoProjetos } from '../repos/projetos.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
 import { estadoParcela, resumoParcelas, recebidoPorMes } from '../domain/financeiro.js';
-import { mesDe, somarMeses } from '../domain/datas.js';
+import { mesDe, somarMeses, dataNoMes } from '../domain/datas.js';
 
 const REGRAS_PARCELA = {
   descricao: { tipo: 'texto' },
@@ -20,7 +20,7 @@ const REGRAS_LOTE = {
 const ESTADOS = ['paga', 'atrasada', 'pendente'];
 
 export function rotasParcelas({ db, hoje }) {
-  const parcelas = criarRepo(db, 'parcelas', ['projeto_id', 'descricao', 'valor_centavos', 'vencimento', 'pago_em']);
+  const parcelas = criarRepo(db, 'parcelas', ['projeto_id', 'descricao', 'valor_centavos', 'vencimento', 'pago_em', 'mensalidade']);
   const projetos = repoProjetos(db);
   const r = Router();
   const comEstado = (p) => ({ ...p, estado: estadoParcela(p, hoje()) });
@@ -31,8 +31,24 @@ export function rotasParcelas({ db, hoje }) {
     return projeto;
   }
 
+  function gerarMensalidadeSeNecessario(projeto) {
+    if (!projeto.mensalidade_ativa) return;
+    const mesAtual = mesDe(hoje());
+    const existentes = parcelas.listar({ projeto_id: projeto.id });
+    const jaGerada = existentes.some((p) => p.mensalidade && mesDe(p.vencimento) === mesAtual);
+    if (jaGerada) return;
+    parcelas.criar({
+      projeto_id: projeto.id,
+      descricao: 'Mensalidade',
+      valor_centavos: projeto.mensalidade_valor_centavos,
+      vencimento: dataNoMes(mesAtual, projeto.mensalidade_dia_vencimento),
+      mensalidade: 1,
+    });
+  }
+
   r.get('/projetos/:id/parcelas', (req, res) => {
     const projeto = exigirProjeto(req);
+    gerarMensalidadeSeNecessario(projeto);
     const lista = parcelas.listar({ projeto_id: projeto.id }, 'vencimento, id');
     res.json({
       parcelas: lista.map(comEstado),
