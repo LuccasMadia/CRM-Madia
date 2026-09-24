@@ -56,4 +56,29 @@ describe('/api/projetos', () => {
     await ctx.http.delete(`/api/projetos/${projeto.id}`).expect(204);
     await ctx.http.get(`/api/projetos/${projeto.id}`).expect(404);
   });
+
+  it('exige valor e dia quando ativa a mensalidade', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' })).body;
+    const res = await ctx.http.put(`/api/projetos/${projeto.id}`).send({ mensalidade_ativa: true }).expect(400);
+    expect(res.body.erros.map((e) => e.campo).sort()).toEqual(['mensalidade_dia_vencimento', 'mensalidade_valor_centavos']);
+  });
+
+  it('ativa mensalidade com valor e dia válidos', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' })).body;
+    const res = await ctx.http
+      .put(`/api/projetos/${projeto.id}`)
+      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: 20000, mensalidade_dia_vencimento: 10 })
+      .expect(200);
+    expect(res.body).toMatchObject({ mensalidade_ativa: 1, mensalidade_valor_centavos: 20000, mensalidade_dia_vencimento: 10 });
+  });
+
+  it('desativar mensalidade não exige valor/dia', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' })).body;
+    await ctx.http
+      .put(`/api/projetos/${projeto.id}`)
+      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: 20000, mensalidade_dia_vencimento: 10 })
+      .expect(200);
+    const res = await ctx.http.put(`/api/projetos/${projeto.id}`).send({ mensalidade_ativa: false }).expect(200);
+    expect(res.body.mensalidade_ativa).toBe(0);
+  });
 });

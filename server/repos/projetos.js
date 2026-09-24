@@ -3,6 +3,7 @@ import { criarRepo, linha } from './crud.js';
 export const CAMPOS_PROJETO = [
   'cliente_id', 'titulo', 'descricao', 'etapa', 'valor_total_centavos',
   'data_inicio', 'prazo_entrega', 'data_entrega', 'notas',
+  'mensalidade_ativa', 'mensalidade_valor_centavos', 'mensalidade_dia_vencimento',
 ];
 
 const SELECT_COM_CLIENTE = 'SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id';

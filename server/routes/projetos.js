@@ -17,7 +17,21 @@ const REGRAS_PROJETO = {
   prazo_entrega: { tipo: 'data' },
   data_entrega: { tipo: 'data' },
   notas: { tipo: 'texto' },
+  mensalidade_ativa: { tipo: 'bool', padrao: 0 },
+  mensalidade_valor_centavos: { tipo: 'inteiro', min: 0, padrao: 0 },
+  mensalidade_dia_vencimento: { tipo: 'inteiro', min: 1, max: 31 },
 };
+
+function exigirDadosMensalidade(atual, dados) {
+  const ativa = dados.mensalidade_ativa ?? atual?.mensalidade_ativa ?? 0;
+  if (!ativa) return;
+  const valor = dados.mensalidade_valor_centavos ?? atual?.mensalidade_valor_centavos;
+  const dia = dados.mensalidade_dia_vencimento ?? atual?.mensalidade_dia_vencimento;
+  const erros = [];
+  if (!valor) erros.push({ campo: 'mensalidade_valor_centavos', mensagem: 'Obrigatório quando a mensalidade está ativa' });
+  if (!dia) erros.push({ campo: 'mensalidade_dia_vencimento', mensagem: 'Obrigatório quando a mensalidade está ativa' });
+  if (erros.length) throw new ErroValidacao(erros);
+}
 
 export function rotasProjetos({ db, hoje }) {
   const clientes = repoClientes(db);
@@ -46,6 +60,7 @@ export function rotasProjetos({ db, hoje }) {
       }
       const { cliente_id: _ignorado, ...regrasSemCliente } = REGRAS_PROJETO;
       const dados = aplicarRegrasProjeto(null, validar(corpo, regrasSemCliente), hoje());
+      exigirDadosMensalidade(null, dados);
       const criado = emTransacao(db, () => {
         const cliente = clientes.criar(dadosCliente);
         return projetos.criar({ ...dados, cliente_id: cliente.id });
@@ -53,6 +68,7 @@ export function rotasProjetos({ db, hoje }) {
       return res.status(201).json(projetos.obterComCliente(criado.id));
     }
     const dados = aplicarRegrasProjeto(null, validar(corpo, REGRAS_PROJETO), hoje());
+    exigirDadosMensalidade(null, dados);
     exigirCliente(dados.cliente_id);
     const criado = projetos.criar(dados);
     res.status(201).json(projetos.obterComCliente(criado.id));
@@ -69,6 +85,7 @@ export function rotasProjetos({ db, hoje }) {
     const atual = projetos.obter(id);
     if (!atual) throw naoEncontrado('Projeto');
     const dados = aplicarRegrasProjeto(atual, validar(req.body, REGRAS_PROJETO, { parcial: true }), hoje());
+    exigirDadosMensalidade(atual, dados);
     if (dados.cliente_id !== undefined) exigirCliente(dados.cliente_id);
     projetos.atualizar(id, dados);
     res.json(projetos.obterComCliente(id));
