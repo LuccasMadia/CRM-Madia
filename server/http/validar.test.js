@@ -54,4 +54,10 @@ describe('validar', () => {
   it('rejeita número não inteiro', () => {
     expect(errosDe(() => validar({ nome: 'A', valor: 1.5 }, REGRAS))[0].campo).toBe('valor');
   });
+
+  it('aplica limite máximo em inteiro', () => {
+    const REGRAS_MAX = { n: { tipo: 'inteiro', max: 5 } };
+    expect(validar({ n: 5 }, REGRAS_MAX)).toEqual({ n: 5 });
+    expect(errosDe(() => validar({ n: 6 }, REGRAS_MAX))).toEqual([{ campo: 'n', mensagem: 'Deve ser no máximo 5' }]);
+  });
 });

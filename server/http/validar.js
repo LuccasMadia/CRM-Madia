@@ -32,6 +32,7 @@ function normalizar(valor, regra) {
     case 'inteiro':
       if (!Number.isInteger(valor)) return { erro: 'Deve ser um número inteiro' };
       if (regra.min !== undefined && valor < regra.min) return { erro: `Deve ser no mínimo ${regra.min}` };
+      if (regra.max !== undefined && valor > regra.max) return { erro: `Deve ser no máximo ${regra.max}` };
       return { valor };
     case 'data':
       return dataValida(valor) ? { valor } : { erro: 'Data inválida (use AAAA-MM-DD)' };
