@@ -10,11 +10,14 @@ import { formatarData, hojeISO } from '../../lib/datas.js';
 import { ROTULO_ESTADO_PARCELA } from '../../lib/rotulos.js';
 
 const VAZIO = { descricao: '', valor: '', vencimento: '' };
+const VAZIO_LOTE = { quantidade: '', valor: '', primeira_vencimento: '' };
 
 export function AbaFinanceiro({ projeto }) {
   const { dados, erro, recarregar } = useCarregar(() => api(`/projetos/${projeto.id}/parcelas`), [projeto.id]);
   const { valores, campo, setValores } = useFormulario(VAZIO);
+  const { valores: loteValores, campo: loteCampo, setValores: setLoteValores } = useFormulario(VAZIO_LOTE);
   const envio = useEnvio();
+  const envioLote = useEnvio();
 
   const acao = (fn) => envio.executar(async () => { await fn(); recarregar(); });
   const atualizar = (parcela, corpo) => acao(() => api(`/parcelas/${parcela.id}`, { method: 'PUT', body: corpo }));
@@ -35,6 +38,27 @@ export function AbaFinanceiro({ projeto }) {
     });
   }
 
+  function gerarLote(e) {
+    e.preventDefault();
+    const valor = paraCentavos(loteValores.valor);
+    if (valor === null || Number.isNaN(valor)) {
+      envioLote.setErros([{ campo: 'valor_centavos', mensagem: 'Informe um valor válido' }]);
+      return;
+    }
+    envioLote.executar(async () => {
+      await api(`/projetos/${projeto.id}/parcelas/lote`, {
+        method: 'POST',
+        body: {
+          quantidade: Number(loteValores.quantidade),
+          valor_centavos: valor,
+          primeira_vencimento: loteValores.primeira_vencimento,
+        },
+      });
+      setLoteValores(VAZIO_LOTE);
+      recarregar();
+    });
+  }
+
   if (erro) return <Aviso erro={erro} />;
   if (!dados) return <p>Carregando…</p>;
   const { parcelas, resumo } = dados;
@@ -52,6 +76,15 @@ export function AbaFinanceiro({ projeto }) {
       </div>
 
       <div className="cartao">
+        <h3>Gerar parcelas em lote</h3>
+        <form onSubmit={gerarLote} className="form form--linha" noValidate>
+          <Campo rotulo="Quantidade" nome="quantidade" erros={envioLote.erros} type="number" min="1" {...loteCampo('quantidade')} />
+          <Campo rotulo="Valor de cada parcela (R$)" nome="valor_centavos" erros={envioLote.erros} inputMode="decimal" {...loteCampo('valor')} />
+          <Campo rotulo="Vencimento da 1ª parcela" nome="primeira_vencimento" erros={envioLote.erros} type="date" {...loteCampo('primeira_vencimento')} />
+          <button className="btn btn--primario" disabled={envioLote.enviando}>Gerar parcelas</button>
+        </form>
+        <Aviso erro={envioLote.erro} />
+
         {parcelas.length ? (
           <table className="tabela">
             <thead>
@@ -93,6 +126,7 @@ export function AbaFinanceiro({ projeto }) {
           </table>
         ) : <p className="vazio">Nenhuma parcela cadastrada.</p>}
 
+        <h3>Adicionar parcela avulsa</h3>
         <form onSubmit={adicionar} className="form form--linha" noValidate>
           <Campo rotulo="Descrição" nome="descricao" erros={envio.erros} placeholder="Entrada 50%" {...campo('descricao')} />
           <Campo rotulo="Valor da parcela (R$)" nome="valor_centavos" erros={envio.erros} inputMode="decimal" {...campo('valor')} />
