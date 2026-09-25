@@ -22,3 +22,29 @@ export function montarProximos({ tarefas = [], parcelas = [], entregas = [], con
     .map((i) => ({ ...i, atrasado: i.data < hoje }))
     .sort((a, b) => a.data.localeCompare(b.data));
 }
+
+export function agruparTarefasPorProjeto(linhas) {
+  const grupos = new Map();
+  for (const l of linhas) {
+    if (!grupos.has(l.projeto_id)) {
+      grupos.set(l.projeto_id, { projeto_id: l.projeto_id, projeto_titulo: l.projeto_titulo, ficticio: Boolean(l.ficticio), tarefas: [] });
+    }
+    grupos.get(l.projeto_id).tarefas.push({ id: l.id, texto: l.texto, prazo: l.prazo });
+  }
+  const projetos = [...grupos.values()];
+  const semFicticio = ({ ficticio, ...resto }) => resto;
+  return {
+    reais: projetos.filter((p) => !p.ficticio).map(semFicticio),
+    ficticios: projetos.filter((p) => p.ficticio).map(semFicticio),
+  };
+}
+
+export function montarDivulgacaoPendente(linhas) {
+  return linhas.map((p) => ({
+    projeto_id: p.id,
+    titulo: p.titulo,
+    ficticio: Boolean(p.ficticio),
+    falta_portfolio: !p.portfolio_publicado,
+    falta_instagram: !p.postou_instagram,
+  }));
+}
