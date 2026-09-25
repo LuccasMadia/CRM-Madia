@@ -24,6 +24,7 @@ export function AbaGeral({ projeto, onSalvo }) {
     mensalidade_ativa: Boolean(projeto.mensalidade_ativa),
     mensalidade_valor: centavosParaTexto(projeto.mensalidade_valor_centavos),
     mensalidade_dia_vencimento: projeto.mensalidade_dia_vencimento ? String(projeto.mensalidade_dia_vencimento) : '',
+    postou_instagram: Boolean(projeto.postou_instagram),
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
 
@@ -107,6 +108,16 @@ export function AbaGeral({ projeto, onSalvo }) {
           <Campo rotulo="Dia de vencimento" nome="mensalidade_dia_vencimento" erros={erros} type="number" min="1" max="31" {...campo('mensalidade_dia_vencimento')} />
         </>
       )}
+      <div className="campo">
+        <label>
+          <input
+            type="checkbox"
+            checked={Boolean(valores.postou_instagram)}
+            onChange={(e) => setValores((v) => ({ ...v, postou_instagram: e.target.checked }))}
+          />{' '}
+          Postou no Instagram
+        </label>
+      </div>
       <Aviso erro={erro} />
       <div className="form--linha">
         <button className="btn btn--primario" disabled={enviando}>Salvar projeto</button>

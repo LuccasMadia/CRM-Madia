@@ -63,4 +63,19 @@ describe('Projeto', () => {
     await screen.findByLabelText('Cobra mensalidade');
     expect(screen.queryByLabelText('Valor da mensalidade (R$)')).not.toBeInTheDocument();
   });
+
+  it('marca postou no instagram', async () => {
+    const { chamadas } = mockApi({
+      'GET /projetos/5': projetoExemplo,
+      'GET /clientes': [{ id: 1, nome: 'Ana' }],
+      'PUT /projetos/5': { ...projetoExemplo, postou_instagram: 1, atualizado_em: 'T2' },
+    });
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('Postou no Instagram'));
+    await user.click(screen.getByRole('button', { name: 'Salvar projeto' }));
+    await screen.findByRole('heading', { name: 'Site Ana' });
+    const put = chamadas.find((c) => c.metodo === 'PUT');
+    expect(put.corpo).toMatchObject({ postou_instagram: true });
+  });
 });
