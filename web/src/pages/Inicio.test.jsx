@@ -15,12 +15,12 @@ describe('Inicio', () => {
           propostas: { quantidade: 1, total_centavos: 800000 },
         },
         tarefas_por_projeto: {
-          reais: [{ projeto_id: 10, projeto_titulo: 'Site A', tarefas: [{ id: 1, texto: 'Revisar', prazo: null }] }],
+          reais: [{ projeto_id: 10, projeto_titulo: 'Site A', tarefas: [
+            { id: 1, texto: 'Revisar', prazo: null },
+            { id: 'divulgacao-10-Publicar no portfólio', texto: 'Publicar no portfólio', prazo: null },
+          ] }],
           ficticios: [{ projeto_id: 20, projeto_titulo: 'Case fictício', tarefas: [{ id: 2, texto: 'Ajustar', prazo: '2026-09-30' }] }],
         },
-        divulgacao_pendente: [
-          { projeto_id: 30, titulo: 'Loja B', ficticio: false, falta_portfolio: true, falta_instagram: false },
-        ],
         proximos: [
           { tipo: 'parcela', id: 3, projeto_id: 5, titulo: 'Entrada', contexto: 'Site Ana', data: '2026-09-20', atrasado: true, valor_centavos: 50000 },
           { tipo: 'conteudo', id: 4, projeto_id: null, titulo: 'Post case', contexto: 'instagram', data: '2026-09-25', atrasado: false },
@@ -36,25 +36,23 @@ describe('Inicio', () => {
 
     expect(screen.getByRole('link', { name: 'Site A' })).toHaveAttribute('href', '/projetos/10');
     expect(screen.getByText('Revisar')).toBeInTheDocument();
+    expect(screen.getByText('Publicar no portfólio')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Case fictício' })).toHaveAttribute('href', '/projetos/20');
     expect(screen.getByText('Ajustar')).toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: 'Loja B' })).toHaveAttribute('href', '/projetos/30');
-    expect(screen.getByText('Falta: Portfólio')).toBeInTheDocument();
+    expect(screen.queryByText(/Divulgação pendente/)).not.toBeInTheDocument();
   });
 
-  it('mostra mensagem quando não há nada nos próximos dias, tarefas nem divulgação pendente', async () => {
+  it('mostra mensagem quando não há nada nos próximos dias nem tarefas', async () => {
     mockApi({
       'GET /painel': {
         cartoes: { a_receber_mes_centavos: 0, atrasadas: { quantidade: 0, total_centavos: 0 }, em_andamento: 0, propostas: { quantidade: 0, total_centavos: 0 } },
         tarefas_por_projeto: { reais: [], ficticios: [] },
-        divulgacao_pendente: [],
         proximos: [],
       },
     });
     renderizar(<Inicio />);
     expect(await screen.findByText('Nada para os próximos 7 dias.')).toBeInTheDocument();
     expect(screen.getAllByText('Nenhuma tarefa pendente.')).toHaveLength(2);
-    expect(screen.queryByText(/Divulgação pendente/)).not.toBeInTheDocument();
   });
 });

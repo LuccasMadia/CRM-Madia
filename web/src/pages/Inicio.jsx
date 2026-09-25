@@ -9,12 +9,6 @@ import { formatarData } from '../lib/datas.js';
 const ROTULO_ITEM = { parcela: 'Parcela', entrega: 'Entrega', conteudo: 'Conteúdo' };
 const destino = (item) => (item.projeto_id ? `/projetos/${item.projeto_id}` : '/conteudo');
 
-function rotuloFalta({ falta_portfolio: faltaPortfolio, falta_instagram: faltaInstagram }) {
-  if (faltaPortfolio && faltaInstagram) return 'Instagram e Portfólio';
-  if (faltaPortfolio) return 'Portfólio';
-  return 'Instagram';
-}
-
 function ColunaTarefas({ titulo, projetos }) {
   return (
     <section className="cartao">
@@ -44,7 +38,7 @@ export function Inicio() {
   const { dados, erro } = useCarregar(() => api('/painel'), []);
   if (erro) return <Aviso erro={erro} />;
   if (!dados) return <p>Carregando…</p>;
-  const { cartoes, tarefas_por_projeto: tarefasPorProjeto, divulgacao_pendente: divulgacaoPendente, proximos } = dados;
+  const { cartoes, tarefas_por_projeto: tarefasPorProjeto, proximos } = dados;
 
   return (
     <section>
@@ -59,22 +53,6 @@ export function Inicio() {
           {cartoes.propostas.quantidade} · {formatarDinheiro(cartoes.propostas.total_centavos)}
         </Numero>
       </div>
-
-      {divulgacaoPendente.length > 0 && (
-        <section className="cartao">
-          <h2>Divulgação pendente</h2>
-          <table className="tabela">
-            <tbody>
-              {divulgacaoPendente.map((p) => (
-                <tr key={p.projeto_id}>
-                  <td><Link to={`/projetos/${p.projeto_id}`}>{p.titulo}</Link></td>
-                  <td>Falta: {rotuloFalta(p)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
 
       <div className="grade-2">
         <ColunaTarefas titulo="Projetos reais" projetos={tarefasPorProjeto.reais} />
