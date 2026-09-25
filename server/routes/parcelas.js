@@ -97,6 +97,7 @@ export function rotasParcelas({ db, hoje }) {
       .prepare(
         `SELECT pa.*, p.titulo AS projeto_titulo, c.nome AS cliente_nome
          FROM parcelas pa JOIN projetos p ON p.id = pa.projeto_id JOIN clientes c ON c.id = p.cliente_id
+         WHERE p.ficticio = 0
          ORDER BY pa.vencimento, pa.id`,
       )
       .all()
@@ -108,7 +109,11 @@ export function rotasParcelas({ db, hoje }) {
   r.get('/financeiro/mensal', (req, res) => {
     const ano = Number(req.query.ano ?? hoje().slice(0, 4));
     if (!Number.isInteger(ano)) throw new ErroHttp(400, 'Ano inválido');
-    res.json(recebidoPorMes(parcelas.listar(), ano));
+    const lista = db
+      .prepare('SELECT pa.* FROM parcelas pa JOIN projetos p ON p.id = pa.projeto_id WHERE p.ficticio = 0')
+      .all()
+      .map(linha);
+    res.json(recebidoPorMes(lista, ano));
   });
 
   return r;

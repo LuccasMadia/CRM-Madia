@@ -53,6 +53,22 @@ describe('parcelas', () => {
     await ctx.http.delete(`/api/parcelas/${p.id}`).expect(204);
     await ctx.http.get('/api/projetos/999/parcelas').expect(404);
   });
+
+  it('ignora projeto fictício na lista geral e no financeiro mensal', async () => {
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Bia' })).body;
+    const ficticio = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Case fictício', ficticio: true })).body;
+    const p = (await ctx.http.post(`/api/projetos/${ficticio.id}/parcelas`).send({ valor_centavos: 5000, vencimento: '2026-09-10' })).body;
+    await ctx.http.put(`/api/parcelas/${p.id}`).send({ pago_em: '2026-09-15' });
+
+    const lista = await ctx.http.get('/api/parcelas').expect(200);
+    expect(lista.body.some((x) => x.projeto_id === ficticio.id)).toBe(false);
+
+    const mensal = await ctx.http.get('/api/financeiro/mensal?ano=2026').expect(200);
+    expect(mensal.body[8]).toEqual({ mes: '2026-09', recebido_centavos: 0 });
+
+    const doProjeto = await ctx.http.get(`/api/projetos/${ficticio.id}/parcelas`).expect(200);
+    expect(doProjeto.body.parcelas).toHaveLength(1);
+  });
 });
 
 describe('parcelamento em lote', () => {
