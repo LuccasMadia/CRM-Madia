@@ -25,6 +25,7 @@ export function AbaGeral({ projeto, onSalvo }) {
     mensalidade_valor: centavosParaTexto(projeto.mensalidade_valor_centavos),
     mensalidade_dia_vencimento: projeto.mensalidade_dia_vencimento ? String(projeto.mensalidade_dia_vencimento) : '',
     postou_instagram: Boolean(projeto.postou_instagram),
+    ficticio: Boolean(projeto.ficticio),
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
 
@@ -116,6 +117,16 @@ export function AbaGeral({ projeto, onSalvo }) {
             onChange={(e) => setValores((v) => ({ ...v, postou_instagram: e.target.checked }))}
           />{' '}
           Postou no Instagram
+        </label>
+      </div>
+      <div className="campo">
+        <label>
+          <input
+            type="checkbox"
+            checked={Boolean(valores.ficticio)}
+            onChange={(e) => setValores((v) => ({ ...v, ficticio: e.target.checked }))}
+          />{' '}
+          Projeto fictício (só portfólio)
         </label>
       </div>
       <Aviso erro={erro} />
