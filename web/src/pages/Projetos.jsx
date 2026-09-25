@@ -55,15 +55,16 @@ export function Projetos() {
       {projetos && (lista.length ? (
         <table className="tabela">
           <thead>
-            <tr><th>Cliente</th><th>Título</th><th>Etapa</th><th>Instagram</th><th className="num">Valor total</th></tr>
+            <tr><th>Título</th><th>Cliente</th><th>Etapa</th><th>Instagram</th><th>Portfólio</th><th className="num">Valor total</th></tr>
           </thead>
           <tbody>
             {lista.map((p) => (
               <tr key={p.id}>
-                <td><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></td>
                 <td><Link to={`/projetos/${p.id}`}>{p.titulo}</Link></td>
+                <td><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></td>
                 <td><span className={`etiqueta etiqueta--${p.etapa}`}>{ROTULO_ETAPA[p.etapa]}</span></td>
-                <td>{p.postou_instagram ? 'Sim' : 'Não'}</td>
+                <td><input type="checkbox" checked={Boolean(p.postou_instagram)} disabled aria-label="Postou no Instagram" /></td>
+                <td><input type="checkbox" checked={Boolean(p.no_portfolio)} disabled aria-label="Adicionado ao portfólio" /></td>
                 <td className="num">{formatarDinheiro(p.valor_total_centavos)}</td>
               </tr>
             ))}

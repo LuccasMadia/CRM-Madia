@@ -7,7 +7,10 @@ export const CAMPOS_PROJETO = [
   'postou_instagram',
 ];
 
-const SELECT_COM_CLIENTE = 'SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id';
+const SELECT_COM_CLIENTE = `SELECT p.*, c.nome AS cliente_nome, COALESCE(pf.publicar, 0) AS no_portfolio
+  FROM projetos p
+  JOIN clientes c ON c.id = p.cliente_id
+  LEFT JOIN portfolio pf ON pf.projeto_id = p.id`;
 
 export function repoProjetos(db) {
   const base = criarRepo(db, 'projetos', CAMPOS_PROJETO);

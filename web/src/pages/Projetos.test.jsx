@@ -27,8 +27,8 @@ describe('Projetos', () => {
     const linhas = await screen.findAllByRole('row');
     expect(within(linhas[1]).getByRole('link', { name: 'Loja Bruno' })).toHaveAttribute('href', '/projetos/2');
     expect(within(linhas[2]).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
-    expect(within(linhas[1]).getByText('Sim')).toBeInTheDocument();
-    expect(within(linhas[2]).getByText('Não')).toBeInTheDocument();
+    expect(within(linhas[1]).getByRole('checkbox', { name: 'Postou no Instagram' })).toBeChecked();
+    expect(within(linhas[2]).getByRole('checkbox', { name: 'Postou no Instagram' })).not.toBeChecked();
     expect(screen.queryByText('App Carla')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/10');
     expect(screen.getByText(/5\.000,00/)).toBeInTheDocument();
