@@ -9,8 +9,8 @@ import { ETAPAS, ROTULO_ETAPA } from '../lib/rotulos.js';
 
 export function FormOportunidade({ onSalvar }) {
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
-  const { valores, campo } = useFormulario({
-    titulo: '', cliente_id: '', novo_cliente_nome: '', valor: '', prazo_entrega: '', etapa: 'contato',
+  const { valores, campo, setValores } = useFormulario({
+    titulo: '', cliente_id: '', novo_cliente_nome: '', valor: '', prazo_entrega: '', etapa: 'contato', ficticio: false,
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const clienteNovo = valores.cliente_id === 'novo';
@@ -22,7 +22,10 @@ export function FormOportunidade({ onSalvar }) {
       setErros([{ campo: 'valor_total_centavos', mensagem: 'Valor inválido' }]);
       return;
     }
-    const corpo = { titulo: valores.titulo, etapa: valores.etapa, valor_total_centavos: valor ?? 0, prazo_entrega: valores.prazo_entrega };
+    const corpo = {
+      titulo: valores.titulo, etapa: valores.etapa, valor_total_centavos: valor ?? 0,
+      prazo_entrega: valores.prazo_entrega, ficticio: valores.ficticio,
+    };
     if (clienteNovo) corpo.novo_cliente = { nome: valores.novo_cliente_nome };
     else corpo.cliente_id = valores.cliente_id ? Number(valores.cliente_id) : null;
     executar(() => onSalvar(corpo));
@@ -48,6 +51,16 @@ export function FormOportunidade({ onSalvar }) {
       </Campo>
       <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" placeholder="0,00" {...campo('valor')} />
       <Campo rotulo="Prazo de entrega" nome="prazo_entrega" erros={erros} type="date" {...campo('prazo_entrega')} />
+      <div className="campo">
+        <label>
+          <input
+            type="checkbox"
+            checked={Boolean(valores.ficticio)}
+            onChange={(e) => setValores((v) => ({ ...v, ficticio: e.target.checked }))}
+          />{' '}
+          Projeto fictício (só portfólio)
+        </label>
+      </div>
       <Aviso erro={erro} />
       <div><button className="btn btn--primario" disabled={enviando}>Criar oportunidade</button></div>
     </form>

@@ -14,7 +14,7 @@ const abrir = () => renderizar(<Funil />, { rota: '/funil', padrao: '/funil' });
 
 describe('Funil', () => {
   it('mostra cards por etapa e recolhe "Perdido"', async () => {
-    mockApi({ 'GET /projetos': projetos });
+    mockApi({ 'GET /projetos?ficticio=0': projetos });
     abrir();
     const contato = await screen.findByRole('region', { name: 'Contato' });
     expect(within(contato).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
@@ -25,14 +25,14 @@ describe('Funil', () => {
   });
 
   it('muda a etapa pelo menu do card', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'proposta' } });
+    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'proposta' } });
     abrir();
     await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Site Ana'), 'proposta');
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/1', corpo: { etapa: 'proposta' } });
   });
 
   it('nova oportunidade: valor inválido não chama a API', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos': [], 'GET /clientes': [] });
+    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [] });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -44,7 +44,7 @@ describe('Funil', () => {
   });
 
   it('nova oportunidade com cliente novo envia novo_cliente e valor em centavos', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 } });
+    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 } });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -55,7 +55,7 @@ describe('Funil', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Site', etapa: 'contato', valor_total_centavos: 150050, prazo_entrega: '', novo_cliente: { nome: 'Diego' },
+      titulo: 'Site', etapa: 'contato', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' },
     });
   });
 });

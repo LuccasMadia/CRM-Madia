@@ -14,7 +14,7 @@ import { ETAPAS, ROTULO_ETAPA } from '../lib/rotulos.js';
 const COLUNAS = ETAPAS.map((id) => ({ id, titulo: ROTULO_ETAPA[id] }));
 
 export function Funil() {
-  const { dados: projetos, erro, recarregar } = useCarregar(() => api('/projetos'), []);
+  const { dados: projetos, erro, recarregar } = useCarregar(() => api('/projetos?ficticio=0'), []);
   const [criando, setCriando] = useState(false);
   const mudanca = useEnvio();
   const navegar = useNavigate();
