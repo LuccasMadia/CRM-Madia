@@ -62,16 +62,17 @@ describe('GET /api/painel', () => {
       { projeto_id: real.id, projeto_titulo: 'Site real', tarefas: [
         { id: expect.any(Number), texto: 'Com prazo', prazo: '2026-09-30' },
         { id: expect.any(Number), texto: 'Sem prazo', prazo: null },
+        { id: `divulgacao-${real.id}-Publicar no portfólio`, texto: 'Publicar no portfólio', prazo: null },
       ] },
     ]);
     expect(res.body.tarefas_por_projeto.ficticios).toEqual([
-      { projeto_id: ficticio.id, projeto_titulo: 'Case fictício', tarefas: [{ id: expect.any(Number), texto: 'Tarefa do case', prazo: null }] },
+      { projeto_id: ficticio.id, projeto_titulo: 'Case fictício', tarefas: [
+        { id: expect.any(Number), texto: 'Tarefa do case', prazo: null },
+        { id: `divulgacao-${ficticio.id}-Postar no Instagram`, texto: 'Postar no Instagram', prazo: null },
+        { id: `divulgacao-${ficticio.id}-Publicar no portfólio`, texto: 'Publicar no portfólio', prazo: null },
+      ] },
     ]);
     expect(res.body.proximos.some((i) => i.tipo === 'tarefa')).toBe(false);
-
-    expect(res.body.divulgacao_pendente).toEqual([
-      { projeto_id: ficticio.id, titulo: 'Case fictício', ficticio: true, falta_portfolio: true, falta_instagram: true },
-      { projeto_id: real.id, titulo: 'Site real', ficticio: false, falta_portfolio: true, falta_instagram: false },
-    ]);
+    expect(res.body.divulgacao_pendente).toBeUndefined();
   });
 });
