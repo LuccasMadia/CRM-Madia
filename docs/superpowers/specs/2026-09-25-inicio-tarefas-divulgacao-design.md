@@ -18,9 +18,11 @@ Lista, em duas colunas — "Projetos reais" e "Projetos fictícios" — todo pro
 - **Ordem das tarefas** dentro de um projeto: `ordem, id` — a mesma ordem manual que `AbaTarefas.jsx` já usa (setinhas ↑↓), sem reordenar por prazo.
 - Coluna vazia (nenhum projeto com tarefa pendente) mostra `<p className="vazio">`.
 
-### 2. Divulgação pendente (nova seção)
+### 2. Divulgação pendente (itens dentro da própria lista de tarefas)
 
-Lista única (sem separar real/fictício) de todo projeto com `etapa = 'entregue'` que ainda não tem as duas divulgações feitas: `postou_instagram = 1` **e** portfólio com `publicar = 1`. Aparece o que falta: só Instagram, só Portfólio, ou os dois. Vale igualmente para projetos reais e fictícios — a regra é a mesma para ambos.
+Não existe seção separada. Todo projeto com `etapa = 'entregue'` que ainda não tem `postou_instagram = 1` e/ou portfólio com `publicar = 1` ganha, na sua lista de tarefas (seção "Tarefas por projeto"), um item extra por divulgação faltando — texto "Postar no Instagram" e/ou "Publicar no portfólio", sem prazo — junto das tarefas reais desse projeto (tabela `tarefas`). Vale igualmente para projetos reais e fictícios.
+
+Isso significa que um projeto sem nenhuma tarefa real, mas com divulgação pendente, ainda assim aparece na coluna certa — só com esse(s) item(ns).
 
 ### 3. "Próximos 7 dias" perde as tarefas
 
@@ -30,7 +32,7 @@ A lista de tarefas some da seção "Próximos 7 dias" (que hoje mistura tarefas,
 
 ### `server/domain/painel.js`
 
-Duas funções novas, no mesmo espírito de `montarProximos` (pura, recebe linhas já buscadas do banco):
+`agruparTarefasPorProjeto` não muda — continua uma função pura de agrupamento, agnóstica a se a linha veio da tabela `tarefas` ou é sintética:
 
 ```js
 export function agruparTarefasPorProjeto(linhas) {
@@ -48,23 +50,31 @@ export function agruparTarefasPorProjeto(linhas) {
     ficticios: projetos.filter((p) => p.ficticio).map(semFicticio),
   };
 }
+```
 
-export function montarDivulgacaoPendente(linhas) {
-  return linhas.map((p) => ({
-    projeto_id: p.id,
-    titulo: p.titulo,
-    ficticio: Boolean(p.ficticio),
-    falta_portfolio: !p.portfolio_publicado,
-    falta_instagram: !p.postou_instagram,
-  }));
+`montarDivulgacaoPendente` é substituída por `montarTarefasDivulgacao`, que transforma as mesmas linhas (projeto + o que falta) em linhas no **formato de tarefa** — prontas pra entrar na mesma lista que alimenta `agruparTarefasPorProjeto`:
+
+```js
+export function montarTarefasDivulgacao(linhas) {
+  return linhas.flatMap((p) => {
+    const itens = [];
+    if (!p.postou_instagram) itens.push('Postar no Instagram');
+    if (!p.portfolio_publicado) itens.push('Publicar no portfólio');
+    return itens.map((texto) => ({
+      id: `divulgacao-${p.id}-${texto}`,
+      texto,
+      prazo: null,
+      projeto_id: p.id,
+      projeto_titulo: p.titulo,
+      ficticio: p.ficticio,
+    }));
+  });
 }
 ```
 
-`montarDivulgacaoPendente` recebe linhas já filtradas pelo SQL (só quem tem algo faltando) e só remonta o formato — igual ao padrão de `montarProximos`, que também não filtra por conta própria o que a query já resolveu.
-
 ### `server/routes/painel.js`
 
-Duas queries novas dentro de `r.get('/painel', ...)`:
+Duas queries dentro de `r.get('/painel', ...)` — a de tarefas reais (igual antes) e a de divulgação, cujo resultado agora é somado à de tarefas antes de agrupar:
 
 ```js
 const tarefasPendentes = todas(
@@ -80,31 +90,40 @@ const divulgacaoPendente = todas(
    WHERE p.etapa = 'entregue' AND (p.postou_instagram = 0 OR COALESCE(pf.publicar, 0) = 0)
    ORDER BY p.titulo`,
 );
+
+// ...
+tarefas_por_projeto: agruparTarefasPorProjeto([...tarefasPendentes, ...montarTarefasDivulgacao(divulgacaoPendente)]),
 ```
 
-E a query de `tarefas` que hoje alimenta `proximos` sai da chamada de `montarProximos` (tarefas deixam de entrar nessa lista — `montarProximos` já trata `tarefas` como opcional, default `[]`):
+A query de `tarefas` que hoje alimenta `proximos` sai da chamada de `montarProximos` (tarefas deixam de entrar nessa lista — `montarProximos` já trata `tarefas` como opcional, default `[]`):
 
 ```js
 proximos: montarProximos({ parcelas: parcelasAbertas, entregas, conteudos: /* query de conteúdos, igual hoje */ }, dia),
 ```
 
-A resposta de `GET /painel` ganha dois campos:
+A resposta de `GET /painel` ganha um campo (`divulgacao_pendente` não existe mais como campo próprio — os itens entram direto em `tarefas_por_projeto`):
 
 ```json
 {
   "cartoes": { "...": "..." },
-  "tarefas_por_projeto": { "reais": [ { "projeto_id": 1, "projeto_titulo": "Site Ana", "tarefas": [{ "id": 9, "texto": "Revisar", "prazo": null }] } ], "ficticios": [] },
-  "divulgacao_pendente": [ { "projeto_id": 3, "titulo": "Loja X", "ficticio": false, "falta_portfolio": true, "falta_instagram": false } ],
+  "tarefas_por_projeto": {
+    "reais": [
+      { "projeto_id": 1, "projeto_titulo": "Site Ana", "tarefas": [
+        { "id": 9, "texto": "Revisar", "prazo": null },
+        { "id": "divulgacao-1-Postar no Instagram", "texto": "Postar no Instagram", "prazo": null }
+      ] }
+    ],
+    "ficticios": []
+  },
   "proximos": [ "...": "..." ]
 }
 ```
 
 ## Frontend (`web/src/pages/Inicio.jsx`)
 
-Ordem das seções na página: Cartões (sem mudança) → **Divulgação pendente** → **Tarefas por projeto** (duas colunas lado a lado, mesmo grid de duas colunas que outras telas já usam) → **Próximos 7 dias** (sem tarefas).
+Ordem das seções na página: Cartões (sem mudança) → **Tarefas por projeto** (duas colunas lado a lado) → **Próximos 7 dias** (sem tarefas). Não existe mais seção "Divulgação pendente" separada.
 
-- **Divulgação pendente**: tabela simples — Projeto (link) | Falta (texto: "Instagram", "Portfólio" ou "Instagram e Portfólio"). Some a seção inteira se a lista vier vazia (parecido com o `vazio` de "Nada para os próximos 7 dias.").
-- **Tarefas por projeto**: dois `<section className="cartao">` lado a lado ("Projetos reais" / "Projetos fictícios"), cada um com uma lista de projetos; sob cada título de projeto, uma lista (`<ul>`) das tarefas com texto e prazo formatado (`formatarData`) quando existir.
+- **Tarefas por projeto**: dois `<section className="cartao">` lado a lado ("Projetos reais" / "Projetos fictícios"), cada um com uma lista de projetos; sob cada título de projeto, uma lista (`<ul>`) das tarefas com texto e prazo formatado (`formatarData`) quando existir — sem distinção visual entre tarefa real e item de divulgação, eles chegam prontos e misturados de `tarefas_por_projeto`.
 
 ## Fora de escopo
 
@@ -114,6 +133,6 @@ Ordem das seções na página: Cartões (sem mudança) → **Divulgação penden
 
 ## Testes
 
-- `server/domain/painel.test.js` (já existe, testando `montarProximos`): adicionar casos para `agruparTarefasPorProjeto` (agrupa corretamente por projeto, separa reais/fictícios, preserva ordem de entrada) e `montarDivulgacaoPendente` (mapeia `portfolio_publicado`/`postou_instagram` para `falta_portfolio`/`falta_instagram`).
-- `server/routes/painel.test.js`: novo teste cobrindo cenário com tarefa sem prazo (aparece em `tarefas_por_projeto`, não aparece em `proximos`), tarefa de projeto fictício (vai para `ficticios`), e projeto entregue sem instagram/portfólio (aparece em `divulgacao_pendente` com o campo certo marcado).
-- `web/src/pages/Inicio.test.jsx`: atualizar o mock de `GET /painel` para incluir `tarefas_por_projeto`/`divulgacao_pendente`, e adicionar casos: tarefa sem prazo aparece na coluna certa; projeto em `divulgacao_pendente` aparece com o texto certo do que falta; nenhuma das duas seções novas quebra quando vêm vazias.
+- `server/domain/painel.test.js`: `agruparTarefasPorProjeto` (já testada, sem mudança). Trocar os casos de `montarDivulgacaoPendente` por casos de `montarTarefasDivulgacao`: projeto faltando só Instagram gera um item; faltando os dois gera dois itens; projeto com tudo em dia não gera nenhum.
+- `server/routes/painel.test.js`: atualizar o teste de "agrupa tarefas por projeto..." — um projeto entregue sem `postou_instagram`/portfólio deve ter os itens de divulgação dentro de `tarefas_por_projeto` (junto das tarefas reais, se houver), e `divulgacao_pendente` não existe mais na resposta.
+- `web/src/pages/Inicio.test.jsx`: atualizar o mock de `GET /painel` (tirar `divulgacao_pendente`, incluir os itens de divulgação dentro de `tarefas_por_projeto`) e o texto do item ("Postar no Instagram"/"Publicar no portfólio") aparecendo na lista de tarefas do projeto certo.
