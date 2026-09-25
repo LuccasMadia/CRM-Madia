@@ -32,7 +32,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fundo); }
-a { color: var(--primaria); }
+a { color: var(--primaria); text-decoration: none; }
 code { font-size: 0.9em; }
 
 .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
