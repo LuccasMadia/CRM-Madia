@@ -11,13 +11,13 @@ export function rotasPainel({ db, hoje }) {
     const dia = hoje();
     const parcelasAbertas = todas(
       `SELECT pa.*, p.titulo AS projeto_titulo FROM parcelas pa
-       JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NULL`,
+       JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NULL AND p.ficticio = 0`,
     );
     const atrasadas = parcelasAbertas.filter((p) => estadoParcela(p, dia) === 'atrasada');
-    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa = 'proposta'");
+    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa = 'proposta' AND ficticio = 0");
     const entregas = todas(
       `SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.etapa = 'andamento'`,
+       WHERE p.etapa = 'andamento' AND p.ficticio = 0`,
     );
 
     res.json({
@@ -37,11 +37,14 @@ export function rotasPainel({ db, hoje }) {
         {
           tarefas: todas(
             `SELECT t.*, p.titulo AS projeto_titulo FROM tarefas t JOIN projetos p ON p.id = t.projeto_id
-             WHERE t.concluida = 0 AND t.prazo IS NOT NULL AND p.etapa <> 'perdido'`,
+             WHERE t.concluida = 0 AND t.prazo IS NOT NULL AND p.etapa <> 'perdido' AND p.ficticio = 0`,
           ),
           parcelas: parcelasAbertas,
           entregas,
-          conteudos: todas("SELECT * FROM conteudos WHERE status <> 'publicado' AND data_planejada IS NOT NULL"),
+          conteudos: todas(
+            `SELECT c.* FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id
+             WHERE c.status <> 'publicado' AND c.data_planejada IS NOT NULL AND (p.id IS NULL OR p.ficticio = 0)`,
+          ),
         },
         dia,
       ),
