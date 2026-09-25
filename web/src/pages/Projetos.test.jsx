@@ -7,11 +7,11 @@ import { renderizar } from '../test/renderizar.jsx';
 
 const antigo = {
   id: 1, cliente_id: 10, titulo: 'Site Ana', cliente_nome: 'Ana', etapa: 'andamento',
-  valor_total_centavos: 250000, atualizado_em: '2026-09-01T10:00:00.000Z',
+  valor_total_centavos: 250000, atualizado_em: '2026-09-01T10:00:00.000Z', postou_instagram: 0,
 };
 const recente = {
   id: 2, cliente_id: 11, titulo: 'Loja Bruno', cliente_nome: 'Bruno', etapa: 'contato',
-  valor_total_centavos: 500000, atualizado_em: '2026-09-20T10:00:00.000Z',
+  valor_total_centavos: 500000, atualizado_em: '2026-09-20T10:00:00.000Z', postou_instagram: 1,
 };
 const perdido = {
   id: 3, cliente_id: 12, titulo: 'App Carla', cliente_nome: 'Carla', etapa: 'perdido',
@@ -27,6 +27,8 @@ describe('Projetos', () => {
     const linhas = await screen.findAllByRole('row');
     expect(within(linhas[1]).getByRole('link', { name: 'Loja Bruno' })).toHaveAttribute('href', '/projetos/2');
     expect(within(linhas[2]).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
+    expect(within(linhas[1]).getByText('Sim')).toBeInTheDocument();
+    expect(within(linhas[2]).getByText('Não')).toBeInTheDocument();
     expect(screen.queryByText('App Carla')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/10');
     expect(screen.getByText(/5\.000,00/)).toBeInTheDocument();
@@ -63,5 +65,19 @@ describe('Projetos', () => {
     mockApi({ 'GET /projetos': [], 'GET /clientes': [] });
     abrir();
     expect(await screen.findByText('Nenhum projeto encontrado.')).toBeInTheDocument();
+  });
+
+  it('filtra por instagram', async () => {
+    const { chamadas } = mockApi({
+      'GET /projetos': [antigo, recente],
+      'GET /projetos?postou_instagram=1': [recente],
+      'GET /clientes': [],
+    });
+    abrir();
+    await screen.findByText('Site Ana');
+    await userEvent.setup().selectOptions(screen.getByLabelText('Instagram'), '1');
+    await screen.findByText('Loja Bruno');
+    expect(screen.queryByText('Site Ana')).not.toBeInTheDocument();
+    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?postou_instagram=1');
   });
 });

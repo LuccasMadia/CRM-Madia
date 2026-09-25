@@ -9,8 +9,9 @@ import { ETAPAS, ROTULO_ETAPA } from '../lib/rotulos.js';
 export function Projetos() {
   const [etapa, setEtapa] = useState('');
   const [clienteId, setClienteId] = useState('');
+  const [instagram, setInstagram] = useState('');
   const consulta = new URLSearchParams(
-    Object.entries({ etapa, cliente_id: clienteId }).filter(([, v]) => v),
+    Object.entries({ etapa, cliente_id: clienteId, postou_instagram: instagram }).filter(([, v]) => v),
   ).toString();
 
   const { dados: projetos, erro } = useCarregar(() => api(`/projetos${consulta ? `?${consulta}` : ''}`), [consulta]);
@@ -40,13 +41,21 @@ export function Projetos() {
               {(clientes ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </label>
+          <label className="campo">
+            <span>Instagram</span>
+            <select aria-label="Instagram" value={instagram} onChange={(e) => setInstagram(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="1">Postaram</option>
+              <option value="0">Não postaram</option>
+            </select>
+          </label>
         </div>
       </header>
       <Aviso erro={erro} />
       {projetos && (lista.length ? (
         <table className="tabela">
           <thead>
-            <tr><th>Cliente</th><th>Título</th><th>Etapa</th><th className="num">Valor total</th></tr>
+            <tr><th>Cliente</th><th>Título</th><th>Etapa</th><th>Instagram</th><th className="num">Valor total</th></tr>
           </thead>
           <tbody>
             {lista.map((p) => (
@@ -54,6 +63,7 @@ export function Projetos() {
                 <td><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></td>
                 <td><Link to={`/projetos/${p.id}`}>{p.titulo}</Link></td>
                 <td><span className={`etiqueta etiqueta--${p.etapa}`}>{ROTULO_ETAPA[p.etapa]}</span></td>
+                <td>{p.postou_instagram ? 'Sim' : 'Não'}</td>
                 <td className="num">{formatarDinheiro(p.valor_total_centavos)}</td>
               </tr>
             ))}
