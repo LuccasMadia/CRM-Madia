@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { montarProximos, agruparTarefasPorProjeto, montarDivulgacaoPendente } from './painel.js';
+import { montarProximos, agruparTarefasPorProjeto, montarTarefasDivulgacao } from './painel.js';
 
 describe('montarProximos', () => {
   const HOJE = '2026-09-23';
@@ -56,15 +56,24 @@ describe('agruparTarefasPorProjeto', () => {
   });
 });
 
-describe('montarDivulgacaoPendente', () => {
-  it('mapeia o que falta divulgar', () => {
-    const linhas = [
-      { id: 1, titulo: 'Site A', ficticio: 0, postou_instagram: 0, portfolio_publicado: 1 },
-      { id: 2, titulo: 'Case fictício', ficticio: 1, postou_instagram: 0, portfolio_publicado: 0 },
-    ];
-    expect(montarDivulgacaoPendente(linhas)).toEqual([
-      { projeto_id: 1, titulo: 'Site A', ficticio: false, falta_portfolio: false, falta_instagram: true },
-      { projeto_id: 2, titulo: 'Case fictício', ficticio: true, falta_portfolio: true, falta_instagram: true },
+describe('montarTarefasDivulgacao', () => {
+  it('gera um item só para o que falta', () => {
+    const linhas = [{ id: 1, titulo: 'Site A', ficticio: 0, postou_instagram: 0, portfolio_publicado: 1 }];
+    expect(montarTarefasDivulgacao(linhas)).toEqual([
+      { id: 'divulgacao-1-Postar no Instagram', texto: 'Postar no Instagram', prazo: null, projeto_id: 1, projeto_titulo: 'Site A', ficticio: 0 },
     ]);
+  });
+
+  it('gera dois itens quando falta tudo', () => {
+    const linhas = [{ id: 2, titulo: 'Case fictício', ficticio: 1, postou_instagram: 0, portfolio_publicado: 0 }];
+    expect(montarTarefasDivulgacao(linhas)).toEqual([
+      { id: 'divulgacao-2-Postar no Instagram', texto: 'Postar no Instagram', prazo: null, projeto_id: 2, projeto_titulo: 'Case fictício', ficticio: 1 },
+      { id: 'divulgacao-2-Publicar no portfólio', texto: 'Publicar no portfólio', prazo: null, projeto_id: 2, projeto_titulo: 'Case fictício', ficticio: 1 },
+    ]);
+  });
+
+  it('não gera nada quando as duas divulgações já foram feitas', () => {
+    const linhas = [{ id: 3, titulo: 'Loja X', ficticio: 0, postou_instagram: 1, portfolio_publicado: 1 }];
+    expect(montarTarefasDivulgacao(linhas)).toEqual([]);
   });
 });

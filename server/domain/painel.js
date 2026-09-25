@@ -39,12 +39,18 @@ export function agruparTarefasPorProjeto(linhas) {
   };
 }
 
-export function montarDivulgacaoPendente(linhas) {
-  return linhas.map((p) => ({
-    projeto_id: p.id,
-    titulo: p.titulo,
-    ficticio: Boolean(p.ficticio),
-    falta_portfolio: !p.portfolio_publicado,
-    falta_instagram: !p.postou_instagram,
-  }));
+export function montarTarefasDivulgacao(linhas) {
+  return linhas.flatMap((p) => {
+    const itens = [];
+    if (!p.postou_instagram) itens.push('Postar no Instagram');
+    if (!p.portfolio_publicado) itens.push('Publicar no portfólio');
+    return itens.map((texto) => ({
+      id: `divulgacao-${p.id}-${texto}`,
+      texto,
+      prazo: null,
+      projeto_id: p.id,
+      projeto_titulo: p.titulo,
+      ficticio: p.ficticio,
+    }));
+  });
 }
