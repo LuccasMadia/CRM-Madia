@@ -20,6 +20,7 @@ const REGRAS_PROJETO = {
   mensalidade_ativa: { tipo: 'bool', padrao: 0 },
   mensalidade_valor_centavos: { tipo: 'inteiro', min: 0, padrao: 0 },
   mensalidade_dia_vencimento: { tipo: 'inteiro', min: 1, max: 31 },
+  postou_instagram: { tipo: 'bool', padrao: 0 },
 };
 
 function exigirDadosMensalidade(atual, dados) {
@@ -45,7 +46,11 @@ export function rotasProjetos({ db, hoje }) {
   }
 
   r.get('/', (req, res) => {
-    res.json(projetos.listarComCliente({ etapa: req.query.etapa, cliente_id: req.query.cliente_id }));
+    res.json(projetos.listarComCliente({
+      etapa: req.query.etapa,
+      cliente_id: req.query.cliente_id,
+      postou_instagram: req.query.postou_instagram,
+    }));
   });
 
   r.post('/', (req, res) => {
