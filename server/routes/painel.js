@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { linha } from '../repos/crud.js';
 import { aReceberNoMes, estadoParcela } from '../domain/financeiro.js';
-import { montarProximos } from '../domain/painel.js';
+import { montarProximos, agruparTarefasPorProjeto, montarDivulgacaoPendente } from '../domain/painel.js';
 
 export function rotasPainel({ db, hoje }) {
   const r = Router();
@@ -33,12 +33,24 @@ export function rotasPainel({ db, hoje }) {
           total_centavos: propostas.reduce((s, p) => s + p.valor_total_centavos, 0),
         },
       },
+      tarefas_por_projeto: agruparTarefasPorProjeto(
+        todas(
+          `SELECT t.id, t.texto, t.prazo, p.id AS projeto_id, p.titulo AS projeto_titulo, p.ficticio
+           FROM tarefas t JOIN projetos p ON p.id = t.projeto_id
+           WHERE t.concluida = 0 AND p.etapa <> 'perdido'
+           ORDER BY p.prazo_entrega IS NULL, p.prazo_entrega, p.id, t.ordem, t.id`,
+        ),
+      ),
+      divulgacao_pendente: montarDivulgacaoPendente(
+        todas(
+          `SELECT p.id, p.titulo, p.ficticio, p.postou_instagram, COALESCE(pf.publicar, 0) AS portfolio_publicado
+           FROM projetos p LEFT JOIN portfolio pf ON pf.projeto_id = p.id
+           WHERE p.etapa = 'entregue' AND (p.postou_instagram = 0 OR COALESCE(pf.publicar, 0) = 0)
+           ORDER BY p.titulo`,
+        ),
+      ),
       proximos: montarProximos(
         {
-          tarefas: todas(
-            `SELECT t.*, p.titulo AS projeto_titulo FROM tarefas t JOIN projetos p ON p.id = t.projeto_id
-             WHERE t.concluida = 0 AND t.prazo IS NOT NULL AND p.etapa <> 'perdido' AND p.ficticio = 0`,
-          ),
           parcelas: parcelasAbertas,
           entregas,
           conteudos: todas(
