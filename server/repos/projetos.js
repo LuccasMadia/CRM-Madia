@@ -4,7 +4,7 @@ export const CAMPOS_PROJETO = [
   'cliente_id', 'titulo', 'descricao', 'etapa', 'valor_total_centavos',
   'data_inicio', 'prazo_entrega', 'data_entrega', 'notas',
   'mensalidade_ativa', 'mensalidade_valor_centavos', 'mensalidade_dia_vencimento',
-  'postou_instagram',
+  'postou_instagram', 'ficticio',
 ];
 
 const SELECT_COM_CLIENTE = `SELECT p.*, c.nome AS cliente_nome, COALESCE(pf.publicar, 0) AS no_portfolio
@@ -16,7 +16,7 @@ export function repoProjetos(db) {
   const base = criarRepo(db, 'projetos', CAMPOS_PROJETO);
   return {
     ...base,
-    listarComCliente({ etapa, cliente_id, postou_instagram } = {}) {
+    listarComCliente({ etapa, cliente_id, postou_instagram, ficticio } = {}) {
       const condicoes = [];
       const args = [];
       if (etapa) {
@@ -30,6 +30,10 @@ export function repoProjetos(db) {
       if (postou_instagram) {
         condicoes.push('p.postou_instagram = ?');
         args.push(Number(postou_instagram));
+      }
+      if (ficticio) {
+        condicoes.push('p.ficticio = ?');
+        args.push(Number(ficticio));
       }
       const where = condicoes.length ? ` WHERE ${condicoes.join(' AND ')}` : '';
       return db

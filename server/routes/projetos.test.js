@@ -98,4 +98,21 @@ describe('/api/projetos', () => {
     const res2 = await ctx.http.get('/api/projetos?postou_instagram=0').expect(200);
     expect(res2.body.map((p) => p.titulo)).toEqual(['B']);
   });
+
+  it('aceita e retorna ficticio', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' })).body;
+    expect(projeto.ficticio).toBe(0);
+    const res = await ctx.http.put(`/api/projetos/${projeto.id}`).send({ ficticio: true }).expect(200);
+    expect(res.body.ficticio).toBe(1);
+  });
+
+  it('lista filtrando por ficticio', async () => {
+    const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' });
+    await ctx.http.put(`/api/projetos/${a.id}`).send({ ficticio: true }).expect(200);
+    const res = await ctx.http.get('/api/projetos?ficticio=1').expect(200);
+    expect(res.body.map((p) => p.titulo)).toEqual(['A']);
+    const res2 = await ctx.http.get('/api/projetos?ficticio=0').expect(200);
+    expect(res2.body.map((p) => p.titulo)).toEqual(['B']);
+  });
 });

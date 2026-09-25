@@ -1,0 +1,1 @@
+ALTER TABLE projetos ADD COLUMN ficticio INTEGER NOT NULL DEFAULT 0 CHECK (ficticio IN (0, 1));

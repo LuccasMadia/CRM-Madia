@@ -21,6 +21,7 @@ const REGRAS_PROJETO = {
   mensalidade_valor_centavos: { tipo: 'inteiro', min: 0, padrao: 0 },
   mensalidade_dia_vencimento: { tipo: 'inteiro', min: 1, max: 31 },
   postou_instagram: { tipo: 'bool', padrao: 0 },
+  ficticio: { tipo: 'bool', padrao: 0 },
 };
 
 function exigirDadosMensalidade(atual, dados) {
@@ -50,6 +51,7 @@ export function rotasProjetos({ db, hoje }) {
       etapa: req.query.etapa,
       cliente_id: req.query.cliente_id,
       postou_instagram: req.query.postou_instagram,
+      ficticio: req.query.ficticio,
     }));
   });
 
