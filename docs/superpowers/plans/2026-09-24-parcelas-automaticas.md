@@ -31,7 +31,7 @@
 - Produces: `somarMeses(iso: string, meses: number): string` — adds whole months to an ISO date, preserving the day-of-month, clamped to the last day of the target month if it doesn't have that many days.
 - Produces: `dataNoMes(anoMes: string, dia: number): string` — builds an ISO date (`YYYY-MM-DD`) for the given `YYYY-MM` and day, clamped to the last day of that month.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `server/domain/datas.test.js` (after the existing `it('mesDe corta o dia', ...)` block, before `dataValida`'s test, importing the two new functions in the top `import` line):
 
@@ -57,12 +57,12 @@ import { hojeLocal, somarDias, somarMeses, mesDe, dataNoMes, dataValida } from '
   });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run server/domain/datas.test.js`
 Expected: FAIL — `somarMeses is not a function` / `dataNoMes is not a function`
 
-- [ ] **Step 3: Implement the helpers**
+- [x] **Step 3: Implement the helpers**
 
 In `server/domain/datas.js`, insert after the `somarDias` function (after line 9) and before `export const mesDe = ...`:
 
@@ -85,12 +85,12 @@ export function dataNoMes(anoMes, dia) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run server/domain/datas.test.js`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/domain/datas.js server/domain/datas.test.js
@@ -109,7 +109,7 @@ git commit -m "feat: soma meses preservando dia, com clamp de fim de mes"
 - Consumes: nothing new.
 - Produces: `validar(corpo, regras)` now honors `regra.max` for `{ tipo: 'inteiro' }` fields, matching the existing `regra.min` behavior and error format `` `Deve ser no máximo ${max}` ``.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `server/http/validar.test.js`, inside the `describe('validar', ...)` block, as a new `it` (don't touch the existing `REGRAS` constant or its tests):
 
@@ -121,12 +121,12 @@ Add to `server/http/validar.test.js`, inside the `describe('validar', ...)` bloc
   });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run server/http/validar.test.js`
 Expected: FAIL — the `n: 6` case doesn't throw (no `max` check exists yet)
 
-- [ ] **Step 3: Implement the `max` check**
+- [x] **Step 3: Implement the `max` check**
 
 In `server/http/validar.js`, replace the `case 'inteiro':` block (lines 32–35):
 
@@ -138,12 +138,12 @@ In `server/http/validar.js`, replace the `case 'inteiro':` block (lines 32–35)
       return { valor };
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run server/http/validar.test.js`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/http/validar.js server/http/validar.test.js
@@ -162,7 +162,7 @@ git commit -m "feat: suporte a limite maximo em campos inteiro do validador"
 - Consumes: `somarMeses(iso, meses)` from Task 1 (`server/domain/datas.js`); `max` validation from Task 2 (`server/http/validar.js`); `emTransacao(db, fn)` from `server/repos/crud.js` (already exists).
 - Produces: `POST /projetos/:id/parcelas/lote` — body `{ quantidade, valor_centavos, primeira_vencimento }`, responds `201` with an array of created parcelas (same shape as the `GET` list, each with `estado`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `server/routes/parcelas.test.js`, as a new `describe` block after the existing `describe('parcelas', ...)` block closes:
 
@@ -215,12 +215,12 @@ describe('parcelamento em lote', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run server/routes/parcelas.test.js`
 Expected: FAIL — `404` / `Rota não encontrada` for the new endpoint (it doesn't exist yet)
 
-- [ ] **Step 3: Implement the lote endpoint**
+- [x] **Step 3: Implement the lote endpoint**
 
 In `server/routes/parcelas.js`, update the imports at the top (line 2 and line 7):
 
@@ -264,12 +264,12 @@ Add the new route right after the existing `r.post('/projetos/:id/parcelas', ...
   });
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run server/routes/parcelas.test.js`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/routes/parcelas.js server/routes/parcelas.test.js
@@ -288,7 +288,7 @@ git commit -m "feat: endpoint para gerar parcelas em lote mensalmente"
 - Consumes: `POST /projetos/:id/parcelas/lote` from Task 3.
 - Produces: no new exports — internal UI addition to `AbaFinanceiro`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `web/src/pages/projeto/AbaFinanceiro.test.jsx`, add `fireEvent` to the existing `@testing-library/react` import and add two new `it` blocks inside `describe('AbaFinanceiro', ...)`:
 
@@ -330,12 +330,12 @@ import { hojeISO } from '../../lib/datas.js';
   });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run web/src/pages/projeto/AbaFinanceiro.test.jsx`
 Expected: FAIL — `Unable to find a label with the text of: Quantidade` (form doesn't exist yet)
 
-- [ ] **Step 3: Implement the lote form**
+- [x] **Step 3: Implement the lote form**
 
 In `web/src/pages/projeto/AbaFinanceiro.jsx`, add a second empty-state constant after `VAZIO` (line 12):
 
@@ -479,12 +479,12 @@ Replace the returned JSX (lines 43–106) with:
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run web/src/pages/projeto/AbaFinanceiro.test.jsx`
 Expected: PASS (all tests in the file, including the two pre-existing ones)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/pages/projeto/AbaFinanceiro.jsx web/src/pages/projeto/AbaFinanceiro.test.jsx
@@ -501,7 +501,7 @@ git commit -m "feat: form para gerar parcelas em lote na aba financeiro"
 **Interfaces:**
 - Produces: `projetos.mensalidade_ativa` (INTEGER 0/1, default 0), `projetos.mensalidade_valor_centavos` (INTEGER, default 0), `projetos.mensalidade_dia_vencimento` (INTEGER, nullable, 1–31), `parcelas.mensalidade` (INTEGER 0/1, default 0).
 
-- [ ] **Step 1: Write the migration**
+- [x] **Step 1: Write the migration**
 
 Create `server/db/migrations/002_mensalidade.sql`:
 
@@ -512,12 +512,12 @@ ALTER TABLE projetos ADD COLUMN mensalidade_dia_vencimento INTEGER CHECK (mensal
 ALTER TABLE parcelas ADD COLUMN mensalidade INTEGER NOT NULL DEFAULT 0 CHECK (mensalidade IN (0, 1));
 ```
 
-- [ ] **Step 2: Run the existing migration/connection suite to verify it applies cleanly**
+- [x] **Step 2: Run the existing migration/connection suite to verify it applies cleanly**
 
 Run: `npx vitest run server/db/connection.test.js`
 Expected: PASS — `openDb(':memory:')` runs both `001_inicial.sql` and `002_mensalidade.sql` without SQL errors, and `schema_migrations` records both filenames (covered by the existing "não reaplica migrações já registradas" test).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add server/db/migrations/002_mensalidade.sql
@@ -537,7 +537,7 @@ git commit -m "feat: colunas de mensalidade em projetos e parcelas"
 - Consumes: `002_mensalidade.sql` columns from Task 5.
 - Produces: `PUT /projetos/:id` and `POST /projetos` accept/return `mensalidade_ativa` (bool), `mensalidade_valor_centavos` (int), `mensalidade_dia_vencimento` (int|null); reject with `400` when `mensalidade_ativa` ends up `true` but valor/dia are missing.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `server/routes/projetos.test.js`, inside `describe('/api/projetos', ...)`, before the closing `});`:
 
@@ -568,12 +568,12 @@ Add to `server/routes/projetos.test.js`, inside `describe('/api/projetos', ...)`
   });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run server/routes/projetos.test.js`
 Expected: FAIL — the `PUT` succeeds with `200` instead of `400` for the first test (no cross-field check yet), and `mensalidade_ativa`/`mensalidade_valor_centavos`/`mensalidade_dia_vencimento` are `undefined` in responses for the other two
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `server/repos/projetos.js`, replace `CAMPOS_PROJETO` (lines 3–6):
 
@@ -660,12 +660,12 @@ And update the `PUT /:id` handler (lines 67–75):
   });
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run server/routes/projetos.test.js`
 Expected: PASS (all tests in the file, including pre-existing ones)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/repos/projetos.js server/routes/projetos.js server/routes/projetos.test.js
@@ -684,7 +684,7 @@ git commit -m "feat: campos de mensalidade em projetos com validacao cruzada"
 - Consumes: `dataNoMes(anoMes, dia)` from Task 1; `mensalidade_ativa`/`mensalidade_valor_centavos`/`mensalidade_dia_vencimento` on the projeto object from Task 6.
 - Produces: `GET /projetos/:id/parcelas` now also creates the current month's mensalidade parcela (idempotently) before responding, when the projeto has `mensalidade_ativa` truthy.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `server/routes/parcelas.test.js`, as a new `describe` block after `describe('parcelamento em lote', ...)`:
 
@@ -734,12 +734,12 @@ describe('mensalidade automática', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run server/routes/parcelas.test.js`
 Expected: FAIL — `res1.body.parcelas` is `[]` instead of having 1 item (no auto-generation yet)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `server/routes/parcelas.js`, update the datas import to include `dataNoMes`:
 
@@ -786,12 +786,12 @@ Update the `GET /projetos/:id/parcelas` handler to call it before listing:
   });
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run server/routes/parcelas.test.js`
 Expected: PASS (all tests in the file)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/routes/parcelas.js server/routes/parcelas.test.js
@@ -810,7 +810,7 @@ git commit -m "feat: gera automaticamente a parcela mensal quando a mensalidade 
 - Consumes: `PUT /projetos/:id` accepting `mensalidade_ativa`/`mensalidade_valor_centavos`/`mensalidade_dia_vencimento` from Task 6.
 - Produces: no new exports — internal UI addition to `AbaGeral`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `web/src/pages/projeto/Projeto.test.jsx`, inside `describe('Projeto', ...)`, after the existing `it('troca de aba', ...)` block:
 
@@ -840,12 +840,12 @@ Add to `web/src/pages/projeto/Projeto.test.jsx`, inside `describe('Projeto', ...
   });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run web/src/pages/projeto/Projeto.test.jsx`
 Expected: FAIL — `Unable to find a label with the text of: Cobra mensalidade`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `web/src/pages/projeto/AbaGeral.jsx`, extend the initial `useFormulario` values (lines 14–24):
 
@@ -928,17 +928,17 @@ Add the checkbox and conditional fields to the JSX, right after the `Notas` `Cam
 
 (This replaces just the single line `<Aviso erro={erro} />` that follows `Notas` in the original file — the `Campo rotulo="Notas"` block itself is unchanged.)
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run web/src/pages/projeto/Projeto.test.jsx`
 Expected: PASS (all tests in the file, including pre-existing ones)
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run: `npx vitest run`
 Expected: PASS — every test in both the `server` and `web` projects
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/src/pages/projeto/AbaGeral.jsx web/src/pages/projeto/Projeto.test.jsx
