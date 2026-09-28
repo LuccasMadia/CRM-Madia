@@ -68,4 +68,53 @@ describe('Funil', () => {
     const opcoes = within(screen.getByLabelText('Etapa')).getAllByRole('option').map((o) => o.textContent);
     expect(opcoes).toEqual(['Em andamento', 'Entregue']);
   });
+
+  it('aba Fictícios carrega só fictícios e mostra colunas reduzidas', async () => {
+    const ficticios = [
+      { id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null },
+    ];
+    mockApi({ 'GET /projetos?ficticio=0': projetos, 'GET /projetos?ficticio=1': ficticios });
+    abrir();
+    await screen.findByRole('region', { name: 'Contato' });
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
+    expect(await screen.findByRole('link', { name: 'Case Padaria' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Contato' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Proposta enviada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Perdido' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Em andamento' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Entregue' })).toBeInTheDocument();
+  });
+
+  it('+ Oportunidade na aba Fictícios cria com ficticio travado e etapa andamento', async () => {
+    const { chamadas } = mockApi({
+      'GET /projetos?ficticio=0': [], 'GET /projetos?ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
+    });
+    abrir();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Fictícios' }));
+    await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
+    const checkboxFicticio = screen.getByLabelText('Projeto fictício (só portfólio)');
+    expect(checkboxFicticio).toBeChecked();
+    expect(checkboxFicticio).toBeDisabled();
+    await user.type(screen.getByLabelText('Título'), 'Case Padaria');
+    await user.selectOptions(screen.getByLabelText('Cliente'), 'novo');
+    await user.type(screen.getByLabelText('Nome do novo cliente'), 'Case');
+    await user.type(screen.getByLabelText('Valor (R$)'), '0,00');
+    await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
+      titulo: 'Case Padaria', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: '', ficticio: true, novo_cliente: { nome: 'Case' },
+    });
+  });
+
+  it('move um card fictício pelo menu do card', async () => {
+    const ficticios = [{ id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null }];
+    const { chamadas } = mockApi({
+      'GET /projetos?ficticio=0': [], 'GET /projetos?ficticio=1': ficticios, 'PUT /projetos/5': { ...ficticios[0], etapa: 'entregue' },
+    });
+    abrir();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
+    await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Case Padaria'), 'entregue');
+    expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/5', corpo: { etapa: 'entregue' } });
+  });
 });

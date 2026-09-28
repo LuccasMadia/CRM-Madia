@@ -9,15 +9,25 @@ import { Kanban } from '../components/Kanban.jsx';
 import { FormOportunidade } from '../components/FormOportunidade.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { formatarData } from '../lib/datas.js';
-import { ETAPAS, ROTULO_ETAPA } from '../lib/rotulos.js';
+import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
-const COLUNAS = ETAPAS.map((id) => ({ id, titulo: ROTULO_ETAPA[id] }));
+const ABAS = [
+  ['reais', 'Reais'],
+  ['ficticios', 'Fictícios'],
+];
 
 export function Funil() {
-  const { dados: projetos, erro, recarregar } = useCarregar(() => api('/projetos?ficticio=0'), []);
+  const [aba, setAba] = useState('reais');
+  const ficticio = aba === 'ficticios';
+  const { dados: projetos, erro, recarregar } = useCarregar(
+    () => api(`/projetos?ficticio=${ficticio ? 1 : 0}`),
+    [ficticio],
+  );
   const [criando, setCriando] = useState(false);
   const mudanca = useEnvio();
   const navegar = useNavigate();
+
+  const colunas = (ficticio ? ETAPAS_FICTICIO : ETAPAS).map((id) => ({ id, titulo: ROTULO_ETAPA[id] }));
 
   function mover(projeto, etapa) {
     mudanca.executar(async () => {
@@ -37,14 +47,21 @@ export function Funil() {
         <h1>Funil</h1>
         <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>+ Oportunidade</button>
       </header>
+      <div role="tablist" className="abas">
+        {ABAS.map(([chave, rotulo]) => (
+          <button key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave} onClick={() => setAba(chave)}>
+            {rotulo}
+          </button>
+        ))}
+      </div>
       <Aviso erro={erro ?? mudanca.erro} />
       {projetos && (
         <Kanban
-          colunas={COLUNAS}
+          colunas={colunas}
           itens={projetos}
           colunaDe={(p) => p.etapa}
           tituloDe={(p) => p.titulo}
-          recolhidas={['perdido']}
+          recolhidas={ficticio ? [] : ['perdido']}
           onMover={mover}
           renderItem={(p) => (
             <>
@@ -57,7 +74,7 @@ export function Funil() {
       )}
       {criando && (
         <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>
-          <FormOportunidade onSalvar={criar} />
+          <FormOportunidade onSalvar={criar} ficticioFixo={ficticio} />
         </Modal>
       )}
     </section>
