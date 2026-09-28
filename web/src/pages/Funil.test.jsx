@@ -58,4 +58,14 @@ describe('Funil', () => {
       titulo: 'Site', etapa: 'contato', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' },
     });
   });
+
+  it('nova oportunidade: marcar "fictício" restringe etapa a andamento/entregue', async () => {
+    mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [] });
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
+    await user.click(screen.getByLabelText('Projeto fictício (só portfólio)'));
+    const opcoes = within(screen.getByLabelText('Etapa')).getAllByRole('option').map((o) => o.textContent);
+    expect(opcoes).toEqual(['Em andamento', 'Entregue']);
+  });
 });

@@ -5,15 +5,25 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos } from '../lib/dinheiro.js';
-import { ETAPAS, ROTULO_ETAPA } from '../lib/rotulos.js';
+import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
-export function FormOportunidade({ onSalvar }) {
+export function FormOportunidade({ onSalvar, ficticioFixo = false }) {
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
   const { valores, campo, setValores } = useFormulario({
-    titulo: '', cliente_id: '', novo_cliente_nome: '', valor: '', prazo_entrega: '', etapa: 'contato', ficticio: false,
+    titulo: '', cliente_id: '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
+    etapa: ficticioFixo ? 'andamento' : 'contato', ficticio: ficticioFixo,
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const clienteNovo = valores.cliente_id === 'novo';
+  const etapasDisponiveis = valores.ficticio ? ETAPAS_FICTICIO : ETAPAS;
+
+  function alternarFicticio(marcado) {
+    setValores((v) => ({
+      ...v,
+      ficticio: marcado,
+      etapa: marcado ? 'andamento' : 'contato',
+    }));
+  }
 
   function enviar(e) {
     e.preventDefault();
@@ -46,7 +56,7 @@ export function FormOportunidade({ onSalvar }) {
       )}
       <Campo rotulo="Etapa" nome="etapa" erros={erros}>
         <select {...campo('etapa')}>
-          {ETAPAS.map((e) => <option key={e} value={e}>{ROTULO_ETAPA[e]}</option>)}
+          {etapasDisponiveis.map((e) => <option key={e} value={e}>{ROTULO_ETAPA[e]}</option>)}
         </select>
       </Campo>
       <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" placeholder="0,00" {...campo('valor')} />
@@ -56,7 +66,8 @@ export function FormOportunidade({ onSalvar }) {
           <input
             type="checkbox"
             checked={Boolean(valores.ficticio)}
-            onChange={(e) => setValores((v) => ({ ...v, ficticio: e.target.checked }))}
+            disabled={ficticioFixo}
+            onChange={(e) => alternarFicticio(e.target.checked)}
           />{' '}
           Projeto fictício (só portfólio)
         </label>
