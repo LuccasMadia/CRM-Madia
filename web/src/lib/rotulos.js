@@ -6,6 +6,7 @@ export const ROTULO_ETAPA = {
   perdido: 'Perdido',
 };
 export const ETAPAS = Object.keys(ROTULO_ETAPA);
+export const ETAPAS_FICTICIO = ['andamento', 'entregue'];
 
 export const ROTULO_STATUS_CONTEUDO = { ideia: 'Ideia', produzindo: 'Produzindo', agendado: 'Agendado', publicado: 'Publicado' };
 export const STATUS_CONTEUDO = Object.keys(ROTULO_STATUS_CONTEUDO);
