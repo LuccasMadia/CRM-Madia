@@ -1,6 +1,6 @@
 # Projeto fictício (só portfólio) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Adicionar um campo `ficticio` em projetos para marcar peças criadas só para portfólio (sem cliente real), excluindo-as do Funil, do Painel e do Financeiro, sem afetar a lista de Projetos nem o detalhe do projeto.
 
@@ -28,7 +28,7 @@
 - Consumes: nada de tasks anteriores.
 - Produces: coluna `projetos.ficticio` (INTEGER 0/1); `GET /projetos?ficticio=0|1` filtra por ela; `POST /projetos` e `PUT /projetos/:id` aceitam `ficticio: boolean` no corpo. Usado por `Funil.jsx` (Task 5) e pelas queries de `painel.js`/`parcelas.js` (Tasks 2 e 3).
 
-- [ ] **Step 1: Escrever os testes (falhando)**
+- [x] **Step 1: Escrever os testes (falhando)**
 
 Adicionar ao final do `describe('/api/projetos', ...)` em `server/routes/projetos.test.js`, antes do `});` final:
 
@@ -51,12 +51,12 @@ Adicionar ao final do `describe('/api/projetos', ...)` em `server/routes/projeto
   });
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham**
+- [x] **Step 2: Rodar os testes e confirmar que falham**
 
 Run: `npx vitest run server/routes/projetos.test.js`
 Expected: FAIL nos dois testes novos — `ficticio` não existe na coluna/validação ainda (`expect(projeto.ficticio).toBe(0)` recebe `undefined`).
 
-- [ ] **Step 3: Criar a migration**
+- [x] **Step 3: Criar a migration**
 
 Criar `server/db/migrations/004_ficticio.sql`:
 
@@ -64,7 +64,7 @@ Criar `server/db/migrations/004_ficticio.sql`:
 ALTER TABLE projetos ADD COLUMN ficticio INTEGER NOT NULL DEFAULT 0 CHECK (ficticio IN (0, 1));
 ```
 
-- [ ] **Step 4: Propagar o campo no repo**
+- [x] **Step 4: Propagar o campo no repo**
 
 Em `server/repos/projetos.js`, atualizar `CAMPOS_PROJETO`:
 
@@ -107,7 +107,7 @@ E `listarComCliente`:
     },
 ```
 
-- [ ] **Step 5: Validar e filtrar na rota**
+- [x] **Step 5: Validar e filtrar na rota**
 
 Em `server/routes/projetos.js`, atualizar `REGRAS_PROJETO`:
 
@@ -143,12 +143,12 @@ E `r.get('/')`:
   });
 ```
 
-- [ ] **Step 6: Rodar os testes e confirmar que passam**
+- [x] **Step 6: Rodar os testes e confirmar que passam**
 
 Run: `npx vitest run server/routes/projetos.test.js`
 Expected: PASS em todos (13 testes).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/db/migrations/004_ficticio.sql server/repos/projetos.js server/routes/projetos.js server/routes/projetos.test.js
@@ -167,7 +167,7 @@ git commit -m "feat: adiciona campo ficticio em projetos"
 - Consumes: coluna `projetos.ficticio` (Task 1).
 - Produces: nada consumido por outras tasks.
 
-- [ ] **Step 1: Escrever o teste (falhando)**
+- [x] **Step 1: Escrever o teste (falhando)**
 
 Em `server/routes/painel.test.js`, adicionar um novo `it` dentro do `describe('GET /api/painel', ...)`, depois do teste existente:
 
@@ -194,12 +194,12 @@ Em `server/routes/painel.test.js`, adicionar um novo `it` dentro do `describe('G
   });
 ```
 
-- [ ] **Step 2: Rodar o teste e confirmar que falha**
+- [x] **Step 2: Rodar o teste e confirmar que falha**
 
 Run: `npx vitest run server/routes/painel.test.js`
 Expected: FAIL — `em_andamento` sai `2` (conta o fictício também), `propostas.quantidade` sai `1`.
 
-- [ ] **Step 3: Filtrar as queries**
+- [x] **Step 3: Filtrar as queries**
 
 Em `server/routes/painel.js`, dentro de `r.get('/painel', ...)`, trocar:
 
@@ -258,12 +258,12 @@ por:
           ),
 ```
 
-- [ ] **Step 4: Rodar o teste e confirmar que passa**
+- [x] **Step 4: Rodar o teste e confirmar que passa**
 
 Run: `npx vitest run server/routes/painel.test.js`
 Expected: PASS em ambos os testes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/routes/painel.js server/routes/painel.test.js
@@ -282,7 +282,7 @@ git commit -m "feat: ignora projetos ficticios no painel"
 - Consumes: coluna `projetos.ficticio` (Task 1).
 - Produces: nada consumido por outras tasks.
 
-- [ ] **Step 1: Escrever os testes (falhando)**
+- [x] **Step 1: Escrever os testes (falhando)**
 
 Adicionar ao final do `describe('parcelas', ...)` em `server/routes/parcelas.test.js`, antes do `});` que fecha esse describe:
 
@@ -305,12 +305,12 @@ Adicionar ao final do `describe('parcelas', ...)` em `server/routes/parcelas.tes
   });
 ```
 
-- [ ] **Step 2: Rodar o teste e confirmar que falha**
+- [x] **Step 2: Rodar o teste e confirmar que falha**
 
 Run: `npx vitest run server/routes/parcelas.test.js`
 Expected: FAIL — `lista.body.some(...)` dá `true` (parcela do fictício aparece), e `mensal.body[8].recebido_centavos` sai `5000`.
 
-- [ ] **Step 3: Filtrar `GET /parcelas`**
+- [x] **Step 3: Filtrar `GET /parcelas`**
 
 Em `server/routes/parcelas.js`, dentro de `r.get('/parcelas', ...)`, trocar:
 
@@ -335,7 +335,7 @@ por:
       )
 ```
 
-- [ ] **Step 4: Filtrar `GET /financeiro/mensal`**
+- [x] **Step 4: Filtrar `GET /financeiro/mensal`**
 
 Trocar:
 
@@ -361,12 +361,12 @@ por:
   });
 ```
 
-- [ ] **Step 5: Rodar os testes e confirmar que passam**
+- [x] **Step 5: Rodar os testes e confirmar que passam**
 
 Run: `npx vitest run server/routes/parcelas.test.js`
 Expected: PASS em todos os testes do arquivo.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add server/routes/parcelas.js server/routes/parcelas.test.js
@@ -384,7 +384,7 @@ git commit -m "feat: ignora projeto ficticio no financeiro"
 - Consumes: campo `projeto.ficticio` (0/1) vindo de `GET /projetos/:id` (Task 1).
 - Produces: nada consumido por outras tasks — o `PUT /projetos/:id` já aceita `ficticio` desde a Task 1.
 
-- [ ] **Step 1: Adicionar o campo ao estado do formulário**
+- [x] **Step 1: Adicionar o campo ao estado do formulário**
 
 Em `web/src/pages/projeto/AbaGeral.jsx`, no `useFormulario`, depois de `postou_instagram: Boolean(projeto.postou_instagram),`:
 
@@ -394,7 +394,7 @@ Em `web/src/pages/projeto/AbaGeral.jsx`, no `useFormulario`, depois de `postou_i
   });
 ```
 
-- [ ] **Step 2: Adicionar o checkbox no formulário**
+- [x] **Step 2: Adicionar o checkbox no formulário**
 
 Depois do bloco do checkbox "Postou no Instagram" (antes de `<Aviso erro={erro} />`):
 
@@ -422,16 +422,16 @@ Depois do bloco do checkbox "Postou no Instagram" (antes de `<Aviso erro={erro} 
       <Aviso erro={erro} />
 ```
 
-- [ ] **Step 3: Verificar manualmente**
+- [x] **Step 3: Verificar manualmente**
 
 Run: `npm run dev` (ou `npm start`, conforme já rodando), abrir um projeto existente em `/projetos/:id`, marcar "Projeto fictício (só portfólio)", clicar em "Salvar projeto", recarregar a página e confirmar que o checkbox continua marcado.
 
-- [ ] **Step 4: Rodar a suíte de testes de projeto pra garantir que nada quebrou**
+- [x] **Step 4: Rodar a suíte de testes de projeto pra garantir que nada quebrou**
 
 Run: `npx vitest run web/src/pages/projeto/Projeto.test.jsx`
 Expected: PASS (o arquivo usa `toMatchObject` no corpo do PUT, então o campo novo não quebra as asserções existentes).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/pages/projeto/AbaGeral.jsx
@@ -451,7 +451,7 @@ git commit -m "feat: adiciona checkbox de projeto ficticio na edicao"
 - Consumes: `GET /projetos?ficticio=0` e `POST /projetos` aceitando `ficticio` (Task 1).
 - Produces: nada consumido por outras tasks — é a ponta final da integração no Funil.
 
-- [ ] **Step 1: Atualizar `Funil.test.jsx` (falhando)**
+- [x] **Step 1: Atualizar `Funil.test.jsx` (falhando)**
 
 Em `web/src/pages/Funil.test.jsx`, trocar as quatro ocorrências da chave de mock `'GET /projetos'` por `'GET /projetos?ficticio=0'`:
 
@@ -483,12 +483,12 @@ E, no último teste, atualizar o corpo esperado do `POST /projetos` para incluir
     });
 ```
 
-- [ ] **Step 2: Rodar o teste e confirmar que falha**
+- [x] **Step 2: Rodar o teste e confirmar que falha**
 
 Run: `npx vitest run web/src/pages/Funil.test.jsx`
 Expected: FAIL — `Funil.jsx` ainda chama `GET /projetos` (sem query string), então o mock de `'GET /projetos?ficticio=0'` não é atingido (`findByRole`/`findAllByRole` dão timeout ou a lista fica vazia); o teste de criação falha porque o corpo do POST não tem `ficticio`.
 
-- [ ] **Step 3: Atualizar `Funil.jsx`**
+- [x] **Step 3: Atualizar `Funil.jsx`**
 
 Trocar:
 
@@ -502,7 +502,7 @@ por:
   const { dados: projetos, erro, recarregar } = useCarregar(() => api('/projetos?ficticio=0'), []);
 ```
 
-- [ ] **Step 4: Atualizar `FormOportunidade.jsx`**
+- [x] **Step 4: Atualizar `FormOportunidade.jsx`**
 
 Trocar a desestruturação do `useFormulario`:
 
@@ -552,12 +552,12 @@ E adicionar o checkbox no JSX, antes de `<Aviso erro={erro} />`:
       <Aviso erro={erro} />
 ```
 
-- [ ] **Step 5: Rodar o teste e confirmar que passa**
+- [x] **Step 5: Rodar o teste e confirmar que passa**
 
 Run: `npx vitest run web/src/pages/Funil.test.jsx`
 Expected: PASS em todos os 4 testes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/src/components/FormOportunidade.jsx web/src/pages/Funil.jsx web/src/pages/Funil.test.jsx
@@ -570,11 +570,11 @@ git commit -m "feat: marca projeto ficticio na criacao e some com eles do funil"
 
 **Files:** nenhum (só execução).
 
-- [ ] **Step 1: Rodar a suíte completa**
+- [x] **Step 1: Rodar a suíte completa**
 
 Run: `npx vitest run`
 Expected: todos os arquivos de teste passam, sem regressões.
 
-- [ ] **Step 2: Conferir manualmente (se o dev server estiver disponível)**
+- [x] **Step 2: Conferir manualmente (se o dev server estiver disponível)**
 
 No Funil, criar uma "Oportunidade" marcando "Projeto fictício (só portfólio)" e confirmar que ela não aparece em nenhuma coluna do kanban. Abrir a página de Projetos e confirmar que ela aparece lá normalmente. Abrir o Painel e confirmar que os cartões "Em andamento"/"Propostas" não contam esse projeto. Abrir o Financeiro (após criar uma parcela nesse projeto fictício) e confirmar que ela não aparece na lista nem no gráfico de recebido por mês.

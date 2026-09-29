@@ -1,6 +1,6 @@
 # Aba "Fictícios" no Funil Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** O Funil ganha duas sub-abas — "Reais" e "Fictícios" — pra que projetos fictícios (`ficticio = 1`) tenham seu próprio kanban, com colunas reduzidas a "Em andamento"/"Entregue", sem se misturar com o funil de vendas real.
 
@@ -26,12 +26,12 @@
 **Interfaces:**
 - Produces: `ETAPAS_FICTICIO` (`string[]`, valor `['andamento', 'entregue']`), exportado de `web/src/lib/rotulos.js`, consumido nas Tasks 2 e 3.
 
-- [ ] **Step 1: Checar se já existe teste pra `rotulos.js`**
+- [x] **Step 1: Checar se já existe teste pra `rotulos.js`**
 
 Rodar: `ls web/src/lib/rotulos.test.js`
 Se não existir, os próximos steps de teste criam o arquivo do zero; se existir, adicionar o `describe` novo nele.
 
-- [ ] **Step 2: Escrever o teste (falhando)**
+- [x] **Step 2: Escrever o teste (falhando)**
 
 Criar/editar `web/src/lib/rotulos.test.js`:
 
@@ -53,12 +53,12 @@ describe('ETAPAS_FICTICIO', () => {
 });
 ```
 
-- [ ] **Step 3: Rodar e confirmar que falha**
+- [x] **Step 3: Rodar e confirmar que falha**
 
 Rodar: `cd web && npx vitest run src/lib/rotulos.test.js`
 Esperado: FAIL — `ETAPAS_FICTICIO` não é exportado por `rotulos.js`.
 
-- [ ] **Step 4: Implementar**
+- [x] **Step 4: Implementar**
 
 Em `web/src/lib/rotulos.js`, logo depois de `export const ETAPAS = Object.keys(ROTULO_ETAPA);`:
 
@@ -66,12 +66,12 @@ Em `web/src/lib/rotulos.js`, logo depois de `export const ETAPAS = Object.keys(R
 export const ETAPAS_FICTICIO = ['andamento', 'entregue'];
 ```
 
-- [ ] **Step 5: Rodar e confirmar que passa**
+- [x] **Step 5: Rodar e confirmar que passa**
 
 Rodar: `cd web && npx vitest run src/lib/rotulos.test.js`
 Esperado: PASS (2 testes).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/src/lib/rotulos.js web/src/lib/rotulos.test.js
@@ -90,7 +90,7 @@ git commit -m "feat: adiciona ETAPAS_FICTICIO para o kanban de fictícios"
 - Consumes: `ETAPAS_FICTICIO` de `web/src/lib/rotulos.js` (Task 1).
 - Produces: `FormOportunidade({ onSalvar, ficticioFixo })` — novo prop opcional `ficticioFixo` (`boolean`, padrão `false`), consumido pela Task 3 (`Funil.jsx`).
 
-- [ ] **Step 1: Escrever o teste (falhando) — etapa muda ao marcar o checkbox**
+- [x] **Step 1: Escrever o teste (falhando) — etapa muda ao marcar o checkbox**
 
 Adicionar em `web/src/pages/Funil.test.jsx`, dentro do `describe('Funil', ...)`:
 
@@ -106,12 +106,12 @@ Adicionar em `web/src/pages/Funil.test.jsx`, dentro do `describe('Funil', ...)`:
   });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falha**
+- [x] **Step 2: Rodar e confirmar que falha**
 
 Rodar: `cd web && npx vitest run src/pages/Funil.test.jsx -t "restringe etapa"`
 Esperado: FAIL — o select de etapa ainda lista todas as `ETAPAS` (Contato, Proposta enviada, Em andamento, Entregue, Perdido).
 
-- [ ] **Step 3: Implementar em `FormOportunidade.jsx`**
+- [x] **Step 3: Implementar em `FormOportunidade.jsx`**
 
 Arquivo completo atualizado:
 
@@ -197,12 +197,12 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false }) {
 }
 ```
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Rodar: `cd web && npx vitest run src/pages/Funil.test.jsx`
 Esperado: PASS em todos os testes do arquivo, incluindo o novo.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/components/FormOportunidade.jsx web/src/pages/Funil.test.jsx
@@ -221,7 +221,7 @@ git commit -m "feat: etapa do formulário de oportunidade reage ao checkbox fict
 - Consumes: `ETAPAS_FICTICIO` (Task 1), `FormOportunidade({ onSalvar, ficticioFixo })` (Task 2).
 - Produces: nenhuma interface nova consumida por outras tasks — esta é a última task do plano.
 
-- [ ] **Step 1: Escrever os testes (falhando)**
+- [x] **Step 1: Escrever os testes (falhando)**
 
 Adicionar em `web/src/pages/Funil.test.jsx`, dentro do `describe('Funil', ...)`:
 
@@ -276,12 +276,12 @@ Adicionar em `web/src/pages/Funil.test.jsx`, dentro do `describe('Funil', ...)`:
   });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falham**
+- [x] **Step 2: Rodar e confirmar que falham**
 
 Rodar: `cd web && npx vitest run src/pages/Funil.test.jsx`
 Esperado: FAIL nos 3 testes novos — não existe `role="tab"` com nome "Fictícios" na página ainda.
 
-- [ ] **Step 3: Implementar em `Funil.jsx`**
+- [x] **Step 3: Implementar em `Funil.jsx`**
 
 Arquivo completo atualizado:
 
@@ -370,17 +370,17 @@ export function Funil() {
 }
 ```
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Rodar: `cd web && npx vitest run src/pages/Funil.test.jsx`
 Esperado: PASS em todos os testes do arquivo (os 4 originais + os 2 da Task 2/3 novos).
 
-- [ ] **Step 5: Rodar a suíte inteira do front pra checar regressão**
+- [x] **Step 5: Rodar a suíte inteira do front pra checar regressão**
 
 Rodar: `cd web && npx vitest run`
 Esperado: PASS em todos os arquivos (nenhum outro teste consome `Funil.jsx` ou `FormOportunidade.jsx` fora de `Funil.test.jsx`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/src/pages/Funil.jsx web/src/pages/Funil.test.jsx
