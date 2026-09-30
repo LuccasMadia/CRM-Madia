@@ -18,7 +18,6 @@ async function criarQrcode(overrides = {}) {
         cliente_id: cliente.id,
         nome: 'QR balcão loja',
         categoria: 'cardapio',
-        destino_atual: 'https://canva.com/design/abc',
         ...overrides,
       })
       .expect(201)
@@ -33,7 +32,7 @@ describe('/api/qrcodes', () => {
     expect(res.body[0]).toMatchObject({ nome: 'QR balcão loja', categoria: 'cardapio', status: 'ativo' });
   });
 
-  it('exige nome, categoria válida e destino_atual', async () => {
+  it('exige nome e categoria válida', async () => {
     const res = await ctx.http
       .post('/api/qrcodes')
       .send({ cliente_id: cliente.id, categoria: 'invalida' })
@@ -42,7 +41,6 @@ describe('/api/qrcodes', () => {
       expect.arrayContaining([
         { campo: 'nome', mensagem: 'Obrigatório' },
         { campo: 'categoria', mensagem: 'Valor inválido: invalida' },
-        { campo: 'destino_atual', mensagem: 'Obrigatório' },
       ]),
     );
   });
@@ -50,9 +48,29 @@ describe('/api/qrcodes', () => {
   it('recusa cliente_id inexistente', async () => {
     const res = await ctx.http
       .post('/api/qrcodes')
-      .send({ cliente_id: 999, nome: 'QR', categoria: 'cardapio', destino_atual: 'https://x.com' })
+      .send({ cliente_id: 999, nome: 'QR', categoria: 'cardapio' })
       .expect(400);
     expect(res.body.erros).toEqual([{ campo: 'cliente_id', mensagem: 'Cliente não encontrado' }]);
+  });
+
+  it('cria QR code junto com um cliente novo', async () => {
+    const res = await ctx.http
+      .post('/api/qrcodes')
+      .send({ novo_cliente: { nome: 'Bruno' }, nome: 'QR do Bruno', categoria: 'cardapio' })
+      .expect(201);
+    expect(res.body).toMatchObject({ nome: 'QR do Bruno', categoria: 'cardapio' });
+    const clientes = await ctx.http.get('/api/clientes').expect(200);
+    const bruno = clientes.body.find((c) => c.nome === 'Bruno');
+    expect(bruno).toBeDefined();
+    expect(res.body.cliente_id).toBe(bruno.id);
+  });
+
+  it('prefixa erros do cliente novo com novo_cliente.', async () => {
+    const res = await ctx.http
+      .post('/api/qrcodes')
+      .send({ novo_cliente: { nome: '' }, nome: 'QR', categoria: 'cardapio' })
+      .expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'novo_cliente.nome', mensagem: 'Obrigatório' }]);
   });
 
   it('filtra por cliente_id e status', async () => {
@@ -67,47 +85,15 @@ describe('/api/qrcodes', () => {
     expect(porStatus.body).toEqual([]);
   });
 
-  it('detalhe traz o histórico vazio', async () => {
-    const qr = await criarQrcode();
-    const res = await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(200);
-    expect(res.body.historico).toEqual([]);
-  });
-
   it('responde 404 para id inexistente ou inválido', async () => {
     await ctx.http.get('/api/qrcodes/999').expect(404);
     await ctx.http.get('/api/qrcodes/abc').expect(404);
   });
 
-  it('atualiza campos e não gera histórico quando o destino não muda', async () => {
+  it('atualiza campos', async () => {
     const qr = await criarQrcode();
     const res = await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ nome: 'Novo nome' }).expect(200);
     expect(res.body).toMatchObject({ nome: 'Novo nome' });
-    expect(res.body.historico).toEqual([]);
-  });
-
-  it('gera histórico quando o destino_atual muda', async () => {
-    const qr = await criarQrcode();
-    const res = await ctx.http
-      .put(`/api/qrcodes/${qr.id}`)
-      .send({ destino_atual: 'https://canva.com/design/novo' })
-      .expect(200);
-    expect(res.body.destino_atual).toBe('https://canva.com/design/novo');
-    expect(res.body.historico).toHaveLength(1);
-    expect(res.body.historico[0]).toMatchObject({
-      destino_anterior: 'https://canva.com/design/abc',
-      destino_novo: 'https://canva.com/design/novo',
-    });
-
-    const detalhe = await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(200);
-    expect(detalhe.body.historico).toHaveLength(1);
-  });
-
-  it('mantém o histórico ordenado do mais recente pro mais antigo', async () => {
-    const qr = await criarQrcode();
-    await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ destino_atual: 'https://x.com/1' }).expect(200);
-    await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ destino_atual: 'https://x.com/2' }).expect(200);
-    const res = await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(200);
-    expect(res.body.historico.map((h) => h.destino_novo)).toEqual(['https://x.com/2', 'https://x.com/1']);
   });
 
   it('valida cliente_id ao atualizar', async () => {
