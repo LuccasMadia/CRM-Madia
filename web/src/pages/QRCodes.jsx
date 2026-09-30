@@ -47,14 +47,13 @@ export function QRCodes() {
       <Aviso erro={erro} />
       {qrcodes && (qrcodes.length ? (
         <table className="tabela">
-          <thead><tr><th>Nome</th><th>Cliente</th><th>Categoria</th><th>Destino atual</th><th>Status</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Cliente</th><th>Categoria</th><th>Status</th></tr></thead>
           <tbody>
             {qrcodes.map((q) => (
               <tr key={q.id}>
                 <td><Link to={`/qrcodes/${q.id}`}>{q.nome}</Link></td>
                 <td>{nomeCliente(q.cliente_id)}</td>
                 <td>{ROTULO_CATEGORIA_QR[q.categoria]}</td>
-                <td>{q.destino_atual}</td>
                 <td>{ROTULO_STATUS_QR[q.status]}</td>
               </tr>
             ))}

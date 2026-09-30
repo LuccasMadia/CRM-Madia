@@ -11,17 +11,25 @@ export function FormQRCode({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
   const editando = Boolean(inicial.id);
   const { valores, campo } = useFormulario({
     cliente_id: inicial.cliente_id ? String(inicial.cliente_id) : '',
+    novo_cliente_nome: '',
     nome: inicial.nome ?? '',
     categoria: inicial.categoria ?? CATEGORIAS_QR[0],
     descricao_local: inicial.descricao_local ?? '',
-    destino_atual: inicial.destino_atual ?? '',
     status: inicial.status ?? 'ativo',
   });
   const { erros, erro, enviando, executar } = useEnvio();
+  const clienteNovo = valores.cliente_id === 'novo';
 
   function enviar(e) {
     e.preventDefault();
-    const corpo = { ...valores, cliente_id: valores.cliente_id ? Number(valores.cliente_id) : null };
+    const corpo = { ...valores };
+    delete corpo.novo_cliente_nome;
+    if (clienteNovo) {
+      delete corpo.cliente_id;
+      corpo.novo_cliente = { nome: valores.novo_cliente_nome };
+    } else {
+      corpo.cliente_id = valores.cliente_id ? Number(valores.cliente_id) : null;
+    }
     if (!editando) delete corpo.status;
     executar(() => onSalvar(corpo));
   }
@@ -32,8 +40,12 @@ export function FormQRCode({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
         <select {...campo('cliente_id')}>
           <option value="">Selecione…</option>
           {(clientes ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          <option value="novo">+ Novo cliente</option>
         </select>
       </Campo>
+      {clienteNovo && (
+        <Campo rotulo="Nome do novo cliente" nome="novo_cliente.nome" erros={erros} {...campo('novo_cliente_nome')} />
+      )}
       <Campo rotulo="Nome" nome="nome" erros={erros} {...campo('nome')} />
       <Campo rotulo="Categoria" nome="categoria" erros={erros}>
         <select {...campo('categoria')}>
@@ -43,7 +55,6 @@ export function FormQRCode({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
       <Campo rotulo="Local de aplicação" nome="descricao_local" erros={erros}>
         <textarea rows={2} {...campo('descricao_local')} />
       </Campo>
-      <Campo rotulo="Destino atual" nome="destino_atual" erros={erros} type="url" {...campo('destino_atual')} />
       {editando && (
         <Campo rotulo="Status" nome="status" erros={erros}>
           <select {...campo('status')}>

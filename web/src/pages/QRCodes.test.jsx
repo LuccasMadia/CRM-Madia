@@ -8,7 +8,7 @@ import { renderizar } from '../test/renderizar.jsx';
 const ana = { id: 1, nome: 'Ana' };
 const qr = {
   id: 5, cliente_id: 1, nome: 'QR balcão', categoria: 'cardapio', descricao_local: null,
-  destino_atual: 'https://canva.com/design/abc', imagem_arquivo: null, status: 'ativo',
+  imagem_arquivo: null, status: 'ativo',
 };
 
 describe('QRCodes', () => {
@@ -45,11 +45,29 @@ describe('QRCodes', () => {
     await user.click(await screen.findByRole('button', { name: '+ QR Code' }));
     await user.selectOptions(screen.getByLabelText('Cliente'), '1');
     await user.type(screen.getByLabelText('Nome'), 'QR balcão');
-    await user.type(screen.getByLabelText('Destino atual'), 'https://canva.com/design/abc');
     await user.click(screen.getByRole('button', { name: 'Criar QR Code' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toMatchObject({
-      cliente_id: 1, nome: 'QR balcão', categoria: 'avaliacao', destino_atual: 'https://canva.com/design/abc',
+      cliente_id: 1, nome: 'QR balcão', categoria: 'avaliacao',
+    });
+  });
+
+  it('cria QR code com cliente novo', async () => {
+    const { chamadas } = mockApi({
+      'GET /clientes': [ana],
+      'GET /qrcodes?': [],
+      'POST /qrcodes': { ...qr, id: 9, cliente_id: 3 },
+    });
+    renderizar(<QRCodes />, { rota: '/qrcodes', padrao: '/qrcodes' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ QR Code' }));
+    await user.selectOptions(screen.getByLabelText('Cliente'), 'novo');
+    await user.type(screen.getByLabelText('Nome do novo cliente'), 'Diego');
+    await user.type(screen.getByLabelText('Nome'), 'QR balcão');
+    await user.click(screen.getByRole('button', { name: 'Criar QR Code' }));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toMatchObject({
+      novo_cliente: { nome: 'Diego' }, nome: 'QR balcão', categoria: 'avaliacao',
     });
   });
 });
