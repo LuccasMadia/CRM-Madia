@@ -69,10 +69,10 @@ export function QRCodeDetalhe() {
           </label>
           <Aviso erro={imagem.erro} />
           {qrcode.imagem_arquivo && qrcode.imagem_arquivo.endsWith('.pdf') && (
-            <iframe title="Arquivo do QR code" src={`/uploads/${qrcode.imagem_arquivo}`} />
+            <iframe className="qrcode-preview" title="Arquivo do QR code" src={`/uploads/${qrcode.imagem_arquivo}`} />
           )}
           {qrcode.imagem_arquivo && !qrcode.imagem_arquivo.endsWith('.pdf') && (
-            <img src={`/uploads/${qrcode.imagem_arquivo}`} alt="Arquivo do QR code" />
+            <img className="qrcode-preview" src={`/uploads/${qrcode.imagem_arquivo}`} alt="Arquivo do QR code" />
           )}
           {qrcode.imagem_arquivo && (
             <div><button type="button" className="btn btn--pequeno btn--perigo" onClick={removerImagem}>Remover arquivo</button></div>

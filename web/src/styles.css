@@ -117,6 +117,7 @@ input, select, textarea { font: inherit; color: inherit; background: var(--super
 .imagens { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
 .imagens figure { margin: 0; display: grid; gap: 6px; }
 .imagens img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 6px; border: 1px solid var(--borda); }
+.qrcode-preview { display: block; width: 100%; max-height: 420px; object-fit: contain; background: #fff; border-radius: 6px; border: 1px solid var(--borda); margin-top: 12px; }
 .slide { border-top: 1px solid var(--borda); padding-top: 12px; margin-top: 12px; }
 
 .modal__fundo { position: fixed; inset: 0; background: rgb(0 0 0 / 0.45); display: grid; place-items: center; padding: 16px; z-index: 10; }
