@@ -4,6 +4,7 @@ import { Funil } from './pages/Funil.jsx';
 import { Projetos } from './pages/Projetos.jsx';
 import { Clientes } from './pages/Clientes.jsx';
 import { ClienteDetalhe } from './pages/ClienteDetalhe.jsx';
+import { QRCodes } from './pages/QRCodes.jsx';
 import { Projeto } from './pages/projeto/Projeto.jsx';
 import { Conteudo } from './pages/Conteudo.jsx';
 import { Financeiro } from './pages/Financeiro.jsx';
@@ -14,6 +15,7 @@ const NAVEGACAO = [
   { para: '/funil', rotulo: 'Funil' },
   { para: '/projetos', rotulo: 'Projetos' },
   { para: '/clientes', rotulo: 'Clientes' },
+  { para: '/qrcodes', rotulo: 'QR Codes' },
   { para: '/conteudo', rotulo: 'Conteúdo' },
   { para: '/financeiro', rotulo: 'Financeiro' },
   { para: '/configuracoes', rotulo: 'Configurações' },
@@ -39,6 +41,7 @@ export function App() {
           <Route path="/projetos" element={<Projetos />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+          <Route path="/qrcodes" element={<QRCodes />} />
           <Route path="/projetos/:id" element={<Projeto />} />
           <Route path="/conteudo" element={<Conteudo />} />
           <Route path="/financeiro" element={<Financeiro />} />
