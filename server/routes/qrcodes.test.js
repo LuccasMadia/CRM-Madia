@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { criarContexto } from '../test/contexto.js';
 
 let ctx;
@@ -116,5 +118,67 @@ describe('/api/qrcodes', () => {
 
   it('responde 404 ao atualizar id inexistente', async () => {
     await ctx.http.put('/api/qrcodes/999').send({ nome: 'X' }).expect(404);
+  });
+
+  it('recebe imagem PNG e serve em /uploads', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http
+      .post(`/api/qrcodes/${qr.id}/imagem`)
+      .attach('imagem', Buffer.from('conteudo-png'), { filename: 'qr.png', contentType: 'image/png' })
+      .expect(200);
+    expect(res.body.imagem_arquivo).toMatch(/\.png$/);
+    await ctx.http.get(`/uploads/${res.body.imagem_arquivo}`).expect(200);
+  });
+
+  it('recebe PDF', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http
+      .post(`/api/qrcodes/${qr.id}/imagem`)
+      .attach('imagem', Buffer.from('conteudo-pdf'), { filename: 'qr.pdf', contentType: 'application/pdf' })
+      .expect(200);
+    expect(res.body.imagem_arquivo).toMatch(/\.pdf$/);
+  });
+
+  it('recusa formato não suportado', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http
+      .post(`/api/qrcodes/${qr.id}/imagem`)
+      .attach('imagem', Buffer.from('x'), { filename: 'a.jpg', contentType: 'image/jpeg' })
+      .expect(400);
+    expect(res.body.erro).toMatch(/Formato não suportado/);
+  });
+
+  it('recusa quando nenhum arquivo é enviado', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http.post(`/api/qrcodes/${qr.id}/imagem`).expect(400);
+    expect(res.body.erro).toMatch(/Nenhum arquivo/);
+  });
+
+  it('troca o arquivo e apaga o antigo do disco', async () => {
+    const qr = await criarQrcode();
+    const primeiro = (
+      await ctx.http
+        .post(`/api/qrcodes/${qr.id}/imagem`)
+        .attach('imagem', Buffer.from('a'), { filename: 'a.png', contentType: 'image/png' })
+    ).body.imagem_arquivo;
+    const segundo = (
+      await ctx.http
+        .post(`/api/qrcodes/${qr.id}/imagem`)
+        .attach('imagem', Buffer.from('b'), { filename: 'b.png', contentType: 'image/png' })
+    ).body.imagem_arquivo;
+    expect(existsSync(path.join(ctx.dataDir, 'uploads', primeiro))).toBe(false);
+    expect(existsSync(path.join(ctx.dataDir, 'uploads', segundo))).toBe(true);
+  });
+
+  it('remove o arquivo', async () => {
+    const qr = await criarQrcode();
+    const { imagem_arquivo } = (
+      await ctx.http
+        .post(`/api/qrcodes/${qr.id}/imagem`)
+        .attach('imagem', Buffer.from('a'), { filename: 'a.png', contentType: 'image/png' })
+    ).body;
+    const res = await ctx.http.delete(`/api/qrcodes/${qr.id}/imagem`).expect(200);
+    expect(res.body.imagem_arquivo).toBeNull();
+    expect(existsSync(path.join(ctx.dataDir, 'uploads', imagem_arquivo))).toBe(false);
   });
 });

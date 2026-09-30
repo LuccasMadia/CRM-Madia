@@ -1,11 +1,15 @@
 import { Router } from 'express';
+import { rmSync } from 'node:fs';
+import path from 'node:path';
 import { repoQrcodes } from '../repos/qrcodes.js';
 import { repoClientes } from '../repos/clientes.js';
+import { criarUpload } from '../http/upload.js';
 import { validar, lerId } from '../http/validar.js';
-import { ErroValidacao, naoEncontrado } from '../http/erros.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 
 const CATEGORIAS_QR = ['adesivo', 'cardapio', 'panfleto', 'embalagem', 'outro'];
 const STATUS_QR = ['ativo', 'arquivado'];
+const EXTENSOES_QR = { 'image/png': '.png', 'application/pdf': '.pdf' };
 
 export const REGRAS_QRCODE = {
   cliente_id: { tipo: 'inteiro', obrigatorio: true },
@@ -16,9 +20,10 @@ export const REGRAS_QRCODE = {
   status: { tipo: 'enum', valores: STATUS_QR, padrao: 'ativo' },
 };
 
-export function rotasQrcodes({ db }) {
+export function rotasQrcodes({ db, dataDir }) {
   const qrcodes = repoQrcodes(db);
   const clientes = repoClientes(db);
+  const upload = criarUpload(dataDir, EXTENSOES_QR);
   const r = Router();
 
   function exigirCliente(clienteId) {
@@ -29,6 +34,10 @@ export function rotasQrcodes({ db }) {
 
   function montar(id) {
     return { ...qrcodes.obter(id), historico: qrcodes.historico(id) };
+  }
+
+  function apagarArquivo(nomeArquivo) {
+    if (nomeArquivo) rmSync(path.join(dataDir, 'uploads', nomeArquivo), { force: true });
   }
 
   r.get('/qrcodes', (req, res) => {
@@ -54,6 +63,25 @@ export function rotasQrcodes({ db }) {
     if (dados.cliente_id !== undefined) exigirCliente(dados.cliente_id);
     const atualizado = qrcodes.atualizar(id, dados);
     if (!atualizado) throw naoEncontrado('QR code');
+    res.json(montar(id));
+  });
+
+  r.post('/qrcodes/:id/imagem', upload.single('imagem'), (req, res) => {
+    const id = lerId(req.params.id);
+    const qrcode = qrcodes.obter(id);
+    if (!qrcode) throw naoEncontrado('QR code');
+    if (!req.file) throw new ErroHttp(400, 'Nenhum arquivo enviado');
+    apagarArquivo(qrcode.imagem_arquivo);
+    qrcodes.atualizar(id, { imagem_arquivo: req.file.filename });
+    res.json(montar(id));
+  });
+
+  r.delete('/qrcodes/:id/imagem', (req, res) => {
+    const id = lerId(req.params.id);
+    const qrcode = qrcodes.obter(id);
+    if (!qrcode) throw naoEncontrado('QR code');
+    apagarArquivo(qrcode.imagem_arquivo);
+    qrcodes.atualizar(id, { imagem_arquivo: null });
     res.json(montar(id));
   });
 
