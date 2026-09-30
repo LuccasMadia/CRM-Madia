@@ -85,8 +85,8 @@ input, select, textarea { font: inherit; color: inherit; background: var(--super
 .lista li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
 .etiqueta { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--borda); color: var(--texto-suave); white-space: nowrap; }
-.etiqueta--entregue, .etiqueta--paga, .etiqueta--publicado { color: var(--ok); border-color: var(--ok); }
-.etiqueta--atrasada, .etiqueta--perdido { color: var(--perigo); border-color: var(--perigo); }
+.etiqueta--entregue, .etiqueta--paga, .etiqueta--publicado, .etiqueta--ok { color: var(--ok); border-color: var(--ok); }
+.etiqueta--atrasada, .etiqueta--perdido, .etiqueta--desatualizado { color: var(--perigo); border-color: var(--perigo); }
 .etiqueta--andamento, .etiqueta--agendado { color: var(--primaria); border-color: var(--primaria); }
 .item-atrasado { color: var(--perigo); font-weight: 600; }
 
