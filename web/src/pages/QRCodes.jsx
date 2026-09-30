@@ -5,7 +5,7 @@ import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormQRCode } from '../components/FormQRCode.jsx';
-import { ROTULO_CATEGORIA_QR, ROTULO_STATUS_QR, STATUS_QR } from '../lib/rotulos.js';
+import { ROTULO_CATEGORIA_QR, ROTULO_STATUS_QR, ROTULO_STATUS_IMAGEM_QR, STATUS_QR } from '../lib/rotulos.js';
 
 export function QRCodes() {
   const [clienteId, setClienteId] = useState('');
@@ -47,7 +47,7 @@ export function QRCodes() {
       <Aviso erro={erro} />
       {qrcodes && (qrcodes.length ? (
         <table className="tabela">
-          <thead><tr><th>Nome</th><th>Cliente</th><th>Categoria</th><th>Destino atual</th><th>Status</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Cliente</th><th>Categoria</th><th>Destino atual</th><th>Imagem</th><th>Status</th></tr></thead>
           <tbody>
             {qrcodes.map((q) => (
               <tr key={q.id}>
@@ -55,6 +55,11 @@ export function QRCodes() {
                 <td>{nomeCliente(q.cliente_id)}</td>
                 <td>{ROTULO_CATEGORIA_QR[q.categoria]}</td>
                 <td>{q.destino_atual}</td>
+                <td>
+                  {q.imagem_status && q.imagem_status !== 'sem_imagem' ? (
+                    <span className={`etiqueta etiqueta--${q.imagem_status}`}>{ROTULO_STATUS_IMAGEM_QR[q.imagem_status]}</span>
+                  ) : '—'}
+                </td>
                 <td>{ROTULO_STATUS_QR[q.status]}</td>
               </tr>
             ))}
