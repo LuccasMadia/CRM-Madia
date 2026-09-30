@@ -25,5 +25,8 @@ export function repoClientes(db) {
     contarProjetos(id) {
       return db.prepare('SELECT COUNT(*) AS n FROM projetos WHERE cliente_id = ?').get(id).n;
     },
+    contarQrcodes(id) {
+      return db.prepare('SELECT COUNT(*) AS n FROM qrcodes WHERE cliente_id = ?').get(id).n;
+    },
   };
 }

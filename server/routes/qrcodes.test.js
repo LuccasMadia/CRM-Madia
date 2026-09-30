@@ -181,4 +181,20 @@ describe('/api/qrcodes', () => {
     expect(res.body.imagem_arquivo).toBeNull();
     expect(existsSync(path.join(ctx.dataDir, 'uploads', imagem_arquivo))).toBe(false);
   });
+
+  it('exclui o QR code e apaga o arquivo do disco', async () => {
+    const qr = await criarQrcode();
+    const { imagem_arquivo } = (
+      await ctx.http
+        .post(`/api/qrcodes/${qr.id}/imagem`)
+        .attach('imagem', Buffer.from('a'), { filename: 'a.png', contentType: 'image/png' })
+    ).body;
+    await ctx.http.delete(`/api/qrcodes/${qr.id}`).expect(204);
+    await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(404);
+    expect(existsSync(path.join(ctx.dataDir, 'uploads', imagem_arquivo))).toBe(false);
+  });
+
+  it('responde 404 ao excluir id inexistente', async () => {
+    await ctx.http.delete('/api/qrcodes/999').expect(404);
+  });
 });

@@ -57,6 +57,16 @@ describe('/api/clientes', () => {
     await ctx.http.get(`/api/clientes/${semProjeto.id}`).expect(404);
   });
 
+  it('não exclui cliente com QR codes (409)', async () => {
+    const comQr = await criarCliente({ nome: 'Com QR' });
+    await ctx.http
+      .post('/api/qrcodes')
+      .send({ cliente_id: comQr.id, nome: 'QR', categoria: 'adesivo', destino_atual: 'https://x.com' })
+      .expect(201);
+    const res = await ctx.http.delete(`/api/clientes/${comQr.id}`).expect(409);
+    expect(res.body.erro).toMatch(/QR codes/);
+  });
+
   it('responde 404 para id inexistente ou inválido', async () => {
     await ctx.http.get('/api/clientes/999').expect(404);
     await ctx.http.get('/api/clientes/abc').expect(404);

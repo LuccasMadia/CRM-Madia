@@ -44,6 +44,9 @@ export function rotasClientes({ db }) {
     if (clientes.contarProjetos(id) > 0) {
       throw new ErroHttp(409, 'Este cliente tem projetos. Exclua ou mova os projetos antes de excluir o cliente.');
     }
+    if (clientes.contarQrcodes(id) > 0) {
+      throw new ErroHttp(409, 'Este cliente tem QR codes. Exclua-os antes de excluir o cliente.');
+    }
     if (!clientes.remover(id)) throw naoEncontrado('Cliente');
     res.status(204).end();
   });

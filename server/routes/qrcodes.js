@@ -85,5 +85,14 @@ export function rotasQrcodes({ db, dataDir }) {
     res.json(montar(id));
   });
 
+  r.delete('/qrcodes/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    const qrcode = qrcodes.obter(id);
+    if (!qrcode) throw naoEncontrado('QR code');
+    apagarArquivo(qrcode.imagem_arquivo);
+    qrcodes.remover(id);
+    res.status(204).end();
+  });
+
   return r;
 }
