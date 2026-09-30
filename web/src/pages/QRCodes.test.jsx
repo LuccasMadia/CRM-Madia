@@ -21,13 +21,6 @@ describe('QRCodes', () => {
     expect(tabela.getByText('Cardápio')).toBeInTheDocument();
   });
 
-  it('mostra selo de status da imagem na listagem', async () => {
-    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes?': [{ ...qr, imagem_status: 'desatualizado' }] });
-    renderizar(<QRCodes />, { rota: '/qrcodes', padrao: '/qrcodes' });
-    const tabela = within(await screen.findByRole('table'));
-    expect(tabela.getByText('Desatualizado')).toBeInTheDocument();
-  });
-
   it('filtra por cliente', async () => {
     const { chamadas } = mockApi({
       'GET /clientes': [ana],

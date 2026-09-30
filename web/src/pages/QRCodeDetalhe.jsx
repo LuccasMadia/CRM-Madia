@@ -4,7 +4,6 @@ import { api } from '../api/client.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { FormQRCode } from '../components/FormQRCode.jsx';
-import { ROTULO_STATUS_IMAGEM_QR } from '../lib/rotulos.js';
 
 export function QRCodeDetalhe() {
   const { id } = useParams();
@@ -69,9 +68,6 @@ export function QRCodeDetalhe() {
             <input type="file" accept="image/png,application/pdf" hidden aria-label="Adicionar arquivo" onChange={enviarImagem} />
           </label>
           <Aviso erro={imagem.erro} />
-          {qrcode.imagem_status && qrcode.imagem_status !== 'sem_imagem' && (
-            <p><span className={`etiqueta etiqueta--${qrcode.imagem_status}`}>{ROTULO_STATUS_IMAGEM_QR[qrcode.imagem_status]}</span></p>
-          )}
           {qrcode.imagem_arquivo && qrcode.imagem_arquivo.endsWith('.pdf') && (
             <iframe className="qrcode-preview" title="Arquivo do QR code" src={`/uploads/${qrcode.imagem_arquivo}`} />
           )}

@@ -56,20 +56,6 @@ describe('QRCodeDetalhe', () => {
     expect(await screen.findByAltText('Arquivo do QR code')).toHaveAttribute('src', '/uploads/abc.png');
   });
 
-  it('mostra selo de status da imagem quando desatualizada', async () => {
-    const comStatus = { ...qr, imagem_arquivo: 'abc.png', imagem_status: 'desatualizado' };
-    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': comStatus });
-    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
-    expect(await screen.findByText('Desatualizado')).toBeInTheDocument();
-  });
-
-  it('não mostra selo quando não há imagem', async () => {
-    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': { ...qr, imagem_status: 'sem_imagem' } });
-    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
-    await screen.findByDisplayValue('QR balcão');
-    expect(screen.queryByText('Desatualizado')).not.toBeInTheDocument();
-  });
-
   it('upload de PDF mostra preview embutido', async () => {
     mockApi({
       'GET /clientes': [ana],

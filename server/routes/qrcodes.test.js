@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import QRCode from 'qrcode';
 import { criarContexto } from '../test/contexto.js';
 
 let ctx;
@@ -197,71 +196,5 @@ describe('/api/qrcodes', () => {
 
   it('responde 404 ao excluir id inexistente', async () => {
     await ctx.http.delete('/api/qrcodes/999').expect(404);
-  });
-
-  it('upload de PNG com QR válido e destino igual marca imagem_status ok', async () => {
-    const qr = await criarQrcode({ destino_atual: 'https://canva.com/design/abc' });
-    const png = await QRCode.toBuffer('https://canva.com/design/abc', { type: 'png' });
-    const res = await ctx.http
-      .post(`/api/qrcodes/${qr.id}/imagem`)
-      .attach('imagem', png, { filename: 'qr.png', contentType: 'image/png' })
-      .expect(200);
-    expect(res.body.imagem_status).toBe('ok');
-  });
-
-  it('upload de PNG com QR divergente marca imagem_status desatualizado', async () => {
-    const qr = await criarQrcode({ destino_atual: 'https://canva.com/design/abc' });
-    const png = await QRCode.toBuffer('https://canva.com/design/outro', { type: 'png' });
-    const res = await ctx.http
-      .post(`/api/qrcodes/${qr.id}/imagem`)
-      .attach('imagem', png, { filename: 'qr.png', contentType: 'image/png' })
-      .expect(200);
-    expect(res.body.imagem_status).toBe('desatualizado');
-  });
-
-  it('upload de PNG ilegível marca imagem_status ilegivel', async () => {
-    const qr = await criarQrcode();
-    const res = await ctx.http
-      .post(`/api/qrcodes/${qr.id}/imagem`)
-      .attach('imagem', Buffer.from('conteudo-png'), { filename: 'qr.png', contentType: 'image/png' })
-      .expect(200);
-    expect(res.body.imagem_status).toBe('ilegivel');
-  });
-
-  it('upload de PDF marca imagem_status nao_verificado', async () => {
-    const qr = await criarQrcode();
-    const res = await ctx.http
-      .post(`/api/qrcodes/${qr.id}/imagem`)
-      .attach('imagem', Buffer.from('conteudo-pdf'), { filename: 'qr.pdf', contentType: 'application/pdf' })
-      .expect(200);
-    expect(res.body.imagem_status).toBe('nao_verificado');
-  });
-
-  it('sem imagem, imagem_status é sem_imagem', async () => {
-    const qr = await criarQrcode();
-    const res = await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(200);
-    expect(res.body.imagem_status).toBe('sem_imagem');
-  });
-
-  it('remover imagem volta imagem_status pra sem_imagem', async () => {
-    const qr = await criarQrcode();
-    const png = await QRCode.toBuffer(qr.destino_atual, { type: 'png' });
-    await ctx.http
-      .post(`/api/qrcodes/${qr.id}/imagem`)
-      .attach('imagem', png, { filename: 'qr.png', contentType: 'image/png' })
-      .expect(200);
-    const res = await ctx.http.delete(`/api/qrcodes/${qr.id}/imagem`).expect(200);
-    expect(res.body.imagem_status).toBe('sem_imagem');
-  });
-
-  it('listagem também traz imagem_status por item', async () => {
-    const qr = await criarQrcode();
-    const png = await QRCode.toBuffer(qr.destino_atual, { type: 'png' });
-    await ctx.http
-      .post(`/api/qrcodes/${qr.id}/imagem`)
-      .attach('imagem', png, { filename: 'qr.png', contentType: 'image/png' })
-      .expect(200);
-    const res = await ctx.http.get('/api/qrcodes').expect(200);
-    expect(res.body[0].imagem_status).toBe('ok');
   });
 });

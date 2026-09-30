@@ -19,10 +19,3 @@ export const ROTULO_CATEGORIA_QR = { avaliacao: 'Avaliação', cardapio: 'Cardá
 export const CATEGORIAS_QR = Object.keys(ROTULO_CATEGORIA_QR);
 export const ROTULO_STATUS_QR = { ativo: 'Ativo', arquivado: 'Arquivado' };
 export const STATUS_QR = Object.keys(ROTULO_STATUS_QR);
-
-export const ROTULO_STATUS_IMAGEM_QR = {
-  ok: 'Confere com o destino',
-  desatualizado: 'Desatualizado',
-  ilegivel: 'Não foi possível ler',
-  nao_verificado: 'Não verificado (PDF)',
-};
