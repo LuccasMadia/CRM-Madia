@@ -12,6 +12,7 @@ import { rotasPainel } from './routes/painel.js';
 import { rotasPortfolio } from './routes/portfolio.js';
 import { rotasPublicacao } from './routes/publicacao.js';
 import { rotasBackup } from './routes/backup.js';
+import { rotasQrcodes } from './routes/qrcodes.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal() }) {
   const app = express();
@@ -28,6 +29,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal() }) {
   app.use('/api', rotasPortfolio(ctx));
   app.use('/api', rotasPublicacao(ctx));
   app.use('/api', rotasBackup(ctx));
+  app.use('/api', rotasQrcodes(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));
