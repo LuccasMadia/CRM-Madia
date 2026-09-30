@@ -75,4 +75,46 @@ describe('/api/qrcodes', () => {
     await ctx.http.get('/api/qrcodes/999').expect(404);
     await ctx.http.get('/api/qrcodes/abc').expect(404);
   });
+
+  it('atualiza campos e não gera histórico quando o destino não muda', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ nome: 'Novo nome' }).expect(200);
+    expect(res.body).toMatchObject({ nome: 'Novo nome' });
+    expect(res.body.historico).toEqual([]);
+  });
+
+  it('gera histórico quando o destino_atual muda', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http
+      .put(`/api/qrcodes/${qr.id}`)
+      .send({ destino_atual: 'https://canva.com/design/novo' })
+      .expect(200);
+    expect(res.body.destino_atual).toBe('https://canva.com/design/novo');
+    expect(res.body.historico).toHaveLength(1);
+    expect(res.body.historico[0]).toMatchObject({
+      destino_anterior: 'https://canva.com/design/abc',
+      destino_novo: 'https://canva.com/design/novo',
+    });
+
+    const detalhe = await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(200);
+    expect(detalhe.body.historico).toHaveLength(1);
+  });
+
+  it('mantém o histórico ordenado do mais recente pro mais antigo', async () => {
+    const qr = await criarQrcode();
+    await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ destino_atual: 'https://x.com/1' }).expect(200);
+    await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ destino_atual: 'https://x.com/2' }).expect(200);
+    const res = await ctx.http.get(`/api/qrcodes/${qr.id}`).expect(200);
+    expect(res.body.historico.map((h) => h.destino_novo)).toEqual(['https://x.com/2', 'https://x.com/1']);
+  });
+
+  it('valida cliente_id ao atualizar', async () => {
+    const qr = await criarQrcode();
+    const res = await ctx.http.put(`/api/qrcodes/${qr.id}`).send({ cliente_id: 999 }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'cliente_id', mensagem: 'Cliente não encontrado' }]);
+  });
+
+  it('responde 404 ao atualizar id inexistente', async () => {
+    await ctx.http.put('/api/qrcodes/999').send({ nome: 'X' }).expect(404);
+  });
 });

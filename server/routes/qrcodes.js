@@ -27,6 +27,10 @@ export function rotasQrcodes({ db }) {
     }
   }
 
+  function montar(id) {
+    return { ...qrcodes.obter(id), historico: qrcodes.historico(id) };
+  }
+
   r.get('/qrcodes', (req, res) => {
     res.json(qrcodes.listar({ cliente_id: req.query.cliente_id, status: req.query.status }));
   });
@@ -34,13 +38,23 @@ export function rotasQrcodes({ db }) {
   r.post('/qrcodes', (req, res) => {
     const dados = validar(req.body, REGRAS_QRCODE);
     exigirCliente(dados.cliente_id);
-    res.status(201).json(qrcodes.criar(dados));
+    const criado = qrcodes.criar(dados);
+    res.status(201).json(montar(criado.id));
   });
 
   r.get('/qrcodes/:id', (req, res) => {
-    const qrcode = qrcodes.obter(lerId(req.params.id));
-    if (!qrcode) throw naoEncontrado('QR code');
-    res.json({ ...qrcode, historico: qrcodes.historico(qrcode.id) });
+    const id = lerId(req.params.id);
+    if (!qrcodes.obter(id)) throw naoEncontrado('QR code');
+    res.json(montar(id));
+  });
+
+  r.put('/qrcodes/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    const dados = validar(req.body, REGRAS_QRCODE, { parcial: true });
+    if (dados.cliente_id !== undefined) exigirCliente(dados.cliente_id);
+    const atualizado = qrcodes.atualizar(id, dados);
+    if (!atualizado) throw naoEncontrado('QR code');
+    res.json(montar(id));
   });
 
   return r;
