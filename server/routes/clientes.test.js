@@ -39,6 +39,16 @@ describe('/api/clientes', () => {
     expect(res.body.projetos.map((p) => p.titulo)).toEqual(['Site']);
   });
 
+  it('detalhe traz os qrcodes do cliente', async () => {
+    const cliente = await criarCliente();
+    await ctx.http
+      .post('/api/qrcodes')
+      .send({ cliente_id: cliente.id, nome: 'QR balcão', categoria: 'adesivo', destino_atual: 'https://x.com' })
+      .expect(201);
+    const res = await ctx.http.get(`/api/clientes/${cliente.id}`).expect(200);
+    expect(res.body.qrcodes.map((q) => q.nome)).toEqual(['QR balcão']);
+  });
+
   it('atualiza parcialmente', async () => {
     const cliente = await criarCliente();
     const res = await ctx.http.put(`/api/clientes/${cliente.id}`).send({ telefone: '11 99999-0000' }).expect(200);

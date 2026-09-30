@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
+import { repoQrcodes } from '../repos/qrcodes.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
 
@@ -17,6 +18,7 @@ export const REGRAS_CLIENTE = {
 export function rotasClientes({ db }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
+  const qrcodes = repoQrcodes(db);
   const r = Router();
 
   r.get('/', (req, res) => res.json(clientes.buscar(req.query.busca ?? '')));
@@ -29,6 +31,7 @@ export function rotasClientes({ db }) {
     res.json({
       ...cliente,
       projetos: projetos.listarComCliente({ cliente_id: cliente.id }),
+      qrcodes: qrcodes.listar({ cliente_id: cliente.id }),
       total_faturado_centavos: clientes.totalFaturado(cliente.id),
     });
   });
