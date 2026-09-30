@@ -1,6 +1,6 @@
 import { criarRepo, linha } from './crud.js';
 
-export const CAMPOS_QRCODE = ['cliente_id', 'nome', 'categoria', 'descricao_local', 'destino_atual', 'imagem_arquivo', 'status'];
+export const CAMPOS_QRCODE = ['cliente_id', 'nome', 'categoria', 'descricao_local', 'destino_atual', 'imagem_arquivo', 'imagem_destino_lido', 'status'];
 
 export function repoQrcodes(db) {
   const base = criarRepo(db, 'qrcodes', CAMPOS_QRCODE);
