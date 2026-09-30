@@ -78,19 +78,6 @@ export function QRCodeDetalhe() {
             <div><button type="button" className="btn btn--pequeno btn--perigo" onClick={removerImagem}>Remover arquivo</button></div>
           )}
         </div>
-        <div className="cartao">
-          <h2>Histórico de redirecionamento</h2>
-          {qrcode.historico.length ? (
-            <ul className="lista">
-              {qrcode.historico.map((h) => (
-                <li key={h.id}>
-                  <span>{h.destino_anterior ?? '—'}</span> → <span>{h.destino_novo}</span>{' '}
-                  <span className="etiqueta">{new Date(h.alterado_em).toLocaleString('pt-BR')}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="vazio">Nenhuma alteração de destino ainda.</p>}
-        </div>
       </div>
     </section>
   );

@@ -8,8 +8,7 @@ import { renderizar } from '../test/renderizar.jsx';
 const ana = { id: 1, nome: 'Ana' };
 const qr = {
   id: 5, cliente_id: 1, nome: 'QR balcão', categoria: 'cardapio', descricao_local: 'Porta de entrada',
-  destino_atual: 'https://canva.com/design/abc', imagem_arquivo: null, status: 'ativo', atualizado_em: 'T1',
-  historico: [],
+  imagem_arquivo: null, status: 'ativo', atualizado_em: 'T1',
 };
 
 describe('QRCodeDetalhe', () => {
@@ -17,23 +16,22 @@ describe('QRCodeDetalhe', () => {
     mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': qr });
     renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
     expect(await screen.findByDisplayValue('QR balcão')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('https://canva.com/design/abc')).toBeInTheDocument();
   });
 
-  it('edita o destino', async () => {
+  it('edita o nome', async () => {
     const { chamadas } = mockApi({
       'GET /clientes': [ana],
       'GET /qrcodes/5': qr,
-      'PUT /qrcodes/5': { ...qr, destino_atual: 'https://canva.com/design/novo' },
+      'PUT /qrcodes/5': { ...qr, nome: 'QR balcão novo' },
     });
     renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
     const user = userEvent.setup();
-    const campo = await screen.findByLabelText('Destino atual');
+    const campo = await screen.findByLabelText('Nome');
     await user.clear(campo);
-    await user.type(campo, 'https://canva.com/design/novo');
+    await user.type(campo, 'QR balcão novo');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByDisplayValue('https://canva.com/design/novo');
-    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toMatchObject({ destino_atual: 'https://canva.com/design/novo' });
+    await screen.findByDisplayValue('QR balcão novo');
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toMatchObject({ nome: 'QR balcão novo' });
   });
 
   it('exclui com confirmação e volta pra lista', async () => {
@@ -78,24 +76,5 @@ describe('QRCodeDetalhe', () => {
     renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Remover arquivo' }));
     await screen.findByLabelText('Adicionar arquivo');
-  });
-
-  it('mostra o histórico de redirecionamento', async () => {
-    const comHistorico = {
-      ...qr,
-      historico: [
-        { id: 1, destino_anterior: 'https://canva.com/design/velho', destino_novo: 'https://canva.com/design/abc', alterado_em: '2026-09-20T10:00:00.000Z' },
-      ],
-    };
-    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': comHistorico });
-    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
-    expect(await screen.findByText('https://canva.com/design/velho')).toBeInTheDocument();
-    expect(screen.getByText('https://canva.com/design/abc')).toBeInTheDocument();
-  });
-
-  it('sem histórico mostra mensagem', async () => {
-    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': qr });
-    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
-    expect(await screen.findByText('Nenhuma alteração de destino ainda.')).toBeInTheDocument();
   });
 });
