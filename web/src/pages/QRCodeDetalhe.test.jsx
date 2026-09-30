@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QRCodeDetalhe } from './QRCodeDetalhe.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -42,5 +42,41 @@ describe('QRCodeDetalhe', () => {
     renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Excluir' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
+  });
+
+  it('upload de PNG mostra preview de imagem', async () => {
+    mockApi({
+      'GET /clientes': [ana],
+      'GET /qrcodes/5': qr,
+      'POST /qrcodes/5/imagem': { ...qr, imagem_arquivo: 'abc.png' },
+    });
+    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
+    const arquivo = new File(['x'], 'qr.png', { type: 'image/png' });
+    fireEvent.change(await screen.findByLabelText('Adicionar arquivo'), { target: { files: [arquivo] } });
+    expect(await screen.findByAltText('Arquivo do QR code')).toHaveAttribute('src', '/uploads/abc.png');
+  });
+
+  it('upload de PDF mostra preview embutido', async () => {
+    mockApi({
+      'GET /clientes': [ana],
+      'GET /qrcodes/5': qr,
+      'POST /qrcodes/5/imagem': { ...qr, imagem_arquivo: 'abc.pdf' },
+    });
+    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
+    const arquivo = new File(['x'], 'qr.pdf', { type: 'application/pdf' });
+    fireEvent.change(await screen.findByLabelText('Adicionar arquivo'), { target: { files: [arquivo] } });
+    expect(await screen.findByTitle('Arquivo do QR code')).toHaveAttribute('src', '/uploads/abc.pdf');
+  });
+
+  it('remove o arquivo', async () => {
+    const comImagem = { ...qr, imagem_arquivo: 'abc.png' };
+    mockApi({
+      'GET /clientes': [ana],
+      'GET /qrcodes/5': comImagem,
+      'DELETE /qrcodes/5/imagem': { ...qr, imagem_arquivo: null },
+    });
+    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Remover arquivo' }));
+    await screen.findByLabelText('Adicionar arquivo');
   });
 });
