@@ -7,7 +7,7 @@ import { renderizar } from '../test/renderizar.jsx';
 
 const ana = { id: 1, nome: 'Ana' };
 const qr = {
-  id: 5, cliente_id: 1, nome: 'QR balcão', categoria: 'adesivo', descricao_local: null,
+  id: 5, cliente_id: 1, nome: 'QR balcão', categoria: 'cardapio', descricao_local: null,
   destino_atual: 'https://canva.com/design/abc', imagem_arquivo: null, status: 'ativo',
 };
 
@@ -18,7 +18,7 @@ describe('QRCodes', () => {
     expect(await screen.findByRole('link', { name: 'QR balcão' })).toHaveAttribute('href', '/qrcodes/5');
     const tabela = within(screen.getByRole('table'));
     expect(tabela.getByText('Ana')).toBeInTheDocument();
-    expect(tabela.getByText('Adesivo')).toBeInTheDocument();
+    expect(tabela.getByText('Cardápio')).toBeInTheDocument();
   });
 
   it('filtra por cliente', async () => {
@@ -49,7 +49,7 @@ describe('QRCodes', () => {
     await user.click(screen.getByRole('button', { name: 'Criar QR Code' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toMatchObject({
-      cliente_id: 1, nome: 'QR balcão', categoria: 'adesivo', destino_atual: 'https://canva.com/design/abc',
+      cliente_id: 1, nome: 'QR balcão', categoria: 'avaliacao', destino_atual: 'https://canva.com/design/abc',
     });
   });
 });

@@ -43,7 +43,7 @@ describe('/api/clientes', () => {
     const cliente = await criarCliente();
     await ctx.http
       .post('/api/qrcodes')
-      .send({ cliente_id: cliente.id, nome: 'QR balcão', categoria: 'adesivo', destino_atual: 'https://x.com' })
+      .send({ cliente_id: cliente.id, nome: 'QR balcão', categoria: 'cardapio', destino_atual: 'https://x.com' })
       .expect(201);
     const res = await ctx.http.get(`/api/clientes/${cliente.id}`).expect(200);
     expect(res.body.qrcodes.map((q) => q.nome)).toEqual(['QR balcão']);
@@ -71,7 +71,7 @@ describe('/api/clientes', () => {
     const comQr = await criarCliente({ nome: 'Com QR' });
     await ctx.http
       .post('/api/qrcodes')
-      .send({ cliente_id: comQr.id, nome: 'QR', categoria: 'adesivo', destino_atual: 'https://x.com' })
+      .send({ cliente_id: comQr.id, nome: 'QR', categoria: 'cardapio', destino_atual: 'https://x.com' })
       .expect(201);
     const res = await ctx.http.delete(`/api/clientes/${comQr.id}`).expect(409);
     expect(res.body.erro).toMatch(/QR codes/);

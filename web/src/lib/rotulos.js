@@ -15,7 +15,7 @@ export const ROTULO_CANAL = { instagram: 'Instagram', portfolio: 'Portfólio' };
 export const ROTULO_TIPO = { post: 'Post', carrossel: 'Carrossel', reels: 'Reels', story: 'Story', atualizacao: 'Atualização de case' };
 export const ROTULO_ESTADO_PARCELA = { paga: 'Paga', atrasada: 'Atrasada', pendente: 'Pendente' };
 
-export const ROTULO_CATEGORIA_QR = { adesivo: 'Adesivo', cardapio: 'Cardápio', panfleto: 'Panfleto', embalagem: 'Embalagem', outro: 'Outro' };
+export const ROTULO_CATEGORIA_QR = { avaliacao: 'Avaliação', cardapio: 'Cardápio' };
 export const CATEGORIAS_QR = Object.keys(ROTULO_CATEGORIA_QR);
 export const ROTULO_STATUS_QR = { ativo: 'Ativo', arquivado: 'Arquivado' };
 export const STATUS_QR = Object.keys(ROTULO_STATUS_QR);

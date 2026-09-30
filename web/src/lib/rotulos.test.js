@@ -16,7 +16,7 @@ describe('ETAPAS_FICTICIO', () => {
 
 describe('rótulos de QR code', () => {
   it('toda categoria tem rótulo', () => {
-    expect(CATEGORIAS_QR).toEqual(['adesivo', 'cardapio', 'panfleto', 'embalagem', 'outro']);
+    expect(CATEGORIAS_QR).toEqual(['avaliacao', 'cardapio']);
     for (const c of CATEGORIAS_QR) expect(ROTULO_CATEGORIA_QR[c]).toBeTruthy();
   });
 

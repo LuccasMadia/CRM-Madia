@@ -7,7 +7,7 @@ import { renderizar } from '../test/renderizar.jsx';
 
 const ana = { id: 1, nome: 'Ana' };
 const qr = {
-  id: 5, cliente_id: 1, nome: 'QR balcão', categoria: 'adesivo', descricao_local: 'Porta de entrada',
+  id: 5, cliente_id: 1, nome: 'QR balcão', categoria: 'cardapio', descricao_local: 'Porta de entrada',
   destino_atual: 'https://canva.com/design/abc', imagem_arquivo: null, status: 'ativo', atualizado_em: 'T1',
   historico: [],
 };

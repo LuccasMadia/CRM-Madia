@@ -17,7 +17,7 @@ async function criarQrcode(overrides = {}) {
       .send({
         cliente_id: cliente.id,
         nome: 'QR balcão loja',
-        categoria: 'adesivo',
+        categoria: 'cardapio',
         destino_atual: 'https://canva.com/design/abc',
         ...overrides,
       })
@@ -30,7 +30,7 @@ describe('/api/qrcodes', () => {
     await criarQrcode();
     const res = await ctx.http.get('/api/qrcodes').expect(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0]).toMatchObject({ nome: 'QR balcão loja', categoria: 'adesivo', status: 'ativo' });
+    expect(res.body[0]).toMatchObject({ nome: 'QR balcão loja', categoria: 'cardapio', status: 'ativo' });
   });
 
   it('exige nome, categoria válida e destino_atual', async () => {
@@ -50,7 +50,7 @@ describe('/api/qrcodes', () => {
   it('recusa cliente_id inexistente', async () => {
     const res = await ctx.http
       .post('/api/qrcodes')
-      .send({ cliente_id: 999, nome: 'QR', categoria: 'adesivo', destino_atual: 'https://x.com' })
+      .send({ cliente_id: 999, nome: 'QR', categoria: 'cardapio', destino_atual: 'https://x.com' })
       .expect(400);
     expect(res.body.erros).toEqual([{ campo: 'cliente_id', mensagem: 'Cliente não encontrado' }]);
   });

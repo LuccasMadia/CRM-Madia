@@ -7,7 +7,7 @@ import { criarUpload } from '../http/upload.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 
-const CATEGORIAS_QR = ['adesivo', 'cardapio', 'panfleto', 'embalagem', 'outro'];
+const CATEGORIAS_QR = ['avaliacao', 'cardapio'];
 const STATUS_QR = ['ativo', 'arquivado'];
 const EXTENSOES_QR = { 'image/png': '.png', 'application/pdf': '.pdf' };
 
