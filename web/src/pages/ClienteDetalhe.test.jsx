@@ -9,6 +9,7 @@ const cliente = {
   id: 1, nome: 'Ana', empresa: null, email: null, telefone: null, instagram: null, origem: null, notas: null,
   atualizado_em: 'T', total_faturado_centavos: 150050,
   projetos: [{ id: 4, titulo: 'Site', etapa: 'andamento' }],
+  qrcodes: [{ id: 5, nome: 'QR balcão' }],
 };
 
 describe('ClienteDetalhe', () => {
@@ -18,6 +19,18 @@ describe('ClienteDetalhe', () => {
     expect(await screen.findByRole('link', { name: 'Site' })).toHaveAttribute('href', '/projetos/4');
     expect(screen.getByText(/1\.500,50/)).toBeInTheDocument();
     expect(screen.getByText('Em andamento')).toBeInTheDocument();
+  });
+
+  it('mostra os QR codes do cliente', async () => {
+    mockApi({ 'GET /clientes/1': cliente });
+    renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
+    expect(await screen.findByRole('link', { name: 'QR balcão' })).toHaveAttribute('href', '/qrcodes/5');
+  });
+
+  it('mostra mensagem quando não há QR codes', async () => {
+    mockApi({ 'GET /clientes/1': { ...cliente, qrcodes: [] } });
+    renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
+    expect(await screen.findByText('Nenhum QR ainda.')).toBeInTheDocument();
   });
 
   it('mostra a mensagem quando o servidor recusa a exclusão', async () => {

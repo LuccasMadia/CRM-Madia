@@ -58,6 +58,16 @@ export function ClienteDetalhe() {
             </ul>
           ) : <p className="vazio">Nenhum projeto ainda. Crie uma oportunidade no Funil.</p>}
         </div>
+        <div className="cartao">
+          <h2>QR Codes</h2>
+          {cliente.qrcodes.length ? (
+            <ul className="lista">
+              {cliente.qrcodes.map((q) => (
+                <li key={q.id}><Link to={`/qrcodes/${q.id}`}>{q.nome}</Link></li>
+              ))}
+            </ul>
+          ) : <p className="vazio">Nenhum QR ainda.</p>}
+        </div>
       </div>
     </section>
   );
