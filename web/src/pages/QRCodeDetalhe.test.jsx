@@ -79,4 +79,23 @@ describe('QRCodeDetalhe', () => {
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Remover arquivo' }));
     await screen.findByLabelText('Adicionar arquivo');
   });
+
+  it('mostra o histórico de redirecionamento', async () => {
+    const comHistorico = {
+      ...qr,
+      historico: [
+        { id: 1, destino_anterior: 'https://canva.com/design/velho', destino_novo: 'https://canva.com/design/abc', alterado_em: '2026-09-20T10:00:00.000Z' },
+      ],
+    };
+    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': comHistorico });
+    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
+    expect(await screen.findByText('https://canva.com/design/velho')).toBeInTheDocument();
+    expect(screen.getByText('https://canva.com/design/abc')).toBeInTheDocument();
+  });
+
+  it('sem histórico mostra mensagem', async () => {
+    mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': qr });
+    renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
+    expect(await screen.findByText('Nenhuma alteração de destino ainda.')).toBeInTheDocument();
+  });
 });
