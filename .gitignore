@@ -3,3 +3,7 @@ data/
 dist/
 dev-dist/
 *.log
+.env.local
+.agents/
+.claude/
+skills-lock.json
