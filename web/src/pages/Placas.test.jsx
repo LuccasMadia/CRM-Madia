@@ -65,4 +65,32 @@ describe('Placas', () => {
     expect(post.corpo).toMatchObject({ material_id: 1, quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
     expect(post.corpo.data_compra).toEqual(expect.any(String));
   });
+
+  it('cria modelo com um item de receita na aba Modelos', async () => {
+    const material = { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: 249 };
+    const { chamadas } = mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/modelos': [],
+      'GET /placas/materiais': [material],
+      'POST /placas/modelos': {
+        id: 1, nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000,
+        itens: [{ id: 1, modelo_id: 1, material_id: 1, quantidade: 1 }],
+        custo_previsto_centavos: 249, lucro_previsto_centavos: 7751,
+      },
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Modelos' }));
+    await user.click(await screen.findByRole('button', { name: '+ Modelo' }));
+    await user.type(screen.getByLabelText('Nome'), 'Placa 10x10 PVC');
+    await user.type(screen.getByLabelText('Preço de venda (R$)'), '80');
+    await user.click(screen.getByRole('button', { name: '+ Item da receita' }));
+    await user.selectOptions(await screen.findByLabelText('Material do item 1'), '1');
+    await user.click(screen.getByRole('button', { name: 'Criar modelo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const post = chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/placas/modelos');
+    expect(post.corpo).toEqual({
+      nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, itens: [{ material_id: 1, quantidade: 1 }],
+    });
+  });
 });

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { AbaResumo } from './placas/AbaResumo.jsx';
 import { AbaMateriais } from './placas/AbaMateriais.jsx';
 import { AbaLotes } from './placas/AbaLotes.jsx';
+import { AbaModelos } from './placas/AbaModelos.jsx';
 
 const ABAS = [
   ['resumo', 'Resumo'],
   ['materiais', 'Materiais'],
   ['lotes', 'Lotes'],
+  ['modelos', 'Modelos'],
 ];
 
 export function Placas() {
@@ -27,6 +29,7 @@ export function Placas() {
         {aba === 'resumo' && <AbaResumo />}
         {aba === 'materiais' && <AbaMateriais />}
         {aba === 'lotes' && <AbaLotes />}
+        {aba === 'modelos' && <AbaModelos />}
       </div>
     </section>
   );
