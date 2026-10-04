@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { repoPlacasMateriais, repoPlacasLotes, repoPlacasModelosItens, repoPlacasVendas } from '../repos/placas.js';
+import { repoPlacasMateriais, repoPlacasLotes, repoPlacasModelos, repoPlacasModelosItens, repoPlacasVendas } from '../repos/placas.js';
+import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroValidacao, naoEncontrado } from '../http/erros.js';
-import { estoqueMaterial, custoAtualMaterial } from '../domain/placas.js';
+import { estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto } from '../domain/placas.js';
 
 const REGRAS_MATERIAL = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -17,9 +18,15 @@ const REGRAS_LOTE = {
   data_compra: { tipo: 'data', obrigatorio: true },
 };
 
+const REGRAS_MODELO = {
+  nome: { tipo: 'texto', obrigatorio: true },
+  preco_venda_centavos: { tipo: 'inteiro', obrigatorio: true, min: 0 },
+};
+
 export function rotasPlacas({ db }) {
   const materiais = repoPlacasMateriais(db);
   const lotes = repoPlacasLotes(db);
+  const modelos = repoPlacasModelos(db);
   const itensModelo = repoPlacasModelosItens(db);
   const vendas = repoPlacasVendas(db);
   const r = Router();
@@ -39,6 +46,32 @@ export function rotasPlacas({ db }) {
     if (!materiais.obter(materialId)) {
       throw new ErroValidacao([{ campo: 'material_id', mensagem: 'Material não encontrado' }]);
     }
+  }
+
+  function validarItens(itensBrutos) {
+    if (!Array.isArray(itensBrutos)) throw new ErroValidacao([{ campo: 'itens', mensagem: 'Deve ser uma lista' }]);
+    return itensBrutos.map((item, i) => {
+      const materialId = Number(item.material_id);
+      const quantidade = Number(item.quantidade);
+      if (!Number.isInteger(materialId) || materialId <= 0 || !materiais.obter(materialId)) {
+        throw new ErroValidacao([{ campo: `itens[${i}].material_id`, mensagem: 'Material inválido' }]);
+      }
+      if (!Number.isInteger(quantidade) || quantidade < 1) {
+        throw new ErroValidacao([{ campo: `itens[${i}].quantidade`, mensagem: 'Deve ser no mínimo 1' }]);
+      }
+      return { material_id: materialId, quantidade };
+    });
+  }
+
+  function montarModelo(modelo) {
+    const todosItens = itensModelo.listar();
+    const custoReceita = custoReceitaModelo(modelo.id, todosItens, lotes.listar());
+    return {
+      ...modelo,
+      itens: todosItens.filter((i) => i.modelo_id === modelo.id),
+      custo_previsto_centavos: custoReceita,
+      lucro_previsto_centavos: lucroPrevisto(modelo, custoReceita),
+    };
   }
 
   r.get('/placas/materiais', (req, res) => {
@@ -92,6 +125,49 @@ export function rotasPlacas({ db }) {
 
   r.delete('/placas/lotes/:id', (req, res) => {
     if (!lotes.remover(lerId(req.params.id))) throw naoEncontrado('Lote');
+    res.status(204).end();
+  });
+
+  r.get('/placas/modelos', (req, res) => {
+    res.json(modelos.listar().map(montarModelo));
+  });
+
+  r.post('/placas/modelos', (req, res) => {
+    const dados = validar(req.body, REGRAS_MODELO);
+    const itens = validarItens(req.body.itens ?? []);
+    const criado = emTransacao(db, () => {
+      const modelo = modelos.criar(dados);
+      for (const item of itens) itensModelo.criar({ ...item, modelo_id: modelo.id });
+      return modelo;
+    });
+    res.status(201).json(montarModelo(criado));
+  });
+
+  r.put('/placas/modelos/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    if (!modelos.obter(id)) throw naoEncontrado('Modelo');
+    const dados = validar(req.body, REGRAS_MODELO, { parcial: true });
+    const itens = req.body.itens !== undefined ? validarItens(req.body.itens) : null;
+    emTransacao(db, () => {
+      if (Object.keys(dados).length) modelos.atualizar(id, dados);
+      if (itens) {
+        itensModelo.removerPorModelo(id);
+        for (const item of itens) itensModelo.criar({ ...item, modelo_id: id });
+      }
+    });
+    res.json(montarModelo(modelos.obter(id)));
+  });
+
+  r.delete('/placas/modelos/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    if (!modelos.obter(id)) throw naoEncontrado('Modelo');
+    if (vendas.listar().some((v) => v.modelo_id === id)) {
+      throw new ErroValidacao([{ campo: 'id', mensagem: 'Modelo tem vendas vinculadas' }]);
+    }
+    emTransacao(db, () => {
+      itensModelo.removerPorModelo(id);
+      modelos.remover(id);
+    });
     res.status(204).end();
   });
 

@@ -112,3 +112,78 @@ describe('/api/placas/materiais exclusão bloqueada por lote', () => {
     expect(res.body.erros).toEqual([{ campo: 'id', mensagem: 'Material tem lotes de compra vinculados' }]);
   });
 });
+
+async function criarModelo(itens, overrides = {}) {
+  return (await ctx.http.post('/api/placas/modelos').send({
+    nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, itens, ...overrides,
+  }).expect(201)).body;
+}
+
+describe('/api/placas/modelos', () => {
+  it('cria com receita e calcula custo/lucro previstos como na planilha', async () => {
+    const placa = await criarMaterial({ nome: 'Placa 10x10 PVC' });
+    const adesivo = await criarMaterial({ nome: 'Adesivo 10x10' });
+    const tag = await criarMaterial({ nome: 'Tag NFC' });
+    await criarLote(placa.id, { quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
+    await criarLote(adesivo.id, { quantidade: 81, valor_kit_centavos: 3000, valor_frete_centavos: 0 });
+    await criarLote(tag.id, { quantidade: 50, valor_kit_centavos: 4497, valor_frete_centavos: 0 });
+
+    const modelo = await criarModelo([
+      { material_id: placa.id, quantidade: 1 },
+      { material_id: adesivo.id, quantidade: 1 },
+      { material_id: tag.id, quantidade: 1 },
+    ]);
+    expect(modelo.custo_previsto_centavos).toBe(376);
+    expect(modelo.lucro_previsto_centavos).toBe(7624);
+    expect(modelo.itens).toHaveLength(3);
+  });
+
+  it('custo previsto é null quando falta lote de algum material da receita', async () => {
+    const placa = await criarMaterial();
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    expect(modelo.custo_previsto_centavos).toBeNull();
+    expect(modelo.lucro_previsto_centavos).toBeNull();
+  });
+
+  it('recusa item com material inexistente', async () => {
+    const res = await ctx.http.post('/api/placas/modelos').send({
+      nome: 'X', preco_venda_centavos: 100, itens: [{ material_id: 999, quantidade: 1 }],
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'itens[0].material_id', mensagem: 'Material inválido' }]);
+  });
+
+  it('recusa item com quantidade menor que 1', async () => {
+    const placa = await criarMaterial();
+    const res = await ctx.http.post('/api/placas/modelos').send({
+      nome: 'X', preco_venda_centavos: 100, itens: [{ material_id: placa.id, quantidade: 0 }],
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'itens[0].quantidade', mensagem: 'Deve ser no mínimo 1' }]);
+  });
+
+  it('atualiza substituindo a receita inteira', async () => {
+    const placa = await criarMaterial({ nome: 'Placa' });
+    const outro = await criarMaterial({ nome: 'Outro material' });
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    const res = await ctx.http.put(`/api/placas/modelos/${modelo.id}`).send({
+      itens: [{ material_id: outro.id, quantidade: 2 }],
+    }).expect(200);
+    expect(res.body.itens).toEqual([expect.objectContaining({ material_id: outro.id, quantidade: 2 })]);
+  });
+
+  it('não exclui material usado na receita de um modelo', async () => {
+    const placa = await criarMaterial();
+    await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    const res = await ctx.http.delete(`/api/placas/materiais/${placa.id}`).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'id', mensagem: 'Material está usado na receita de um modelo' }]);
+  });
+
+  it('exclui modelo sem vendas', async () => {
+    const placa = await criarMaterial();
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    await ctx.http.delete(`/api/placas/modelos/${modelo.id}`).expect(204);
+  });
+
+  it('responde 404 ao excluir modelo inexistente', async () => {
+    await ctx.http.delete('/api/placas/modelos/999').expect(404);
+  });
+});

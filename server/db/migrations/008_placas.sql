@@ -29,7 +29,9 @@ CREATE TABLE placas_modelos_itens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   modelo_id INTEGER NOT NULL REFERENCES placas_modelos(id),
   material_id INTEGER NOT NULL REFERENCES placas_materiais(id),
-  quantidade INTEGER NOT NULL
+  quantidade INTEGER NOT NULL,
+  criado_em TEXT NOT NULL,
+  atualizado_em TEXT NOT NULL
 );
 
 CREATE TABLE placas_vendas (
