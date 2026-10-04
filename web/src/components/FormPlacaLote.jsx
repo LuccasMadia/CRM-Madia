@@ -7,7 +7,7 @@ import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { hojeISO } from '../lib/datas.js';
 
-export function FormPlacaLote({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
+export function FormPlacaLote({ inicial = {}, rotuloBotao = 'Salvar', onSalvar, sugestoesNomeLote = [] }) {
   const { dados: materiais } = useCarregar(() => api('/placas/materiais'), []);
   const { valores, campo } = useFormulario({
     material_id: inicial.material_id ? String(inicial.material_id) : '',
@@ -49,7 +49,10 @@ export function FormPlacaLote({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }
           {(materiais ?? []).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
         </select>
       </Campo>
-      <Campo rotulo="Nome do lote (opcional)" nome="nome_lote" erros={erros} {...campo('nome_lote')} />
+      <Campo rotulo="Nome do lote (opcional)" nome="nome_lote" erros={erros} list="lista-nomes-lote" {...campo('nome_lote')} />
+      <datalist id="lista-nomes-lote">
+        {sugestoesNomeLote.map((nome) => <option key={nome} value={nome} />)}
+      </datalist>
       <Campo rotulo="Quantidade" nome="quantidade" erros={erros} type="number" min="1" {...campo('quantidade')} />
       <Campo rotulo="Valor do kit (R$)" nome="valor_kit_centavos" erros={erros} inputMode="decimal" {...campo('valor_kit')} />
       <Campo rotulo="Valor do frete (R$)" nome="valor_frete_centavos" erros={erros} inputMode="decimal" {...campo('valor_frete')} />
