@@ -40,4 +40,29 @@ describe('Placas', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({ nome: 'Placa 10x10 PVC' });
   });
+
+  it('lança lote na aba Lotes', async () => {
+    const material = { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: null };
+    const { chamadas } = mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/materiais': [material],
+      'GET /placas/lotes': [],
+      'POST /placas/lotes': {
+        id: 1, material_id: 1, nome_lote: '', quantidade: 10,
+        valor_kit_centavos: 2490, valor_frete_centavos: 0, data_compra: '2026-10-03',
+      },
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await user.click(await screen.findByRole('button', { name: '+ Lote' }));
+    await user.selectOptions(await screen.findByLabelText('Material'), '1');
+    await user.type(screen.getByLabelText('Quantidade'), '10');
+    await user.type(screen.getByLabelText('Valor do kit (R$)'), '24,90');
+    await user.click(screen.getByRole('button', { name: 'Lançar lote' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const post = chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/placas/lotes');
+    expect(post.corpo).toMatchObject({ material_id: 1, quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
+    expect(post.corpo.data_compra).toEqual(expect.any(String));
+  });
 });

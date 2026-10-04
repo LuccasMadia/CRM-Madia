@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { AbaResumo } from './placas/AbaResumo.jsx';
 import { AbaMateriais } from './placas/AbaMateriais.jsx';
+import { AbaLotes } from './placas/AbaLotes.jsx';
 
 const ABAS = [
   ['resumo', 'Resumo'],
   ['materiais', 'Materiais'],
+  ['lotes', 'Lotes'],
 ];
 
 export function Placas() {
@@ -24,6 +26,7 @@ export function Placas() {
       <div role="tabpanel">
         {aba === 'resumo' && <AbaResumo />}
         {aba === 'materiais' && <AbaMateriais />}
+        {aba === 'lotes' && <AbaLotes />}
       </div>
     </section>
   );
