@@ -66,6 +66,71 @@ describe('Placas', () => {
     expect(post.corpo.data_compra).toEqual(expect.any(String));
   });
 
+  it('agrupa lotes com o mesmo nome_lote numa seção expansível com total e intervalo de datas', async () => {
+    const pvc = { id: 1, nome: 'Placa 10x10 PVC' };
+    const nfc = { id: 2, nome: 'Tag NFC' };
+    const loteA = {
+      id: 1, material_id: 1, nome_lote: 'Compra Outubro', quantidade: 10,
+      valor_kit_centavos: 1000, valor_frete_centavos: 100, data_compra: '2026-10-05',
+    };
+    const loteB = {
+      id: 2, material_id: 2, nome_lote: 'Compra Outubro', quantidade: 20,
+      valor_kit_centavos: 2000, valor_frete_centavos: 200, data_compra: '2026-10-08',
+    };
+    mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/materiais': [pvc, nfc],
+      'GET /placas/lotes': [loteA, loteB],
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    expect(await screen.findByText('Compra Outubro')).toBeInTheDocument();
+    expect(screen.getByText('Tag NFC')).not.toBeVisible();
+    const resumo = screen.getByText('Compra Outubro').closest('summary');
+    expect(resumo.textContent).toContain('05/10/2026 – 08/10/2026');
+    expect(resumo.textContent).toMatch(/R\$\s*33,00/);
+    await user.click(screen.getByText('Compra Outubro'));
+    expect(screen.getByText('Tag NFC')).toBeVisible();
+  });
+
+  it('lote sem nome_lote continua aparecendo como linha solta, fora de qualquer seção', async () => {
+    const pvc = { id: 1, nome: 'Placa 10x10 PVC' };
+    const loteSolto = {
+      id: 3, material_id: 1, nome_lote: '', quantidade: 5,
+      valor_kit_centavos: 500, valor_frete_centavos: 0, data_compra: '2026-10-01',
+    };
+    mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/materiais': [pvc],
+      'GET /placas/lotes': [loteSolto],
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    expect(await screen.findByText('Placa 10x10 PVC')).toBeVisible();
+    expect(document.querySelector('details.cartao')).not.toBeInTheDocument();
+  });
+
+  it('sugere no formulário de novo lote os nomes de lote já usados', async () => {
+    const pvc = { id: 1, nome: 'Placa 10x10 PVC' };
+    const loteA = {
+      id: 1, material_id: 1, nome_lote: 'Compra Outubro', quantidade: 10,
+      valor_kit_centavos: 1000, valor_frete_centavos: 100, data_compra: '2026-10-05',
+    };
+    mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/materiais': [pvc],
+      'GET /placas/lotes': [loteA],
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await user.click(await screen.findByRole('button', { name: '+ Lote' }));
+    const opcoes = [...document.querySelectorAll('#lista-nomes-lote option')].map((o) => o.value);
+    expect(opcoes).toEqual(['Compra Outubro']);
+  });
+
   it('cria modelo com um item de receita na aba Modelos', async () => {
     const material = { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: 249 };
     const { chamadas } = mockApi({

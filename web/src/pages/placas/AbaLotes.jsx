@@ -6,6 +6,7 @@ import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaLote } from '../../components/FormPlacaLote.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData } from '../../lib/datas.js';
+import { agruparLotesPorNome, nomesLoteDistintos } from '../../lib/agruparLotes.js';
 
 export function AbaLotes() {
   const [criando, setCriando] = useState(false);
@@ -35,6 +36,29 @@ export function AbaLotes() {
     recarregar();
   }
 
+  function linhaLote(l) {
+    return (
+      <tr key={l.id}>
+        <td>{nomeMaterial(l.material_id)}</td>
+        <td className="num">{l.quantidade}</td>
+        <td className="num">{formatarDinheiro(l.valor_kit_centavos)}</td>
+        <td className="num">{formatarDinheiro(l.valor_frete_centavos)}</td>
+        <td>{formatarData(l.data_compra)}</td>
+        <td>
+          <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => setEditando(l)}>Editar</button>{' '}
+          <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => remover(l)}>Excluir</button>
+        </td>
+      </tr>
+    );
+  }
+
+  function cabecalhoColunas() {
+    return <tr><th>Material</th><th className="num">Quantidade</th><th className="num">Kit</th><th className="num">Frete</th><th>Data</th><th></th></tr>;
+  }
+
+  const entradas = lotes ? agruparLotesPorNome(lotes) : [];
+  const sugestoesNomeLote = lotes ? nomesLoteDistintos(lotes) : [];
+
   return (
     <section>
       <header className="pagina__topo">
@@ -42,37 +66,40 @@ export function AbaLotes() {
         <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>+ Lote</button>
       </header>
       <Aviso erro={erro} />
-      {lotes && (lotes.length ? (
-        <table className="tabela">
-          <thead>
-            <tr><th>Material</th><th>Lote</th><th className="num">Quantidade</th><th className="num">Kit</th><th className="num">Frete</th><th>Data</th><th></th></tr>
-          </thead>
-          <tbody>
-            {lotes.map((l) => (
-              <tr key={l.id}>
-                <td>{nomeMaterial(l.material_id)}</td>
-                <td>{l.nome_lote || '—'}</td>
-                <td className="num">{l.quantidade}</td>
-                <td className="num">{formatarDinheiro(l.valor_kit_centavos)}</td>
-                <td className="num">{formatarDinheiro(l.valor_frete_centavos)}</td>
-                <td>{formatarData(l.data_compra)}</td>
-                <td>
-                  <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => setEditando(l)}>Editar</button>{' '}
-                  <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => remover(l)}>Excluir</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {lotes && (entradas.length ? (
+        <div className="lista-lotes">
+          {entradas.map((entrada) => (entrada.tipo === 'grupo' ? (
+            <details className="cartao" key={`grupo-${entrada.nomeLote}`}>
+              <summary>
+                <strong>{entrada.nomeLote}</strong>
+                {' — '}
+                {entrada.dataMin === entrada.dataMax
+                  ? formatarData(entrada.dataMin)
+                  : `${formatarData(entrada.dataMin)} – ${formatarData(entrada.dataMax)}`}
+                {' — '}
+                {formatarDinheiro(entrada.totalCentavos)}
+              </summary>
+              <table className="tabela">
+                <thead>{cabecalhoColunas()}</thead>
+                <tbody>{entrada.itens.map(linhaLote)}</tbody>
+              </table>
+            </details>
+          ) : (
+            <table className="tabela" key={`solto-${entrada.lote.id}`}>
+              <thead>{cabecalhoColunas()}</thead>
+              <tbody>{linhaLote(entrada.lote)}</tbody>
+            </table>
+          )))}
+        </div>
       ) : <p className="vazio">Nenhum lote lançado ainda.</p>)}
       {criando && (
         <Modal titulo="Novo lote" onFechar={() => setCriando(false)}>
-          <FormPlacaLote rotuloBotao="Lançar lote" onSalvar={criar} />
+          <FormPlacaLote rotuloBotao="Lançar lote" onSalvar={criar} sugestoesNomeLote={sugestoesNomeLote} />
         </Modal>
       )}
       {editando && (
         <Modal titulo="Editar lote" onFechar={() => setEditando(null)}>
-          <FormPlacaLote inicial={editando} rotuloBotao="Salvar" onSalvar={salvarEdicao} />
+          <FormPlacaLote inicial={editando} rotuloBotao="Salvar" onSalvar={salvarEdicao} sugestoesNomeLote={sugestoesNomeLote} />
         </Modal>
       )}
     </section>
