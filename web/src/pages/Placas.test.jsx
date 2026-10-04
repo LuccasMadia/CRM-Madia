@@ -93,4 +93,32 @@ describe('Placas', () => {
       nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, itens: [{ material_id: 1, quantidade: 1 }],
     });
   });
+
+  it('lança venda e mostra aviso de estoque negativo', async () => {
+    const modelo = { id: 1, nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, custo_previsto_centavos: 249, lucro_previsto_centavos: 7751, itens: [] };
+    const ana = { id: 1, nome: 'Ana' };
+    const { chamadas } = mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/vendas': [],
+      'GET /placas/modelos': [modelo],
+      'GET /clientes': [ana],
+      'POST /placas/vendas': {
+        venda: {
+          id: 1, modelo_id: 1, quantidade: 1, preco_vendido_centavos: 8000, custo_unitario_centavos: 249,
+          cliente_id: 1, comprador_nome: null, data_venda: '2026-10-03', lucro_real_centavos: 7751,
+        },
+        avisos_estoque: [{ material_id: 1, nome: 'Placa 10x10 PVC', estoque_atual: -1 }],
+      },
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Vendas' }));
+    await user.click(await screen.findByRole('button', { name: '+ Venda' }));
+    await user.selectOptions(await screen.findByLabelText('Modelo'), '1');
+    await user.selectOptions(screen.getByLabelText('Comprador'), '1');
+    await user.click(screen.getByRole('button', { name: 'Lançar venda' }));
+    expect(await screen.findByText(/Estoque negativo após esta venda/)).toBeInTheDocument();
+    const post = chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/placas/vendas');
+    expect(post.corpo).toMatchObject({ modelo_id: 1, quantidade: 1, preco_vendido_centavos: 8000, cliente_id: 1, comprador_nome: null });
+  });
 });

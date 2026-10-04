@@ -3,12 +3,14 @@ import { AbaResumo } from './placas/AbaResumo.jsx';
 import { AbaMateriais } from './placas/AbaMateriais.jsx';
 import { AbaLotes } from './placas/AbaLotes.jsx';
 import { AbaModelos } from './placas/AbaModelos.jsx';
+import { AbaVendas } from './placas/AbaVendas.jsx';
 
 const ABAS = [
   ['resumo', 'Resumo'],
   ['materiais', 'Materiais'],
   ['lotes', 'Lotes'],
   ['modelos', 'Modelos'],
+  ['vendas', 'Vendas'],
 ];
 
 export function Placas() {
@@ -30,6 +32,7 @@ export function Placas() {
         {aba === 'materiais' && <AbaMateriais />}
         {aba === 'lotes' && <AbaLotes />}
         {aba === 'modelos' && <AbaModelos />}
+        {aba === 'vendas' && <AbaVendas />}
       </div>
     </section>
   );
