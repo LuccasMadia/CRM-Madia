@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Placas } from './Placas.jsx';
 import { mockApi } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
@@ -22,5 +23,21 @@ describe('Placas', () => {
     expect(screen.getByText(/R\$\s*76,24/)).toBeInTheDocument();
     expect(screen.getByText(/R\$\s*75,00/)).toBeInTheDocument();
     expect(screen.getByText('-1')).toBeInTheDocument();
+  });
+
+  it('cria material na aba Materiais', async () => {
+    const { chamadas } = mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/materiais': [],
+      'POST /placas/materiais': { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: null },
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Materiais' }));
+    await user.click(await screen.findByRole('button', { name: '+ Material' }));
+    await user.type(screen.getByLabelText('Nome'), 'Placa 10x10 PVC');
+    await user.click(screen.getByRole('button', { name: 'Criar material' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({ nome: 'Placa 10x10 PVC' });
   });
 });
