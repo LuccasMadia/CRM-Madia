@@ -1,9 +1,13 @@
 import { Router } from 'express';
 import { repoPlacasMateriais, repoPlacasLotes, repoPlacasModelos, repoPlacasModelosItens, repoPlacasVendas } from '../repos/placas.js';
+import { repoClientes } from '../repos/clientes.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroValidacao, naoEncontrado } from '../http/erros.js';
-import { estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto } from '../domain/placas.js';
+import {
+  estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto,
+  lucroRealVenda, materiaisComEstoqueNegativo,
+} from '../domain/placas.js';
 
 const REGRAS_MATERIAL = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -23,12 +27,22 @@ const REGRAS_MODELO = {
   preco_venda_centavos: { tipo: 'inteiro', obrigatorio: true, min: 0 },
 };
 
+const REGRAS_VENDA = {
+  modelo_id: { tipo: 'inteiro', obrigatorio: true },
+  quantidade: { tipo: 'inteiro', min: 1 },
+  preco_vendido_centavos: { tipo: 'inteiro', obrigatorio: true, min: 0 },
+  cliente_id: { tipo: 'inteiro' },
+  comprador_nome: { tipo: 'texto' },
+  data_venda: { tipo: 'data', obrigatorio: true },
+};
+
 export function rotasPlacas({ db }) {
   const materiais = repoPlacasMateriais(db);
   const lotes = repoPlacasLotes(db);
   const modelos = repoPlacasModelos(db);
   const itensModelo = repoPlacasModelosItens(db);
   const vendas = repoPlacasVendas(db);
+  const clientes = repoClientes(db);
   const r = Router();
 
   function comCalculo(material) {
@@ -168,6 +182,75 @@ export function rotasPlacas({ db }) {
       itensModelo.removerPorModelo(id);
       modelos.remover(id);
     });
+    res.status(204).end();
+  });
+
+  r.get('/placas/vendas', (req, res) => {
+    const modelosTodos = modelos.listar();
+    const clientesTodos = clientes.listar();
+    res.json(vendas.listar().map((v) => ({
+      ...v,
+      lucro_real_centavos: lucroRealVenda(v),
+      modelo_nome: modelosTodos.find((m) => m.id === v.modelo_id)?.nome ?? '—',
+      cliente_nome: v.cliente_id ? (clientesTodos.find((c) => c.id === v.cliente_id)?.nome ?? '—') : null,
+    })));
+  });
+
+  r.post('/placas/vendas', (req, res) => {
+    const dados = validar(req.body, REGRAS_VENDA);
+    const temCliente = dados.cliente_id !== undefined && dados.cliente_id !== null;
+    const temNome = typeof dados.comprador_nome === 'string' && dados.comprador_nome.trim() !== '';
+    if (temCliente === temNome) {
+      throw new ErroValidacao([{ campo: 'comprador_nome', mensagem: 'Informe um cliente cadastrado ou um nome avulso (não os dois)' }]);
+    }
+    if (temCliente && !clientes.obter(dados.cliente_id)) {
+      throw new ErroValidacao([{ campo: 'cliente_id', mensagem: 'Cliente não encontrado' }]);
+    }
+    const modelo = modelos.obter(dados.modelo_id);
+    if (!modelo) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
+
+    const itensDoModelo = itensModelo.listar({ modelo_id: modelo.id });
+    if (!itensDoModelo.length) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
+
+    const lotesTodos = lotes.listar();
+    let custoUnitario = 0;
+    for (const item of itensDoModelo) {
+      const custo = custoAtualMaterial(item.material_id, lotesTodos);
+      if (custo === null) {
+        throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
+      }
+      custoUnitario += custo * item.quantidade;
+    }
+
+    const venda = vendas.criar({
+      modelo_id: modelo.id,
+      quantidade: dados.quantidade ?? 1,
+      preco_vendido_centavos: dados.preco_vendido_centavos,
+      custo_unitario_centavos: custoUnitario,
+      cliente_id: temCliente ? dados.cliente_id : null,
+      comprador_nome: temNome ? dados.comprador_nome.trim() : null,
+      data_venda: dados.data_venda,
+    });
+
+    const vendasTodas = vendas.listar();
+    const todosItensModelo = itensModelo.listar();
+    const materiaisAfetados = itensDoModelo.map((i) => materiais.obter(i.material_id));
+    const avisosEstoque = materiaisComEstoqueNegativo(materiaisAfetados, lotesTodos, vendasTodas, todosItensModelo)
+      .map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
+
+    res.status(201).json({ venda: { ...venda, lucro_real_centavos: lucroRealVenda(venda) }, avisos_estoque: avisosEstoque });
+  });
+
+  r.put('/placas/vendas/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    const dados = validar(req.body, REGRAS_VENDA, { parcial: true });
+    const atualizada = vendas.atualizar(id, dados);
+    if (!atualizada) throw naoEncontrado('Venda');
+    res.json({ ...atualizada, lucro_real_centavos: lucroRealVenda(atualizada) });
+  });
+
+  r.delete('/placas/vendas/:id', (req, res) => {
+    if (!vendas.remover(lerId(req.params.id))) throw naoEncontrado('Venda');
     res.status(204).end();
   });
 

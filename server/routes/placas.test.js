@@ -187,3 +187,97 @@ describe('/api/placas/modelos', () => {
     await ctx.http.delete('/api/placas/modelos/999').expect(404);
   });
 });
+
+async function montarModeloCompleto() {
+  const placa = await criarMaterial({ nome: 'Placa 10x10 PVC' });
+  await criarLote(placa.id, { quantidade: 2, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
+  return criarModelo([{ material_id: placa.id, quantidade: 1 }], { preco_venda_centavos: 8000 });
+}
+
+describe('/api/placas/vendas', () => {
+  it('cria venda calculando o custo snapshot e o lucro real', async () => {
+    const modelo = await montarModeloCompleto();
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const res = await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, cliente_id: cliente.id, data_venda: '2026-09-23',
+    }).expect(201);
+    expect(res.body.venda).toMatchObject({ custo_unitario_centavos: 1245, quantidade: 1, lucro_real_centavos: 8000 - 1245 });
+    expect(res.body.avisos_estoque).toEqual([]);
+  });
+
+  it('aceita comprador avulso sem cliente cadastrado', async () => {
+    const modelo = await montarModeloCompleto();
+    const res = await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, comprador_nome: 'Fulano do Instagram', data_venda: '2026-09-23',
+    }).expect(201);
+    expect(res.body.venda.comprador_nome).toBe('Fulano do Instagram');
+    expect(res.body.venda.cliente_id).toBeNull();
+  });
+
+  it('recusa quando não informa cliente nem nome avulso', async () => {
+    const modelo = await montarModeloCompleto();
+    const res = await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, data_venda: '2026-09-23',
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'comprador_nome', mensagem: 'Informe um cliente cadastrado ou um nome avulso (não os dois)' }]);
+  });
+
+  it('recusa quando informa cliente e nome avulso ao mesmo tempo', async () => {
+    const modelo = await montarModeloCompleto();
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const res = await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, cliente_id: cliente.id, comprador_nome: 'Fulano', data_venda: '2026-09-23',
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'comprador_nome', mensagem: 'Informe um cliente cadastrado ou um nome avulso (não os dois)' }]);
+  });
+
+  it('avisa sem bloquear quando o estoque fica negativo', async () => {
+    const modelo = await montarModeloCompleto();
+    const res = await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, quantidade: 3, preco_vendido_centavos: 8000, comprador_nome: 'Fulano', data_venda: '2026-09-23',
+    }).expect(201);
+    expect(res.body.avisos_estoque).toHaveLength(1);
+    expect(res.body.avisos_estoque[0]).toMatchObject({ nome: 'Placa 10x10 PVC', estoque_atual: -1 });
+  });
+
+  it('recusa quando o modelo não tem lote comprado para a receita', async () => {
+    const placa = await criarMaterial();
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    const res = await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, comprador_nome: 'Fulano', data_venda: '2026-09-23',
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'modelo_id', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
+  });
+
+  it('lista vendas com nomes do modelo e do cliente', async () => {
+    const modelo = await montarModeloCompleto();
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, cliente_id: cliente.id, data_venda: '2026-09-23',
+    }).expect(201);
+    const res = await ctx.http.get('/api/placas/vendas').expect(200);
+    expect(res.body[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', cliente_nome: 'Ana' });
+  });
+
+  it('edita preço vendido', async () => {
+    const modelo = await montarModeloCompleto();
+    const criada = (await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, comprador_nome: 'Fulano', data_venda: '2026-09-23',
+    }).expect(201)).body.venda;
+    const res = await ctx.http.put(`/api/placas/vendas/${criada.id}`).send({ preco_vendido_centavos: 7500 }).expect(200);
+    expect(res.body.preco_vendido_centavos).toBe(7500);
+  });
+
+  it('exclui venda', async () => {
+    const modelo = await montarModeloCompleto();
+    const criada = (await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, comprador_nome: 'Fulano', data_venda: '2026-09-23',
+    }).expect(201)).body.venda;
+    await ctx.http.delete(`/api/placas/vendas/${criada.id}`).expect(204);
+  });
+
+  it('responde 404 ao editar ou excluir venda inexistente', async () => {
+    await ctx.http.put('/api/placas/vendas/999').send({ preco_vendido_centavos: 100 }).expect(404);
+    await ctx.http.delete('/api/placas/vendas/999').expect(404);
+  });
+});
