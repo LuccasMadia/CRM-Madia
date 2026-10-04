@@ -6,7 +6,7 @@ import { validar, lerId } from '../http/validar.js';
 import { ErroValidacao, naoEncontrado } from '../http/erros.js';
 import {
   estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto,
-  lucroRealVenda, materiaisComEstoqueNegativo,
+  lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
 } from '../domain/placas.js';
 
 const REGRAS_MATERIAL = {
@@ -252,6 +252,40 @@ export function rotasPlacas({ db }) {
   r.delete('/placas/vendas/:id', (req, res) => {
     if (!vendas.remover(lerId(req.params.id))) throw naoEncontrado('Venda');
     res.status(204).end();
+  });
+
+  r.get('/placas/resumo', (req, res) => {
+    const materiaisTodos = materiais.listar();
+    const modelosTodos = modelos.listar();
+    const lotesTodos = lotes.listar();
+    const vendasTodas = vendas.listar();
+    const todosItens = itensModelo.listar();
+
+    const lucroPrevistoPorModelo = modelosTodos.map((m) => {
+      const custoReceita = custoReceitaModelo(m.id, todosItens, lotesTodos);
+      return {
+        modelo_id: m.id,
+        modelo_nome: m.nome,
+        preco_venda_centavos: m.preco_venda_centavos,
+        custo_previsto_centavos: custoReceita,
+        lucro_previsto_centavos: lucroPrevisto(m, custoReceita),
+      };
+    });
+
+    const materiaisComEstoque = materiaisTodos.map((m) => ({
+      material_id: m.id,
+      nome: m.nome,
+      estoque_atual: estoqueMaterial(m.id, lotesTodos, vendasTodas, todosItens),
+    }));
+
+    res.json({
+      lucro_previsto_por_modelo: lucroPrevistoPorModelo,
+      lucro_real_por_modelo: resumoLucroReal(vendasTodas).map((rl) => ({
+        ...rl,
+        modelo_nome: modelosTodos.find((m) => m.id === rl.modelo_id)?.nome ?? '—',
+      })),
+      materiais: materiaisComEstoque,
+    });
   });
 
   return r;

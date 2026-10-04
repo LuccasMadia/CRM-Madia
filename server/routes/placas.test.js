@@ -281,3 +281,16 @@ describe('/api/placas/vendas', () => {
     await ctx.http.delete('/api/placas/vendas/999').expect(404);
   });
 });
+
+describe('/api/placas/resumo', () => {
+  it('agrega lucro previsto, lucro real e estoque', async () => {
+    const modelo = await montarModeloCompleto();
+    await ctx.http.post('/api/placas/vendas').send({
+      modelo_id: modelo.id, preco_vendido_centavos: 8000, comprador_nome: 'Fulano', data_venda: '2026-09-23',
+    }).expect(201);
+    const res = await ctx.http.get('/api/placas/resumo').expect(200);
+    expect(res.body.lucro_previsto_por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', lucro_previsto_centavos: 8000 - 1245 });
+    expect(res.body.lucro_real_por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', quantidade: 1, lucro_total_centavos: 8000 - 1245 });
+    expect(res.body.materiais[0]).toMatchObject({ nome: 'Placa 10x10 PVC', estoque_atual: 1 });
+  });
+});
