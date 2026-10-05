@@ -69,6 +69,25 @@ export function AbaResumo() {
               </table>
             ) : <p className="vazio">Nenhum material cadastrado.</p>}
           </section>
+
+          <section className="cartao">
+            <h2>Prejuízo com avarias</h2>
+            <p><strong>Total perdido:</strong> {formatarDinheiro(resumo.prejuizo_avarias.total_centavos)}</p>
+            {resumo.prejuizo_avarias.por_modelo.length ? (
+              <table className="tabela">
+                <thead><tr><th>Modelo</th><th className="num">Quantidade avariada</th><th className="num">Custo perdido</th></tr></thead>
+                <tbody>
+                  {resumo.prejuizo_avarias.por_modelo.map((m) => (
+                    <tr key={m.modelo_id}>
+                      <td>{m.modelo_nome}</td>
+                      <td className="num">{m.quantidade}</td>
+                      <td className="num">{formatarDinheiro(m.total_centavos)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <p className="vazio">Nenhuma avaria lançada ainda.</p>}
+          </section>
         </>
       )}
     </section>

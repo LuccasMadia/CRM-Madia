@@ -6,7 +6,7 @@ import { mockApi } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 
 describe('Placas', () => {
-  it('mostra o resumo de lucro previsto, lucro real e estoque', async () => {
+  it('mostra o resumo de lucro previsto, lucro real, estoque e prejuízo com avarias', async () => {
     mockApi({
       'GET /placas/resumo': {
         lucro_previsto_por_modelo: [
@@ -16,6 +16,10 @@ describe('Placas', () => {
           { modelo_id: 1, modelo_nome: 'Placa 10x10 PVC', quantidade: 2, lucro_total_centavos: 15000, lucro_medio_centavos: 7500 },
         ],
         materiais: [{ material_id: 1, nome: 'Placa 10x10 PVC', estoque_atual: -1 }],
+        prejuizo_avarias: {
+          total_centavos: 1245,
+          por_modelo: [{ modelo_id: 1, modelo_nome: 'Placa 10x10 PVC', quantidade: 1, total_centavos: 1245 }],
+        },
       },
     });
     renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
@@ -23,11 +27,13 @@ describe('Placas', () => {
     expect(screen.getByText(/R\$\s*76,24/)).toBeInTheDocument();
     expect(screen.getByText(/R\$\s*75,00/)).toBeInTheDocument();
     expect(screen.getByText('-1')).toBeInTheDocument();
+    expect(screen.getByText('Prejuízo com avarias')).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*12,45/).length).toBeGreaterThan(0);
   });
 
   it('cria material na aba Materiais', async () => {
     const { chamadas } = mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/materiais': [],
       'POST /placas/materiais': { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: null },
     });
@@ -44,7 +50,7 @@ describe('Placas', () => {
   it('lança lote na aba Lotes', async () => {
     const material = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: null };
     const { chamadas } = mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/materiais': [material],
       'GET /placas/lotes': [],
       'POST /placas/lotes': {
@@ -135,7 +141,7 @@ describe('Placas', () => {
       valor_kit_centavos: 2000, valor_frete_centavos: 200, data_compra: '2026-10-08',
     };
     mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/materiais': [pvc, nfc],
       'GET /placas/lotes': [loteA, loteB],
     });
@@ -158,7 +164,7 @@ describe('Placas', () => {
       valor_kit_centavos: 500, valor_frete_centavos: 0, data_compra: '2026-10-01',
     };
     mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/materiais': [pvc],
       'GET /placas/lotes': [loteSolto],
     });
@@ -176,7 +182,7 @@ describe('Placas', () => {
       valor_kit_centavos: 1000, valor_frete_centavos: 100, data_compra: '2026-10-05',
     };
     mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/materiais': [pvc],
       'GET /placas/lotes': [loteA],
     });
@@ -225,7 +231,7 @@ describe('Placas', () => {
   it('cria modelo com um item de receita na aba Modelos', async () => {
     const material = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: 249 };
     const { chamadas } = mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/modelos': [],
       'GET /placas/materiais': [material],
       'POST /placas/modelos': {
@@ -254,7 +260,7 @@ describe('Placas', () => {
     const modelo = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, preco_venda_centavos: 8000, custo_previsto_centavos: 249, lucro_previsto_centavos: 7751, itens: [] };
     const ana = { id: 1, nome: 'Ana' };
     const { chamadas } = mockApi({
-      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
       'GET /placas/vendas': [],
       'GET /placas/modelos': [modelo],
       'GET /clientes': [ana],
