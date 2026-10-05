@@ -28,7 +28,7 @@ describe('Placas', () => {
     expect(screen.getByText(/R\$\s*75,00/)).toBeInTheDocument();
     expect(screen.getByText('-1')).toBeInTheDocument();
     expect(screen.getByText('Prejuízo com avarias')).toBeInTheDocument();
-    expect(screen.getAllByText(/R\$\s*12,45/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/R\$\s*12,45/)).toHaveLength(2);
   });
 
   it('cria material na aba Materiais', async () => {

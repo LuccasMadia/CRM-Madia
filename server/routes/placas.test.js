@@ -387,6 +387,25 @@ describe('/api/placas/avarias', () => {
     await ctx.http.put('/api/placas/avarias/999').send({ observacao: 'x' }).expect(404);
     await ctx.http.delete('/api/placas/avarias/999').expect(404);
   });
+
+  it('não exclui modelo com avaria vinculada', async () => {
+    const modelo = await montarModeloCompleto();
+    await criarAvaria(modelo.id);
+    const res = await ctx.http.delete(`/api/placas/modelos/${modelo.id}`).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'id', mensagem: 'Modelo tem avarias vinculadas' }]);
+  });
+
+  it('não exclui material usado em uma avaria', async () => {
+    const placa = await criarMaterial({ nome: 'Placa 10x10 PVC' });
+    await criarLote(placa.id, { quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
+    const extra = await criarMaterial({ nome: 'Verniz extra' });
+    const loteExtra = await criarLote(extra.id, { quantidade: 10, valor_kit_centavos: 1000, valor_frete_centavos: 0 });
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }], { preco_venda_centavos: 8000 });
+    await criarAvaria(modelo.id, { itens: [{ material_id: extra.id, quantidade: 2 }] });
+    await ctx.http.delete(`/api/placas/lotes/${loteExtra.id}`).expect(204);
+    const res = await ctx.http.delete(`/api/placas/materiais/${extra.id}`).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'id', mensagem: 'Material está usado em uma avaria' }]);
+  });
 });
 
 describe('/api/placas/resumo', () => {

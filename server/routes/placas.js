@@ -137,6 +137,9 @@ export function rotasPlacas({ db }) {
     if (itensModelo.listar().some((i) => i.material_id === id)) {
       throw new ErroValidacao([{ campo: 'id', mensagem: 'Material está usado na receita de um modelo' }]);
     }
+    if (itensAvaria.listar().some((i) => i.material_id === id)) {
+      throw new ErroValidacao([{ campo: 'id', mensagem: 'Material está usado em uma avaria' }]);
+    }
     materiais.remover(id);
     res.status(204).end();
   });
@@ -215,6 +218,9 @@ export function rotasPlacas({ db }) {
     if (vendas.listar().some((v) => v.modelo_id === id)) {
       throw new ErroValidacao([{ campo: 'id', mensagem: 'Modelo tem vendas vinculadas' }]);
     }
+    if (avarias.listar().some((a) => a.modelo_id === id)) {
+      throw new ErroValidacao([{ campo: 'id', mensagem: 'Modelo tem avarias vinculadas' }]);
+    }
     emTransacao(db, () => {
       itensModelo.removerPorModelo(id);
       modelos.remover(id);
@@ -285,9 +291,12 @@ export function rotasPlacas({ db }) {
 
     const vendasTodas = vendas.listar();
     const todosItensModelo = itensModelo.listar();
+    const avariasTodas = avarias.listar();
+    const todosItensAvaria = itensAvaria.listar();
     const materiaisAfetados = itensDoModelo.map((i) => materiais.obter(i.material_id));
-    const avisosEstoque = materiaisComEstoqueNegativo(materiaisAfetados, lotesTodos, vendasTodas, todosItensModelo)
-      .map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
+    const avisosEstoque = materiaisComEstoqueNegativo(
+      materiaisAfetados, lotesTodos, vendasTodas, todosItensModelo, avariasTodas, todosItensAvaria,
+    ).map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
 
     res.status(201).json({ venda: { ...venda, lucro_real_centavos: lucroRealVenda(venda) }, avisos_estoque: avisosEstoque });
   });
