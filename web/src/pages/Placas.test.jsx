@@ -188,6 +188,40 @@ describe('Placas', () => {
     expect(opcoes).toEqual(['Compra Outubro']);
   });
 
+  it('lança avaria com a receita do modelo pré-carregada, na aba Avarias', async () => {
+    const modelo = {
+      id: 1, nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, ativo: 1,
+      itens: [{ id: 1, modelo_id: 1, material_id: 1, quantidade: 1 }],
+    };
+    const material = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 2, custo_unitario_atual: 1245 };
+    const { chamadas } = mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
+      'GET /placas/avarias': [],
+      'GET /placas/modelos': [modelo],
+      'GET /placas/materiais': [material],
+      'POST /placas/avarias': {
+        avaria: {
+          id: 1, modelo_id: 1, quantidade: 1, custo_unitario_centavos: 1245, custo_total_centavos: 1245,
+          observacao: null, data_avaria: '2026-10-05', itens: [{ material_id: 1, quantidade: 1 }],
+        },
+        avisos_estoque: [],
+      },
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Avarias' }));
+    await user.click(await screen.findByRole('button', { name: '+ Avaria' }));
+    await user.selectOptions(await screen.findByLabelText('Modelo'), '1');
+    expect(await screen.findByLabelText('Material do item 1')).toHaveValue('1');
+    await user.click(screen.getByRole('button', { name: 'Lançar avaria' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const post = chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/placas/avarias');
+    expect(post.corpo).toEqual({
+      modelo_id: 1, quantidade: 1, observacao: null, data_avaria: expect.any(String),
+      itens: [{ material_id: 1, quantidade: 1 }],
+    });
+  });
+
   it('cria modelo com um item de receita na aba Modelos', async () => {
     const material = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: 249 };
     const { chamadas } = mockApi({
