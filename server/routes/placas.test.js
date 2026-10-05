@@ -113,6 +113,22 @@ describe('/api/placas/materiais exclusão bloqueada por lote', () => {
   });
 });
 
+describe('/api/placas/materiais ativar e desativar', () => {
+  it('desativa e reativa um material', async () => {
+    const material = await criarMaterial();
+    const desativado = (await ctx.http.post(`/api/placas/materiais/${material.id}/desativar`).expect(200)).body;
+    expect(desativado.ativo).toBe(0);
+    const listagem = await ctx.http.get('/api/placas/materiais').expect(200);
+    expect(listagem.body[0].ativo).toBe(0);
+    const reativado = (await ctx.http.post(`/api/placas/materiais/${material.id}/ativar`).expect(200)).body;
+    expect(reativado.ativo).toBe(1);
+  });
+
+  it('responde 404 ao desativar material inexistente', async () => {
+    await ctx.http.post('/api/placas/materiais/999/desativar').expect(404);
+  });
+});
+
 async function criarModelo(itens, overrides = {}) {
   return (await ctx.http.post('/api/placas/modelos').send({
     nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, itens, ...overrides,
@@ -292,5 +308,20 @@ describe('/api/placas/resumo', () => {
     expect(res.body.lucro_previsto_por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', lucro_previsto_centavos: 8000 - 1245 });
     expect(res.body.lucro_real_por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', quantidade: 1, lucro_total_centavos: 8000 - 1245 });
     expect(res.body.materiais[0]).toMatchObject({ nome: 'Placa 10x10 PVC', estoque_atual: 1 });
+  });
+});
+
+describe('/api/placas/modelos ativar e desativar', () => {
+  it('desativa e reativa um modelo', async () => {
+    const placa = await criarMaterial();
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    const desativado = (await ctx.http.post(`/api/placas/modelos/${modelo.id}/desativar`).expect(200)).body;
+    expect(desativado.ativo).toBe(0);
+    const reativado = (await ctx.http.post(`/api/placas/modelos/${modelo.id}/ativar`).expect(200)).body;
+    expect(reativado.ativo).toBe(1);
+  });
+
+  it('responde 404 ao desativar modelo inexistente', async () => {
+    await ctx.http.post('/api/placas/modelos/999/desativar').expect(404);
   });
 });

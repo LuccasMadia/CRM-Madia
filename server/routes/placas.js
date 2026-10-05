@@ -118,6 +118,20 @@ export function rotasPlacas({ db }) {
     res.status(204).end();
   });
 
+  r.post('/placas/materiais/:id/desativar', (req, res) => {
+    const id = lerId(req.params.id);
+    const atualizado = materiais.atualizar(id, { ativo: 0 });
+    if (!atualizado) throw naoEncontrado('Material');
+    res.json(comCalculo(atualizado));
+  });
+
+  r.post('/placas/materiais/:id/ativar', (req, res) => {
+    const id = lerId(req.params.id);
+    const atualizado = materiais.atualizar(id, { ativo: 1 });
+    if (!atualizado) throw naoEncontrado('Material');
+    res.json(comCalculo(atualizado));
+  });
+
   r.get('/placas/lotes', (req, res) => {
     res.json(lotes.listar({ material_id: req.query.material_id }));
   });
@@ -183,6 +197,20 @@ export function rotasPlacas({ db }) {
       modelos.remover(id);
     });
     res.status(204).end();
+  });
+
+  r.post('/placas/modelos/:id/desativar', (req, res) => {
+    const id = lerId(req.params.id);
+    const atualizado = modelos.atualizar(id, { ativo: 0 });
+    if (!atualizado) throw naoEncontrado('Modelo');
+    res.json(montarModelo(atualizado));
+  });
+
+  r.post('/placas/modelos/:id/ativar', (req, res) => {
+    const id = lerId(req.params.id);
+    const atualizado = modelos.atualizar(id, { ativo: 1 });
+    if (!atualizado) throw naoEncontrado('Modelo');
+    res.json(montarModelo(atualizado));
   });
 
   r.get('/placas/vendas', (req, res) => {

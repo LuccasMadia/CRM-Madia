@@ -1,6 +1,6 @@
 import { criarRepo } from './crud.js';
 
-export const CAMPOS_MATERIAL = ['nome'];
+export const CAMPOS_MATERIAL = ['nome', 'ativo'];
 export function repoPlacasMateriais(db) {
   const base = criarRepo(db, 'placas_materiais', CAMPOS_MATERIAL);
   return { ...base, listar: () => base.listar({}, 'nome COLLATE NOCASE') };
@@ -19,7 +19,7 @@ export function repoPlacasLotes(db) {
   };
 }
 
-export const CAMPOS_MODELO = ['nome', 'preco_venda_centavos'];
+export const CAMPOS_MODELO = ['nome', 'preco_venda_centavos', 'ativo'];
 export function repoPlacasModelos(db) {
   const base = criarRepo(db, 'placas_modelos', CAMPOS_MODELO);
   return { ...base, listar: () => base.listar({}, 'nome COLLATE NOCASE') };
