@@ -29,6 +29,40 @@ export function AbaMateriais() {
     recarregar();
   }
 
+  async function desativar(material) {
+    await api(`/placas/materiais/${material.id}/desativar`, { method: 'POST' });
+    recarregar();
+  }
+
+  async function ativar(material) {
+    await api(`/placas/materiais/${material.id}/ativar`, { method: 'POST' });
+    recarregar();
+  }
+
+  function linhaMaterial(m) {
+    return (
+      <tr key={m.id} className={m.ativo ? undefined : 'tabela__linha--inativa'}>
+        <td>{m.nome}</td>
+        <td className="num">
+          {m.estoque_atual < 0 ? <span className="etiqueta etiqueta--atrasada">{m.estoque_atual}</span> : m.estoque_atual}
+        </td>
+        <td className="num">{m.custo_unitario_atual === null ? '—' : formatarDinheiro(m.custo_unitario_atual)}</td>
+        <td>
+          <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => setEditando(m)}>Editar</button>{' '}
+          {m.ativo ? (
+            <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => desativar(m)}>Desativar</button>
+          ) : (
+            <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => ativar(m)}>Reativar</button>
+          )}{' '}
+          <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => remover(m)}>Excluir</button>
+        </td>
+      </tr>
+    );
+  }
+
+  const ativos = (materiais ?? []).filter((m) => m.ativo);
+  const inativos = (materiais ?? []).filter((m) => !m.ativo);
+
   return (
     <section>
       <header className="pagina__topo">
@@ -40,19 +74,9 @@ export function AbaMateriais() {
         <table className="tabela">
           <thead><tr><th>Nome</th><th className="num">Estoque atual</th><th className="num">Custo unitário atual</th><th></th></tr></thead>
           <tbody>
-            {materiais.map((m) => (
-              <tr key={m.id}>
-                <td>{m.nome}</td>
-                <td className="num">
-                  {m.estoque_atual < 0 ? <span className="etiqueta etiqueta--atrasada">{m.estoque_atual}</span> : m.estoque_atual}
-                </td>
-                <td className="num">{m.custo_unitario_atual === null ? '—' : formatarDinheiro(m.custo_unitario_atual)}</td>
-                <td>
-                  <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => setEditando(m)}>Editar</button>{' '}
-                  <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => remover(m)}>Excluir</button>
-                </td>
-              </tr>
-            ))}
+            {ativos.map(linhaMaterial)}
+            {inativos.length > 0 && <tr className="tabela__divisoria"><td colSpan={4}>Inativos</td></tr>}
+            {inativos.map(linhaMaterial)}
           </tbody>
         </table>
       ) : <p className="vazio">Nenhum material cadastrado.</p>)}

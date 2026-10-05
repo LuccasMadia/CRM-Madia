@@ -83,6 +83,23 @@ describe('Placas', () => {
     expect(opcoes).toEqual(['Selecione…', 'Placa 10x10 PVC']);
   });
 
+  it('separa materiais ativos e inativos, com botão de desativar e reativar', async () => {
+    const ativo = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: null };
+    const inativo = { id: 2, nome: 'Placa Antiga', ativo: 0, estoque_atual: 0, custo_unitario_atual: null };
+    const { chamadas } = mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
+      'GET /placas/materiais': [ativo, inativo],
+      'POST /placas/materiais/2/ativar': { ...inativo, ativo: 1 },
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Materiais' }));
+    expect(await screen.findByText('Inativos')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reativar' }));
+    const post = chamadas.find((c) => c.caminho === '/placas/materiais/2/ativar');
+    expect(post.metodo).toBe('POST');
+  });
+
   it('agrupa lotes com o mesmo nome_lote numa seção expansível com total e intervalo de datas', async () => {
     const pvc = { id: 1, nome: 'Placa 10x10 PVC' };
     const nfc = { id: 2, nome: 'Tag NFC' };
