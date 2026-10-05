@@ -6,6 +6,7 @@ import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { hojeISO } from '../lib/datas.js';
+import { apenasAtivos } from '../lib/ativos.js';
 
 export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
   const { dados: modelos } = useCarregar(() => api('/placas/modelos'), []);
@@ -53,7 +54,7 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
       <Campo rotulo="Modelo" nome="modelo_id" erros={erros}>
         <select value={valores.modelo_id} onChange={selecionarModelo}>
           <option value="">Selecione…</option>
-          {(modelos ?? []).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+          {apenasAtivos(modelos, valores.modelo_id).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
         </select>
       </Campo>
       <Campo rotulo="Quantidade" nome="quantidade" erros={erros} type="number" min="1" {...campo('quantidade')} />

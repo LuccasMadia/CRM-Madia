@@ -42,7 +42,7 @@ describe('Placas', () => {
   });
 
   it('lança lote na aba Lotes', async () => {
-    const material = { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: null };
+    const material = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: null };
     const { chamadas } = mockApi({
       'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
       'GET /placas/materiais': [material],
@@ -64,6 +64,23 @@ describe('Placas', () => {
     const post = chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/placas/lotes');
     expect(post.corpo).toMatchObject({ material_id: 1, quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
     expect(post.corpo.data_compra).toEqual(expect.any(String));
+  });
+
+  it('esconde materiais inativos do select de novo lote', async () => {
+    const ativo = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: null };
+    const inativo = { id: 2, nome: 'Placa Antiga', ativo: 0, estoque_atual: 0, custo_unitario_atual: null };
+    mockApi({
+      'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } },
+      'GET /placas/materiais': [ativo, inativo],
+      'GET /placas/lotes': [],
+    });
+    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await user.click(await screen.findByRole('button', { name: '+ Lote' }));
+    const select = await screen.findByLabelText('Material');
+    const opcoes = [...select.querySelectorAll('option')].map((o) => o.textContent);
+    expect(opcoes).toEqual(['Selecione…', 'Placa 10x10 PVC']);
   });
 
   it('agrupa lotes com o mesmo nome_lote numa seção expansível com total e intervalo de datas', async () => {
@@ -132,7 +149,7 @@ describe('Placas', () => {
   });
 
   it('cria modelo com um item de receita na aba Modelos', async () => {
-    const material = { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: 249 };
+    const material = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, estoque_atual: 0, custo_unitario_atual: 249 };
     const { chamadas } = mockApi({
       'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },
       'GET /placas/modelos': [],
@@ -160,7 +177,7 @@ describe('Placas', () => {
   });
 
   it('lança venda e mostra aviso de estoque negativo', async () => {
-    const modelo = { id: 1, nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, custo_previsto_centavos: 249, lucro_previsto_centavos: 7751, itens: [] };
+    const modelo = { id: 1, nome: 'Placa 10x10 PVC', ativo: 1, preco_venda_centavos: 8000, custo_previsto_centavos: 249, lucro_previsto_centavos: 7751, itens: [] };
     const ana = { id: 1, nome: 'Ana' };
     const { chamadas } = mockApi({
       'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [] },

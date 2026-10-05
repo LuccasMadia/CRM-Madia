@@ -6,6 +6,7 @@ import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { hojeISO } from '../lib/datas.js';
+import { apenasAtivos } from '../lib/ativos.js';
 
 export function FormPlacaLote({ inicial = {}, rotuloBotao = 'Salvar', onSalvar, sugestoesNomeLote = [] }) {
   const { dados: materiais } = useCarregar(() => api('/placas/materiais'), []);
@@ -46,7 +47,7 @@ export function FormPlacaLote({ inicial = {}, rotuloBotao = 'Salvar', onSalvar, 
       <Campo rotulo="Material" nome="material_id" erros={erros}>
         <select {...campo('material_id')}>
           <option value="">Selecione…</option>
-          {(materiais ?? []).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+          {apenasAtivos(materiais, valores.material_id).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
         </select>
       </Campo>
       <Campo rotulo="Nome do lote (opcional)" nome="nome_lote" erros={erros} list="lista-nomes-lote" {...campo('nome_lote')} />

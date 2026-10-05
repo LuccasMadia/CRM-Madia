@@ -6,6 +6,7 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
+import { apenasAtivos } from '../lib/ativos.js';
 
 export function FormPlacaModelo({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
   const { dados: materiais } = useCarregar(() => api('/placas/materiais'), []);
@@ -58,7 +59,7 @@ export function FormPlacaModelo({ inicial = {}, rotuloBotao = 'Salvar', onSalvar
               onChange={(e) => alterarItem(indice, 'material_id', e.target.value)}
             >
               <option value="">Selecione…</option>
-              {(materiais ?? []).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              {apenasAtivos(materiais, item.material_id).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </select>
             <input
               aria-label={`Quantidade do item ${indice + 1}`}
