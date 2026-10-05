@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { repoPlacasMateriais, repoPlacasLotes, repoPlacasModelos, repoPlacasModelosItens, repoPlacasVendas } from '../repos/placas.js';
+import {
+  repoPlacasMateriais, repoPlacasLotes, repoPlacasModelos, repoPlacasModelosItens, repoPlacasVendas,
+  repoPlacasAvarias, repoPlacasAvariasItens,
+} from '../repos/placas.js';
 import { repoClientes } from '../repos/clientes.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
@@ -7,6 +10,7 @@ import { ErroValidacao, naoEncontrado } from '../http/erros.js';
 import {
   estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto,
   lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
+  custoItensAvaria, resumoPrejuizoAvarias,
 } from '../domain/placas.js';
 
 const REGRAS_MATERIAL = {
@@ -36,6 +40,13 @@ const REGRAS_VENDA = {
   data_venda: { tipo: 'data', obrigatorio: true },
 };
 
+const REGRAS_AVARIA = {
+  modelo_id: { tipo: 'inteiro', obrigatorio: true },
+  quantidade: { tipo: 'inteiro', min: 1 },
+  observacao: { tipo: 'texto' },
+  data_avaria: { tipo: 'data', obrigatorio: true },
+};
+
 export function rotasPlacas({ db }) {
   const materiais = repoPlacasMateriais(db);
   const lotes = repoPlacasLotes(db);
@@ -43,15 +54,19 @@ export function rotasPlacas({ db }) {
   const itensModelo = repoPlacasModelosItens(db);
   const vendas = repoPlacasVendas(db);
   const clientes = repoClientes(db);
+  const avarias = repoPlacasAvarias(db);
+  const itensAvaria = repoPlacasAvariasItens(db);
   const r = Router();
 
   function comCalculo(material) {
     const lotesTodos = lotes.listar();
     const vendasTodas = vendas.listar();
     const todosItens = itensModelo.listar();
+    const avariasTodas = avarias.listar();
+    const todosItensAvaria = itensAvaria.listar();
     return {
       ...material,
-      estoque_atual: estoqueMaterial(material.id, lotesTodos, vendasTodas, todosItens),
+      estoque_atual: estoqueMaterial(material.id, lotesTodos, vendasTodas, todosItens, avariasTodas, todosItensAvaria),
       custo_unitario_atual: custoAtualMaterial(material.id, lotesTodos),
     };
   }
@@ -85,6 +100,14 @@ export function rotasPlacas({ db }) {
       itens: todosItens.filter((i) => i.modelo_id === modelo.id),
       custo_previsto_centavos: custoReceita,
       lucro_previsto_centavos: lucroPrevisto(modelo, custoReceita),
+    };
+  }
+
+  function montarAvaria(avaria) {
+    return {
+      ...avaria,
+      itens: itensAvaria.listar({ avaria_id: avaria.id }),
+      custo_total_centavos: avaria.custo_unitario_centavos * avaria.quantidade,
     };
   }
 
@@ -282,12 +305,91 @@ export function rotasPlacas({ db }) {
     res.status(204).end();
   });
 
+  r.get('/placas/avarias', (req, res) => {
+    const modelosTodos = modelos.listar();
+    res.json(avarias.listar().map((a) => ({
+      ...montarAvaria(a),
+      modelo_nome: modelosTodos.find((m) => m.id === a.modelo_id)?.nome ?? '—',
+    })));
+  });
+
+  r.post('/placas/avarias', (req, res) => {
+    const dados = validar(req.body, REGRAS_AVARIA);
+    const modelo = modelos.obter(dados.modelo_id);
+    if (!modelo) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
+
+    const itensBrutos = req.body.itens !== undefined
+      ? req.body.itens
+      : itensModelo.listar({ modelo_id: modelo.id }).map((i) => ({ material_id: i.material_id, quantidade: i.quantidade }));
+    const itens = validarItens(itensBrutos);
+    if (!itens.length) throw new ErroValidacao([{ campo: 'itens', mensagem: 'Informe ao menos um material consumido' }]);
+
+    const lotesTodos = lotes.listar();
+    const custoUnitario = custoItensAvaria(itens, lotesTodos);
+    if (custoUnitario === null) {
+      throw new ErroValidacao([{ campo: 'itens', mensagem: 'Algum material ainda não tem lote comprado' }]);
+    }
+
+    const quantidade = dados.quantidade ?? 1;
+    const criada = emTransacao(db, () => {
+      const avaria = avarias.criar({ ...dados, quantidade, custo_unitario_centavos: custoUnitario });
+      for (const item of itens) itensAvaria.criar({ ...item, avaria_id: avaria.id });
+      return avaria;
+    });
+
+    const vendasTodas = vendas.listar();
+    const todosItensModelo = itensModelo.listar();
+    const avariasTodas = avarias.listar();
+    const todosItensAvaria = itensAvaria.listar();
+    const materiaisAfetados = itens.map((i) => materiais.obter(i.material_id));
+    const avisosEstoque = materiaisComEstoqueNegativo(
+      materiaisAfetados, lotesTodos, vendasTodas, todosItensModelo, avariasTodas, todosItensAvaria,
+    ).map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
+
+    res.status(201).json({ avaria: montarAvaria(criada), avisos_estoque: avisosEstoque });
+  });
+
+  r.put('/placas/avarias/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    if (!avarias.obter(id)) throw naoEncontrado('Avaria');
+    const dados = validar(req.body, REGRAS_AVARIA, { parcial: true });
+    const itens = req.body.itens !== undefined ? validarItens(req.body.itens) : null;
+    if (itens) {
+      if (!itens.length) throw new ErroValidacao([{ campo: 'itens', mensagem: 'Informe ao menos um material consumido' }]);
+      const custoUnitario = custoItensAvaria(itens, lotes.listar());
+      if (custoUnitario === null) {
+        throw new ErroValidacao([{ campo: 'itens', mensagem: 'Algum material ainda não tem lote comprado' }]);
+      }
+      dados.custo_unitario_centavos = custoUnitario;
+    }
+    emTransacao(db, () => {
+      if (Object.keys(dados).length) avarias.atualizar(id, dados);
+      if (itens) {
+        itensAvaria.removerPorAvaria(id);
+        for (const item of itens) itensAvaria.criar({ ...item, avaria_id: id });
+      }
+    });
+    res.json(montarAvaria(avarias.obter(id)));
+  });
+
+  r.delete('/placas/avarias/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    if (!avarias.obter(id)) throw naoEncontrado('Avaria');
+    emTransacao(db, () => {
+      itensAvaria.removerPorAvaria(id);
+      avarias.remover(id);
+    });
+    res.status(204).end();
+  });
+
   r.get('/placas/resumo', (req, res) => {
     const materiaisTodos = materiais.listar();
     const modelosTodos = modelos.listar();
     const lotesTodos = lotes.listar();
     const vendasTodas = vendas.listar();
     const todosItens = itensModelo.listar();
+    const avariasTodas = avarias.listar();
+    const todosItensAvaria = itensAvaria.listar();
 
     const lucroPrevistoPorModelo = modelosTodos.map((m) => {
       const custoReceita = custoReceitaModelo(m.id, todosItens, lotesTodos);
@@ -303,7 +405,7 @@ export function rotasPlacas({ db }) {
     const materiaisComEstoque = materiaisTodos.map((m) => ({
       material_id: m.id,
       nome: m.nome,
-      estoque_atual: estoqueMaterial(m.id, lotesTodos, vendasTodas, todosItens),
+      estoque_atual: estoqueMaterial(m.id, lotesTodos, vendasTodas, todosItens, avariasTodas, todosItensAvaria),
     }));
 
     res.json({
@@ -313,6 +415,7 @@ export function rotasPlacas({ db }) {
         modelo_nome: modelosTodos.find((m) => m.id === rl.modelo_id)?.nome ?? '—',
       })),
       materiais: materiaisComEstoque,
+      prejuizo_avarias: resumoPrejuizoAvarias(avariasTodas, modelosTodos),
     });
   });
 

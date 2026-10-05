@@ -13,5 +13,7 @@ CREATE TABLE placas_avarias_itens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   avaria_id INTEGER NOT NULL REFERENCES placas_avarias(id),
   material_id INTEGER NOT NULL REFERENCES placas_materiais(id),
-  quantidade INTEGER NOT NULL
+  quantidade INTEGER NOT NULL,
+  criado_em TEXT NOT NULL,
+  atualizado_em TEXT NOT NULL
 );

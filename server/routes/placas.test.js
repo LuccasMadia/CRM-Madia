@@ -298,6 +298,97 @@ describe('/api/placas/vendas', () => {
   });
 });
 
+async function criarAvaria(modeloId, overrides = {}) {
+  return (await ctx.http.post('/api/placas/avarias').send({
+    modelo_id: modeloId, data_avaria: '2026-09-23', ...overrides,
+  }).expect(201)).body;
+}
+
+describe('/api/placas/avarias', () => {
+  it('lança avaria usando a receita atual do modelo e calcula o custo snapshot', async () => {
+    const modelo = await montarModeloCompleto();
+    const res = await criarAvaria(modelo.id);
+    expect(res.avaria).toMatchObject({ modelo_id: modelo.id, quantidade: 1, custo_unitario_centavos: 1245, custo_total_centavos: 1245 });
+    expect(res.avaria.itens).toHaveLength(1);
+    expect(res.avisos_estoque).toEqual([]);
+  });
+
+  it('aceita receita customizada só para esse lançamento, sem alterar a receita do modelo', async () => {
+    const placa = await criarMaterial({ nome: 'Placa 10x10 PVC' });
+    await criarLote(placa.id, { quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0 });
+    const extra = await criarMaterial({ nome: 'Verniz extra' });
+    await criarLote(extra.id, { quantidade: 10, valor_kit_centavos: 1000, valor_frete_centavos: 0 });
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }], { preco_venda_centavos: 8000 });
+
+    const res = await criarAvaria(modelo.id, { itens: [{ material_id: extra.id, quantidade: 2 }] });
+    expect(res.avaria.itens).toEqual([expect.objectContaining({ material_id: extra.id, quantidade: 2 })]);
+    expect(res.avaria.custo_unitario_centavos).toBe(200);
+
+    const modeloDepois = await ctx.http.get('/api/placas/modelos').expect(200);
+    expect(modeloDepois.body[0].itens).toEqual([expect.objectContaining({ material_id: placa.id, quantidade: 1 })]);
+  });
+
+  it('recusa quando nenhum material da avaria tem lote comprado', async () => {
+    const placa = await criarMaterial();
+    const modelo = await criarModelo([{ material_id: placa.id, quantidade: 1 }]);
+    const res = await ctx.http.post('/api/placas/avarias').send({ modelo_id: modelo.id, data_avaria: '2026-09-23' }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'itens', mensagem: 'Algum material ainda não tem lote comprado' }]);
+  });
+
+  it('avisa sem bloquear quando o estoque fica negativo', async () => {
+    const modelo = await montarModeloCompleto();
+    const res = await criarAvaria(modelo.id, { quantidade: 3 });
+    expect(res.avisos_estoque).toHaveLength(1);
+    expect(res.avisos_estoque[0]).toMatchObject({ estoque_atual: -1 });
+  });
+
+  it('considera o consumo de avarias no estoque do material', async () => {
+    const modelo = await montarModeloCompleto();
+    await criarAvaria(modelo.id);
+    const materiaisRes = await ctx.http.get('/api/placas/materiais').expect(200);
+    expect(materiaisRes.body[0].estoque_atual).toBe(1);
+  });
+
+  it('lista avarias com nome do modelo e custo total', async () => {
+    const modelo = await montarModeloCompleto();
+    await criarAvaria(modelo.id);
+    const res = await ctx.http.get('/api/placas/avarias').expect(200);
+    expect(res.body[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', custo_total_centavos: 1245 });
+  });
+
+  it('edita quantidade e observação', async () => {
+    const modelo = await montarModeloCompleto();
+    const criada = (await criarAvaria(modelo.id)).avaria;
+    const res = await ctx.http.put(`/api/placas/avarias/${criada.id}`).send({ observacao: 'Quebrou no transporte' }).expect(200);
+    expect(res.body.observacao).toBe('Quebrou no transporte');
+  });
+
+  it('edita a receita recalculando o custo', async () => {
+    const modelo = await montarModeloCompleto();
+    const extra = await criarMaterial({ nome: 'Verniz extra' });
+    await criarLote(extra.id, { quantidade: 10, valor_kit_centavos: 500, valor_frete_centavos: 0 });
+    const criada = (await criarAvaria(modelo.id)).avaria;
+    const res = await ctx.http.put(`/api/placas/avarias/${criada.id}`).send({
+      itens: [{ material_id: extra.id, quantidade: 1 }],
+    }).expect(200);
+    expect(res.body.custo_unitario_centavos).toBe(50);
+    expect(res.body.itens).toEqual([expect.objectContaining({ material_id: extra.id, quantidade: 1 })]);
+  });
+
+  it('exclui avaria', async () => {
+    const modelo = await montarModeloCompleto();
+    const criada = (await criarAvaria(modelo.id)).avaria;
+    await ctx.http.delete(`/api/placas/avarias/${criada.id}`).expect(204);
+    const res = await ctx.http.get('/api/placas/avarias').expect(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('responde 404 ao editar ou excluir avaria inexistente', async () => {
+    await ctx.http.put('/api/placas/avarias/999').send({ observacao: 'x' }).expect(404);
+    await ctx.http.delete('/api/placas/avarias/999').expect(404);
+  });
+});
+
 describe('/api/placas/resumo', () => {
   it('agrega lucro previsto, lucro real e estoque', async () => {
     const modelo = await montarModeloCompleto();
@@ -308,6 +399,14 @@ describe('/api/placas/resumo', () => {
     expect(res.body.lucro_previsto_por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', lucro_previsto_centavos: 8000 - 1245 });
     expect(res.body.lucro_real_por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', quantidade: 1, lucro_total_centavos: 8000 - 1245 });
     expect(res.body.materiais[0]).toMatchObject({ nome: 'Placa 10x10 PVC', estoque_atual: 1 });
+  });
+
+  it('inclui prejuízo com avarias agregado por modelo', async () => {
+    const modelo = await montarModeloCompleto();
+    await criarAvaria(modelo.id);
+    const res = await ctx.http.get('/api/placas/resumo').expect(200);
+    expect(res.body.prejuizo_avarias.total_centavos).toBe(1245);
+    expect(res.body.prejuizo_avarias.por_modelo[0]).toMatchObject({ modelo_nome: 'Placa 10x10 PVC', quantidade: 1, total_centavos: 1245 });
   });
 });
 
