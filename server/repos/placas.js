@@ -49,3 +49,25 @@ export function repoPlacasVendas(db) {
   const base = criarRepo(db, 'placas_vendas', CAMPOS_VENDA);
   return { ...base, listar: () => base.listar({}, 'data_venda DESC, id DESC') };
 }
+
+export const CAMPOS_AVARIA = ['modelo_id', 'quantidade', 'custo_unitario_centavos', 'observacao', 'data_avaria'];
+export function repoPlacasAvarias(db) {
+  const base = criarRepo(db, 'placas_avarias', CAMPOS_AVARIA);
+  return { ...base, listar: () => base.listar({}, 'data_avaria DESC, id DESC') };
+}
+
+export const CAMPOS_ITEM_AVARIA = ['avaria_id', 'material_id', 'quantidade'];
+export function repoPlacasAvariasItens(db) {
+  const base = criarRepo(db, 'placas_avarias_itens', CAMPOS_ITEM_AVARIA);
+  return {
+    ...base,
+    listar({ avaria_id } = {}) {
+      const filtro = {};
+      if (avaria_id) filtro.avaria_id = Number(avaria_id);
+      return base.listar(filtro, 'id');
+    },
+    removerPorAvaria(avariaId) {
+      db.prepare('DELETE FROM placas_avarias_itens WHERE avaria_id = ?').run(avariaId);
+    },
+  };
+}
