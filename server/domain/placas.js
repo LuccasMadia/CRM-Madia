@@ -25,12 +25,22 @@ export function quantidadeConsumidaMaterial(materialId, vendas, itensModelo) {
   }, 0);
 }
 
-export function estoqueMaterial(materialId, lotes, vendas, itensModelo) {
-  return totalCompradoMaterial(materialId, lotes) - quantidadeConsumidaMaterial(materialId, vendas, itensModelo);
+export function quantidadeConsumidaAvariaMaterial(materialId, avarias, itensAvaria) {
+  return avarias.reduce((soma, avaria) => {
+    const porUnidade = itensAvaria
+      .filter((i) => i.avaria_id === avaria.id && i.material_id === materialId)
+      .reduce((s, i) => s + i.quantidade, 0);
+    return soma + porUnidade * avaria.quantidade;
+  }, 0);
 }
 
-export function custoReceitaModelo(modeloId, itensModelo, lotes) {
-  const itens = itensModelo.filter((i) => i.modelo_id === modeloId);
+export function estoqueMaterial(materialId, lotes, vendas, itensModelo, avarias = [], itensAvaria = []) {
+  return totalCompradoMaterial(materialId, lotes)
+    - quantidadeConsumidaMaterial(materialId, vendas, itensModelo)
+    - quantidadeConsumidaAvariaMaterial(materialId, avarias, itensAvaria);
+}
+
+export function custoItensAvaria(itens, lotes) {
   if (!itens.length) return null;
   let total = 0;
   for (const item of itens) {
@@ -39,6 +49,11 @@ export function custoReceitaModelo(modeloId, itensModelo, lotes) {
     total += custo * item.quantidade;
   }
   return total;
+}
+
+export function custoReceitaModelo(modeloId, itensModelo, lotes) {
+  const itens = itensModelo.filter((i) => i.modelo_id === modeloId);
+  return custoItensAvaria(itens, lotes);
 }
 
 export function lucroPrevisto(modelo, custoReceitaCentavos) {
@@ -61,8 +76,26 @@ export function resumoLucroReal(vendas) {
   return [...porModelo.values()].map((r) => ({ ...r, lucro_medio_centavos: Math.round(r.lucro_total_centavos / r.quantidade) }));
 }
 
-export function materiaisComEstoqueNegativo(materiais, lotes, vendas, itensModelo) {
+export function materiaisComEstoqueNegativo(materiais, lotes, vendas, itensModelo, avarias = [], itensAvaria = []) {
   return materiais
-    .map((m) => ({ ...m, estoque_atual: estoqueMaterial(m.id, lotes, vendas, itensModelo) }))
+    .map((m) => ({ ...m, estoque_atual: estoqueMaterial(m.id, lotes, vendas, itensModelo, avarias, itensAvaria) }))
     .filter((m) => m.estoque_atual < 0);
+}
+
+export function resumoPrejuizoAvarias(avarias, modelos) {
+  const porModelo = new Map();
+  for (const avaria of avarias) {
+    const atual = porModelo.get(avaria.modelo_id) ?? { modelo_id: avaria.modelo_id, quantidade: 0, total_centavos: 0 };
+    atual.quantidade += avaria.quantidade;
+    atual.total_centavos += avaria.custo_unitario_centavos * avaria.quantidade;
+    porModelo.set(avaria.modelo_id, atual);
+  }
+  const porModeloComNome = [...porModelo.values()].map((r) => ({
+    ...r,
+    modelo_nome: modelos.find((m) => m.id === r.modelo_id)?.nome ?? '—',
+  }));
+  return {
+    total_centavos: porModeloComNome.reduce((soma, r) => soma + r.total_centavos, 0),
+    por_modelo: porModeloComNome,
+  };
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   custoUnitarioLote, custoAtualMaterial, estoqueMaterial, custoReceitaModelo,
   lucroPrevisto, lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
+  custoItensAvaria, quantidadeConsumidaAvariaMaterial, resumoPrejuizoAvarias,
 } from './placas.js';
 
 const PLACA = 1;
@@ -76,6 +77,31 @@ describe('estoqueMaterial', () => {
   });
 });
 
+describe('quantidadeConsumidaAvariaMaterial', () => {
+  it('soma item.quantidade * avaria.quantidade por avaria', () => {
+    const avarias = [{ id: 1, quantidade: 2 }];
+    const itensAvaria = [{ avaria_id: 1, material_id: PLACA, quantidade: 1 }];
+    expect(quantidadeConsumidaAvariaMaterial(PLACA, avarias, itensAvaria)).toBe(2);
+  });
+
+  it('ignora itens de outras avarias', () => {
+    const avarias = [{ id: 1, quantidade: 2 }, { id: 2, quantidade: 5 }];
+    const itensAvaria = [
+      { avaria_id: 1, material_id: PLACA, quantidade: 1 },
+      { avaria_id: 2, material_id: ADESIVO_10x10, quantidade: 1 },
+    ];
+    expect(quantidadeConsumidaAvariaMaterial(PLACA, avarias, itensAvaria)).toBe(2);
+  });
+});
+
+describe('estoqueMaterial com avarias', () => {
+  it('subtrai também o consumo de avarias', () => {
+    const avarias = [{ id: 1, quantidade: 1 }];
+    const itensAvaria = [{ avaria_id: 1, material_id: PLACA, quantidade: 1 }];
+    expect(estoqueMaterial(PLACA, lotes, [], [], avarias, itensAvaria)).toBe(10 - 1);
+  });
+});
+
 describe('custoReceitaModelo', () => {
   it('reproduz o custo montado da planilha: placa 10x10 = R$ 3,76', () => {
     expect(custoReceitaModelo(MODELO_10x10, itensModelo, lotes)).toBe(376);
@@ -92,6 +118,25 @@ describe('custoReceitaModelo', () => {
 
   it('retorna null se o modelo não tem receita', () => {
     expect(custoReceitaModelo(999, itensModelo, lotes)).toBeNull();
+  });
+});
+
+describe('custoItensAvaria', () => {
+  it('soma o custo atual de cada item, igual à receita de um modelo', () => {
+    const itens = [
+      { material_id: PLACA, quantidade: 1 },
+      { material_id: ADESIVO_10x10, quantidade: 1 },
+      { material_id: TAG_NFC, quantidade: 1 },
+    ];
+    expect(custoItensAvaria(itens, lotes)).toBe(376);
+  });
+
+  it('retorna null se algum material não tem lote', () => {
+    expect(custoItensAvaria([{ material_id: 999, quantidade: 1 }], lotes)).toBeNull();
+  });
+
+  it('retorna null para lista vazia', () => {
+    expect(custoItensAvaria([], lotes)).toBeNull();
   });
 });
 
@@ -142,5 +187,23 @@ describe('materiaisComEstoqueNegativo', () => {
     const resultado = materiaisComEstoqueNegativo(materiais, lotes, vendas, itensModelo);
     expect(resultado.map((m) => m.id)).toEqual([PLACA]);
     expect(resultado[0].estoque_atual).toBe(10 - 15);
+  });
+});
+
+describe('resumoPrejuizoAvarias', () => {
+  it('agrega custo total e por modelo', () => {
+    const avariasLista = [
+      { modelo_id: MODELO_10x10, quantidade: 2, custo_unitario_centavos: 376 },
+      { modelo_id: MODELO_10x10, quantidade: 1, custo_unitario_centavos: 400 },
+      { modelo_id: MODELO_10x15, quantidade: 1, custo_unitario_centavos: 2055 },
+    ];
+    const modelosLista = [
+      { id: MODELO_10x10, nome: 'Placa 10x10 PVC' },
+      { id: MODELO_10x15, nome: 'Placa 10x15 Acrílico' },
+    ];
+    const resumo = resumoPrejuizoAvarias(avariasLista, modelosLista);
+    expect(resumo.total_centavos).toBe(376 * 2 + 400 + 2055);
+    const do10x10 = resumo.por_modelo.find((r) => r.modelo_id === MODELO_10x10);
+    expect(do10x10).toMatchObject({ quantidade: 3, total_centavos: 376 * 2 + 400, modelo_nome: 'Placa 10x10 PVC' });
   });
 });
