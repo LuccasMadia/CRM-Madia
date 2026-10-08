@@ -3,7 +3,8 @@ import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { repoQrcodes } from '../repos/qrcodes.js';
 import { validar, lerId } from '../http/validar.js';
-import { ErroHttp, naoEncontrado } from '../http/erros.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
+import { gerarCodigoPix } from '../domain/pix.js';
 
 export const REGRAS_CLIENTE = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -13,7 +14,19 @@ export const REGRAS_CLIENTE = {
   instagram: { tipo: 'texto' },
   origem: { tipo: 'texto' },
   notas: { tipo: 'texto' },
+  chave_pix: { tipo: 'texto' },
+  tipo_chave_pix: { tipo: 'enum', valores: ['cpf', 'cnpj', 'email', 'telefone', 'aleatoria'] },
+  cidade: { tipo: 'texto' },
 };
+
+function exigirPixCompleto(dados, atual = {}) {
+  const chave = dados.chave_pix !== undefined ? dados.chave_pix : atual.chave_pix;
+  const tipo = dados.tipo_chave_pix !== undefined ? dados.tipo_chave_pix : atual.tipo_chave_pix;
+  const cidade = dados.cidade !== undefined ? dados.cidade : atual.cidade;
+  if (chave && (!tipo || !cidade)) {
+    throw new ErroValidacao([{ campo: 'chave_pix', mensagem: 'Informe tipo de chave e cidade' }]);
+  }
+}
 
 export function rotasClientes({ db }) {
   const clientes = repoClientes(db);
@@ -23,7 +36,11 @@ export function rotasClientes({ db }) {
 
   r.get('/', (req, res) => res.json(clientes.buscar(req.query.busca ?? '')));
 
-  r.post('/', (req, res) => res.status(201).json(clientes.criar(validar(req.body, REGRAS_CLIENTE))));
+  r.post('/', (req, res) => {
+    const dados = validar(req.body, REGRAS_CLIENTE);
+    exigirPixCompleto(dados);
+    res.status(201).json(clientes.criar(dados));
+  });
 
   r.get('/:id', (req, res) => {
     const cliente = clientes.obter(lerId(req.params.id));
@@ -33,13 +50,19 @@ export function rotasClientes({ db }) {
       projetos: projetos.listarComCliente({ cliente_id: cliente.id }),
       qrcodes: qrcodes.listar({ cliente_id: cliente.id }),
       total_faturado_centavos: clientes.totalFaturado(cliente.id),
+      pix_copia_cola: cliente.chave_pix
+        ? gerarCodigoPix({ chave: cliente.chave_pix, nomeRecebedor: cliente.empresa || cliente.nome, cidade: cliente.cidade })
+        : null,
     });
   });
 
   r.put('/:id', (req, res) => {
-    const cliente = clientes.atualizar(lerId(req.params.id), validar(req.body, REGRAS_CLIENTE, { parcial: true }));
-    if (!cliente) throw naoEncontrado('Cliente');
-    res.json(cliente);
+    const id = lerId(req.params.id);
+    const atual = clientes.obter(id);
+    if (!atual) throw naoEncontrado('Cliente');
+    const dados = validar(req.body, REGRAS_CLIENTE, { parcial: true });
+    exigirPixCompleto(dados, atual);
+    res.json(clientes.atualizar(id, dados));
   });
 
   r.delete('/:id', (req, res) => {

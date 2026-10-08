@@ -81,4 +81,39 @@ describe('/api/clientes', () => {
     await ctx.http.get('/api/clientes/999').expect(404);
     await ctx.http.get('/api/clientes/abc').expect(404);
   });
+
+  it('gera pix_copia_cola quando a chave Pix está completa', async () => {
+    const cliente = await criarCliente({
+      nome: 'Ana Souza',
+      empresa: 'Doces da Ana',
+      chave_pix: 'ana@doces.com',
+      tipo_chave_pix: 'email',
+      cidade: 'Sao Paulo',
+    });
+    const res = await ctx.http.get(`/api/clientes/${cliente.id}`).expect(200);
+    expect(res.body.pix_copia_cola).toContain('ana@doces.com');
+  });
+
+  it('pix_copia_cola é null quando o cliente não tem chave Pix', async () => {
+    const cliente = await criarCliente();
+    const res = await ctx.http.get(`/api/clientes/${cliente.id}`).expect(200);
+    expect(res.body.pix_copia_cola).toBeNull();
+  });
+
+  it('exige tipo e cidade quando a chave Pix é informada', async () => {
+    const res = await ctx.http
+      .post('/api/clientes')
+      .send({ nome: 'Bia', chave_pix: 'bia@x.com' })
+      .expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'chave_pix', mensagem: 'Informe tipo de chave e cidade' }]);
+  });
+
+  it('exige cidade ao completar a chave Pix via atualização parcial', async () => {
+    const cliente = await criarCliente();
+    const res = await ctx.http
+      .put(`/api/clientes/${cliente.id}`)
+      .send({ chave_pix: 'bia@x.com', tipo_chave_pix: 'email' })
+      .expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'chave_pix', mensagem: 'Informe tipo de chave e cidade' }]);
+  });
 });
