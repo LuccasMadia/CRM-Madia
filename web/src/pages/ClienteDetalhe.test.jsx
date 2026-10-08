@@ -62,4 +62,30 @@ describe('ClienteDetalhe', () => {
     renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
     expect(await screen.findByText('Preencha a chave Pix no formulário para gerar o código.')).toBeInTheDocument();
   });
+
+  it('publica o pix e mostra a mensagem de sucesso', async () => {
+    mockApi({
+      'GET /clientes/1': { ...cliente, pix_copia_cola: '00020126...CODIGO...6304ABCD' },
+      'POST /clientes/1/publicar-pix': { commitado: true, saida: 'ok' },
+    });
+    renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
+    await screen.findByText('00020126...CODIGO...6304ABCD');
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Publicar Pix' }));
+    expect(await screen.findByText(/Publicado/)).toBeInTheDocument();
+  });
+
+  it('mostra o erro quando a publicação do pix falha', async () => {
+    mockApi({
+      'GET /clientes/1': { ...cliente, pix_copia_cola: '00020126...CODIGO...6304ABCD' },
+      'POST /clientes/1/publicar-pix': resposta(400, { erro: 'Configure o caminho do repositório do portfólio' }),
+    });
+    renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
+    await screen.findByText('00020126...CODIGO...6304ABCD');
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Publicar Pix' }));
+    expect(await screen.findByText('Configure o caminho do repositório do portfólio')).toBeInTheDocument();
+  });
 });

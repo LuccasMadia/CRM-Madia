@@ -8,8 +8,10 @@ import { FormCliente } from '../components/FormCliente.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../lib/rotulos.js';
 
-function CartaoPix({ codigo }) {
+function CartaoPix({ id, codigo }) {
   const [copiado, setCopiado] = useState(false);
+  const [mensagem, setMensagem] = useState(null);
+  const publicacao = useEnvio();
 
   async function copiar() {
     await navigator.clipboard.writeText(codigo);
@@ -17,11 +19,24 @@ function CartaoPix({ codigo }) {
     setTimeout(() => setCopiado(false), 2000);
   }
 
+  function publicar() {
+    setMensagem(null);
+    publicacao.executar(async () => {
+      await api(`/clientes/${id}/publicar-pix`, { method: 'POST' });
+      setMensagem(`Publicado! Cole a URL /pix/${id} no campo "URL" do QR do Canva.`);
+    });
+  }
+
   if (!codigo) return <p className="vazio">Preencha a chave Pix no formulário para gerar o código.</p>;
   return (
     <>
       <textarea readOnly rows={4} value={codigo} />
-      <div><button type="button" className="btn" onClick={copiar}>{copiado ? 'Copiado!' : 'Copiar'}</button></div>
+      <div>
+        <button type="button" className="btn" onClick={copiar}>{copiado ? 'Copiado!' : 'Copiar'}</button>{' '}
+        <button type="button" className="btn" onClick={publicar} disabled={publicacao.enviando}>Publicar Pix</button>
+      </div>
+      <Aviso erro={publicacao.erro} />
+      {mensagem && <p>{mensagem}</p>}
     </>
   );
 }
@@ -89,7 +104,7 @@ export function ClienteDetalhe() {
         </div>
         <div className="cartao">
           <h2>Pix</h2>
-          <CartaoPix codigo={cliente.pix_copia_cola} />
+          <CartaoPix id={cliente.id} codigo={cliente.pix_copia_cola} />
         </div>
       </div>
     </section>
