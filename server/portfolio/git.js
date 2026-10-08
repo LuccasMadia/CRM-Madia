@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { ErroHttp } from '../http/erros.js';
 import { CAMINHO_JSON, PASTA_IMAGENS } from './write.js';
+import { CAMINHO_PIX_JSON } from './pix.js';
 
-const CAMINHOS = [CAMINHO_JSON, PASTA_IMAGENS];
-const MENSAGEM = 'chore(portfolio): atualiza projetos via CRM';
+const CAMINHOS_PORTFOLIO = [CAMINHO_JSON, PASTA_IMAGENS];
+const MENSAGEM_PORTFOLIO = 'chore(portfolio): atualiza projetos via CRM';
+const MENSAGEM_PIX = 'chore(pix): atualiza link Pix via CRM';
 
 function git(repo, args) {
   try {
@@ -22,18 +24,36 @@ function commitsNaoEnviados(repo) {
   }
 }
 
-export function commitarPortfolio(repo, { push = true } = {}) {
-  git(repo, ['add', '-A', '--', ...CAMINHOS]);
-  const pendentes = git(repo, ['diff', '--cached', '--name-only', '--', ...CAMINHOS]).trim();
+function commitarCaminhos(repo, { caminhos, mensagem, semMudancas, push = true }) {
+  git(repo, ['add', '-A', '--', ...caminhos]);
+  const pendentes = git(repo, ['diff', '--cached', '--name-only', '--', ...caminhos]).trim();
   if (!pendentes) {
     // Um push anterior pode ter falhado depois do commit: envia o que ficou para trás.
     if (push && commitsNaoEnviados(repo) > 0) {
       return { commitado: false, saida: `Commit pendente enviado.\n${git(repo, ['push'])}` };
     }
-    return { commitado: false, saida: 'Nada para commitar: o portfólio já está atualizado.' };
+    return { commitado: false, saida: semMudancas };
   }
   // O pathspec no commit garante que só os caminhos do CRM entram, mesmo com outros arquivos no stage.
-  let saida = git(repo, ['commit', '-m', MENSAGEM, '--', ...CAMINHOS]);
+  let saida = git(repo, ['commit', '-m', mensagem, '--', ...caminhos]);
   if (push) saida += git(repo, ['push']);
   return { commitado: true, saida };
+}
+
+export function commitarPortfolio(repo, { push = true } = {}) {
+  return commitarCaminhos(repo, {
+    caminhos: CAMINHOS_PORTFOLIO,
+    mensagem: MENSAGEM_PORTFOLIO,
+    semMudancas: 'Nada para commitar: o portfólio já está atualizado.',
+    push,
+  });
+}
+
+export function commitarPix(repo, { push = true } = {}) {
+  return commitarCaminhos(repo, {
+    caminhos: [CAMINHO_PIX_JSON],
+    mensagem: MENSAGEM_PIX,
+    semMudancas: 'Nada para commitar: o Pix já está atualizado.',
+    push,
+  });
 }
