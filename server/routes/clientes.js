@@ -5,6 +5,12 @@ import { repoQrcodes } from '../repos/qrcodes.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { gerarCodigoPix } from '../domain/pix.js';
+import { obterConfig } from '../repos/config.js';
+import { validarRepo } from '../portfolio/validate.js';
+import { gravarPix } from '../portfolio/pix.js';
+import { commitarPix } from '../portfolio/git.js';
+
+const CHAVE_REPO_PORTFOLIO = 'portfolio_repo_path';
 
 export const REGRAS_CLIENTE = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -63,6 +69,18 @@ export function rotasClientes({ db }) {
     const dados = validar(req.body, REGRAS_CLIENTE, { parcial: true });
     exigirPixCompleto(dados, atual);
     res.json(clientes.atualizar(id, dados));
+  });
+
+  r.post('/:id/publicar-pix', (req, res) => {
+    const cliente = clientes.obter(lerId(req.params.id));
+    if (!cliente) throw naoEncontrado('Cliente');
+    if (!cliente.chave_pix) throw new ErroHttp(400, 'Cadastre a chave Pix antes de publicar');
+    const repo = obterConfig(db, CHAVE_REPO_PORTFOLIO);
+    const erros = validarRepo(repo);
+    if (erros.length) throw new ErroHttp(400, erros.join('\n'));
+    const codigo = gerarCodigoPix({ chave: cliente.chave_pix, nomeRecebedor: cliente.empresa || cliente.nome, cidade: cliente.cidade });
+    gravarPix(repo, { id: cliente.id, nome: cliente.empresa || cliente.nome, codigo });
+    res.json(commitarPix(repo));
   });
 
   r.delete('/:id', (req, res) => {
