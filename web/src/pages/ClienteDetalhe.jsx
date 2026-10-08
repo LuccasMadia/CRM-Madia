@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
@@ -6,6 +7,24 @@ import { Aviso } from '../components/Aviso.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../lib/rotulos.js';
+
+function CartaoPix({ codigo }) {
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiar() {
+    await navigator.clipboard.writeText(codigo);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  if (!codigo) return <p className="vazio">Preencha a chave Pix no formulário para gerar o código.</p>;
+  return (
+    <>
+      <textarea readOnly rows={4} value={codigo} />
+      <div><button type="button" className="btn" onClick={copiar}>{copiado ? 'Copiado!' : 'Copiar'}</button></div>
+    </>
+  );
+}
 
 export function ClienteDetalhe() {
   const { id } = useParams();
@@ -67,6 +86,10 @@ export function ClienteDetalhe() {
               ))}
             </ul>
           ) : <p className="vazio">Nenhum QR ainda.</p>}
+        </div>
+        <div className="cartao">
+          <h2>Pix</h2>
+          <CartaoPix codigo={cliente.pix_copia_cola} />
         </div>
       </div>
     </section>

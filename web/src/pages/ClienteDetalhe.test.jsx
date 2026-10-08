@@ -44,4 +44,22 @@ describe('ClienteDetalhe', () => {
     await user.click(await screen.findByRole('button', { name: 'Excluir' }));
     expect(await screen.findByText('Este cliente tem projetos.')).toBeInTheDocument();
   });
+
+  it('mostra o código Pix e copia ao clicar no botão', async () => {
+    mockApi({ 'GET /clientes/1': { ...cliente, pix_copia_cola: '00020126...CODIGO...6304ABCD' } });
+    renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
+    expect(await screen.findByText('00020126...CODIGO...6304ABCD')).toBeInTheDocument();
+
+    const escreverNaAreaDeTransferencia = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Copiar' }));
+    expect(escreverNaAreaDeTransferencia).toHaveBeenCalledWith('00020126...CODIGO...6304ABCD');
+    expect(await screen.findByRole('button', { name: 'Copiado!' })).toBeInTheDocument();
+  });
+
+  it('mostra aviso quando o cliente não tem chave Pix cadastrada', async () => {
+    mockApi({ 'GET /clientes/1': { ...cliente, pix_copia_cola: null } });
+    renderizar(<ClienteDetalhe />, { rota: '/clientes/1', padrao: '/clientes/:id' });
+    expect(await screen.findByText('Preencha a chave Pix no formulário para gerar o código.')).toBeInTheDocument();
+  });
 });
