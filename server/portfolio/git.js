@@ -1,11 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { ErroHttp } from '../http/erros.js';
 import { CAMINHO_JSON, PASTA_IMAGENS } from './write.js';
-import { CAMINHO_PIX_JSON } from './pix.js';
 
 const CAMINHOS_PORTFOLIO = [CAMINHO_JSON, PASTA_IMAGENS];
 const MENSAGEM_PORTFOLIO = 'chore(portfolio): atualiza projetos via CRM';
-const MENSAGEM_PIX = 'chore(pix): atualiza link Pix via CRM';
 
 function git(repo, args) {
   try {
@@ -45,15 +43,6 @@ export function commitarPortfolio(repo, { push = true } = {}) {
     caminhos: CAMINHOS_PORTFOLIO,
     mensagem: MENSAGEM_PORTFOLIO,
     semMudancas: 'Nada para commitar: o portfólio já está atualizado.',
-    push,
-  });
-}
-
-export function commitarPix(repo, { push = true } = {}) {
-  return commitarCaminhos(repo, {
-    caminhos: [CAMINHO_PIX_JSON],
-    mensagem: MENSAGEM_PIX,
-    semMudancas: 'Nada para commitar: o Pix já está atualizado.',
     push,
   });
 }

@@ -19,6 +19,3 @@ export const ROTULO_CATEGORIA_QR = { avaliacao: 'Avaliação', cardapio: 'Cardá
 export const CATEGORIAS_QR = Object.keys(ROTULO_CATEGORIA_QR);
 export const ROTULO_STATUS_QR = { ativo: 'Ativo', arquivado: 'Arquivado' };
 export const STATUS_QR = Object.keys(ROTULO_STATUS_QR);
-
-export const ROTULO_TIPO_CHAVE_PIX = { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Telefone', aleatoria: 'Aleatória' };
-export const TIPOS_CHAVE_PIX = Object.keys(ROTULO_TIPO_CHAVE_PIX);

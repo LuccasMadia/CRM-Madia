@@ -1,6 +1,6 @@
 import { criarRepo, linha } from './crud.js';
 
-export const CAMPOS_CLIENTE = ['nome', 'empresa', 'email', 'telefone', 'instagram', 'origem', 'notas', 'chave_pix', 'tipo_chave_pix', 'cidade'];
+export const CAMPOS_CLIENTE = ['nome', 'empresa', 'email', 'telefone', 'instagram', 'origem', 'notas'];
 
 export function repoClientes(db) {
   const base = criarRepo(db, 'clientes', CAMPOS_CLIENTE);

@@ -27,7 +27,6 @@ export function Config() {
 function Repositorio({ inicial }) {
   const { valores, campo } = useFormulario({
     portfolio_repo_path: inicial.portfolio_repo_path ?? '',
-    portfolio_site_url: inicial.portfolio_site_url ?? '',
   });
   const { erros, erro, enviando, executar } = useEnvio();
   const [salvo, setSalvo] = useState(false);
@@ -59,13 +58,6 @@ function Repositorio({ inicial }) {
           erros={erros}
           placeholder="C:\Users\ComputadorA\Documents\Projetos\Luccas-Madia-Portif-lio"
           {...campo('portfolio_repo_path')}
-        />
-        <Campo
-          rotulo="URL do site publicado"
-          nome="portfolio_site_url"
-          erros={erros}
-          placeholder="https://luccasmadia.com.br"
-          {...campo('portfolio_site_url')}
         />
         <Aviso erro={erro} />
         {salvo && <p className="aviso aviso--ok" role="status">Caminho salvo.</p>}

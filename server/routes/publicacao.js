@@ -11,7 +11,6 @@ import { commitarPortfolio } from '../portfolio/git.js';
 import { importarPortfolio } from '../portfolio/import.js';
 
 const CHAVE_REPO = 'portfolio_repo_path';
-const CHAVE_SITE_URL = 'portfolio_site_url';
 
 export function rotasPublicacao({ db, dataDir, hoje }) {
   const uploadsDir = path.join(dataDir, 'uploads');
@@ -46,7 +45,6 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
 
   r.get('/config', (req, res) => res.json({
     portfolio_repo_path: obterConfig(db, CHAVE_REPO),
-    portfolio_site_url: obterConfig(db, CHAVE_SITE_URL),
   }));
 
   r.put('/config', (req, res) => {
@@ -58,12 +56,8 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
       if (errosRepo.length) erros.push(...errosRepo.map((mensagem) => ({ campo: CHAVE_REPO, mensagem })));
       else definirConfig(db, CHAVE_REPO, caminho);
     }
-    if ('portfolio_site_url' in corpo) {
-      const url = typeof corpo.portfolio_site_url === 'string' ? corpo.portfolio_site_url.trim().replace(/\/+$/, '') : '';
-      definirConfig(db, CHAVE_SITE_URL, url || null);
-    }
     if (erros.length) throw new ErroValidacao(erros);
-    res.json({ portfolio_repo_path: obterConfig(db, CHAVE_REPO), portfolio_site_url: obterConfig(db, CHAVE_SITE_URL) });
+    res.json({ portfolio_repo_path: obterConfig(db, CHAVE_REPO) });
   });
 
   r.post('/portfolio/previa', (req, res) => {

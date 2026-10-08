@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { commitarPortfolio, commitarPix } from './git.js';
+import { commitarPortfolio } from './git.js';
 
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' });
 let repo;
@@ -66,29 +66,5 @@ describe('commitarPortfolio', () => {
     escreverSaida();
     git(repo, 'remote', 'set-url', 'origin', path.join(remoto, 'nao-existe'));
     expect(() => commitarPortfolio(repo)).toThrow(expect.objectContaining({ status: 502, message: expect.stringMatching(/git push falhou/) }));
-  });
-});
-
-function escreverSaidaPix() {
-  mkdirSync(path.join(repo, 'src/data'), { recursive: true });
-  writeFileSync(path.join(repo, 'src/data/pix.json'), '{}\n');
-}
-
-describe('commitarPix', () => {
-  it('commita só src/data/pix.json e envia', () => {
-    escreverSaidaPix();
-    writeFileSync(path.join(repo, 'outro.txt'), 'não commitar');
-    git(repo, 'add', 'outro.txt');
-
-    const resultado = commitarPix(repo);
-    expect(resultado.commitado).toBe(true);
-    expect(git(repo, 'show', '--name-only', '--format=', 'HEAD').trim()).toBe('src/data/pix.json');
-    expect(git(remoto, 'log', '-1', '--format=%s', 'main').trim()).toBe('chore(pix): atualiza link Pix via CRM');
-  });
-
-  it('não cria commit quando nada mudou', () => {
-    escreverSaidaPix();
-    commitarPix(repo);
-    expect(commitarPix(repo)).toEqual({ commitado: false, saida: 'Nada para commitar: o Pix já está atualizado.' });
   });
 });
