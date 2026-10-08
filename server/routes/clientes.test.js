@@ -162,10 +162,22 @@ describe('/api/clientes', () => {
 
       const res = await ctx.http.post(`/api/clientes/${cliente.id}/publicar-pix`).expect(200);
       expect(res.body.commitado).toBe(true);
+      expect(res.body.url).toBeNull();
 
       const pix = JSON.parse(readFileSync(path.join(repo, 'src/data/pix.json'), 'utf8'));
       expect(pix[String(cliente.id)].nome).toBe('Doces da Ana');
       expect(pix[String(cliente.id)].codigo).toContain('ana@doces.com');
+    });
+
+    it('devolve a URL completa quando portfolio_site_url está configurada', async () => {
+      const repo = criarRepoGitFalso();
+      await ctx.http.put('/api/config').send({ portfolio_repo_path: repo, portfolio_site_url: 'https://luccasmadia.com.br' }).expect(200);
+      const cliente = await criarCliente({
+        nome: 'Ana', empresa: 'Doces da Ana', chave_pix: 'ana@doces.com', tipo_chave_pix: 'email', cidade: 'Sao Paulo',
+      });
+
+      const res = await ctx.http.post(`/api/clientes/${cliente.id}/publicar-pix`).expect(200);
+      expect(res.body.url).toBe(`https://luccasmadia.com.br/pix/${cliente.id}`);
     });
   });
 });

@@ -11,6 +11,7 @@ import { gravarPix } from '../portfolio/pix.js';
 import { commitarPix } from '../portfolio/git.js';
 
 const CHAVE_REPO_PORTFOLIO = 'portfolio_repo_path';
+const CHAVE_SITE_URL_PORTFOLIO = 'portfolio_site_url';
 
 export const REGRAS_CLIENTE = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -80,7 +81,8 @@ export function rotasClientes({ db }) {
     if (erros.length) throw new ErroHttp(400, erros.join('\n'));
     const codigo = gerarCodigoPix({ chave: cliente.chave_pix, nomeRecebedor: cliente.empresa || cliente.nome, cidade: cliente.cidade });
     gravarPix(repo, { id: cliente.id, nome: cliente.empresa || cliente.nome, codigo });
-    res.json(commitarPix(repo));
+    const siteUrl = obterConfig(db, CHAVE_SITE_URL_PORTFOLIO);
+    res.json({ ...commitarPix(repo), url: siteUrl ? `${siteUrl}/pix/${cliente.id}` : null });
   });
 
   r.delete('/:id', (req, res) => {

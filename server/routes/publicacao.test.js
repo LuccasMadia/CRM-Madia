@@ -20,12 +20,20 @@ describe('configuração', () => {
     const res = await ctx.http.put('/api/config').send({ portfolio_repo_path: path.join(repo, 'nada') }).expect(400);
     expect(res.body.erros[0].campo).toBe('portfolio_repo_path');
     await ctx.http.put('/api/config').send({ portfolio_repo_path: repo }).expect(200);
-    expect((await ctx.http.get('/api/config')).body).toEqual({ portfolio_repo_path: repo });
+    expect((await ctx.http.get('/api/config')).body).toEqual({ portfolio_repo_path: repo, portfolio_site_url: null });
   });
 
   it('publicação sem configuração responde 400 com mensagem', async () => {
     const res = await ctx.http.post('/api/portfolio/previa').expect(400);
     expect(res.body.erro).toMatch(/Configure o caminho/);
+  });
+
+  it('salva a URL do site separadamente, sem exigir o caminho do repo junto', async () => {
+    await ctx.http.put('/api/config').send({ portfolio_site_url: 'https://luccasmadia.com.br/' }).expect(200);
+    expect((await ctx.http.get('/api/config')).body).toEqual({
+      portfolio_repo_path: null,
+      portfolio_site_url: 'https://luccasmadia.com.br',
+    });
   });
 });
 

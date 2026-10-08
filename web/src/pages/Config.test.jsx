@@ -61,6 +61,18 @@ describe('Config', () => {
     expect(chamadas.map((c) => `${c.metodo} ${c.caminho}`)).toContain('POST /portfolio/git');
   });
 
+  it('salva a URL do site publicado', async () => {
+    mockApi({
+      'GET /config': { portfolio_repo_path: 'C:/pf', portfolio_site_url: null },
+      'PUT /config': { portfolio_repo_path: 'C:/pf', portfolio_site_url: 'https://luccasmadia.com.br' },
+    });
+    renderizar(<Config />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('URL do site publicado'), 'https://luccasmadia.com.br');
+    await user.click(screen.getByRole('button', { name: 'Salvar caminho' }));
+    expect(await screen.findByText('Caminho salvo.')).toBeInTheDocument();
+  });
+
   it('importar mostra o resultado', async () => {
     mockApi({
       'GET /config': { portfolio_repo_path: 'C:/pf' },

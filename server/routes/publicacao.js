@@ -11,6 +11,7 @@ import { commitarPortfolio } from '../portfolio/git.js';
 import { importarPortfolio } from '../portfolio/import.js';
 
 const CHAVE_REPO = 'portfolio_repo_path';
+const CHAVE_SITE_URL = 'portfolio_site_url';
 
 export function rotasPublicacao({ db, dataDir, hoje }) {
   const uploadsDir = path.join(dataDir, 'uploads');
@@ -43,14 +44,26 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
     return { repo, erros: [], resultado, atual, diff };
   }
 
-  r.get('/config', (req, res) => res.json({ portfolio_repo_path: obterConfig(db, CHAVE_REPO) }));
+  r.get('/config', (req, res) => res.json({
+    portfolio_repo_path: obterConfig(db, CHAVE_REPO),
+    portfolio_site_url: obterConfig(db, CHAVE_SITE_URL),
+  }));
 
   r.put('/config', (req, res) => {
-    const caminho = typeof req.body?.portfolio_repo_path === 'string' ? req.body.portfolio_repo_path.trim() : '';
-    const erros = validarRepo(caminho);
-    if (erros.length) throw new ErroValidacao(erros.map((mensagem) => ({ campo: CHAVE_REPO, mensagem })));
-    definirConfig(db, CHAVE_REPO, caminho);
-    res.json({ portfolio_repo_path: caminho });
+    const corpo = req.body ?? {};
+    const erros = [];
+    if ('portfolio_repo_path' in corpo) {
+      const caminho = typeof corpo.portfolio_repo_path === 'string' ? corpo.portfolio_repo_path.trim() : '';
+      const errosRepo = validarRepo(caminho);
+      if (errosRepo.length) erros.push(...errosRepo.map((mensagem) => ({ campo: CHAVE_REPO, mensagem })));
+      else definirConfig(db, CHAVE_REPO, caminho);
+    }
+    if ('portfolio_site_url' in corpo) {
+      const url = typeof corpo.portfolio_site_url === 'string' ? corpo.portfolio_site_url.trim().replace(/\/+$/, '') : '';
+      definirConfig(db, CHAVE_SITE_URL, url || null);
+    }
+    if (erros.length) throw new ErroValidacao(erros);
+    res.json({ portfolio_repo_path: obterConfig(db, CHAVE_REPO), portfolio_site_url: obterConfig(db, CHAVE_SITE_URL) });
   });
 
   r.post('/portfolio/previa', (req, res) => {

@@ -10,7 +10,8 @@ import { ROTULO_ETAPA } from '../lib/rotulos.js';
 
 function CartaoPix({ id, codigo }) {
   const [copiado, setCopiado] = useState(false);
-  const [mensagem, setMensagem] = useState(null);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+  const [resultado, setResultado] = useState(null);
   const publicacao = useEnvio();
 
   async function copiar() {
@@ -19,11 +20,16 @@ function CartaoPix({ id, codigo }) {
     setTimeout(() => setCopiado(false), 2000);
   }
 
+  async function copiarLink() {
+    await navigator.clipboard.writeText(resultado.url);
+    setLinkCopiado(true);
+    setTimeout(() => setLinkCopiado(false), 2000);
+  }
+
   function publicar() {
-    setMensagem(null);
+    setResultado(null);
     publicacao.executar(async () => {
-      await api(`/clientes/${id}/publicar-pix`, { method: 'POST' });
-      setMensagem(`Publicado! Cole a URL /pix/${id} no campo "URL" do QR do Canva.`);
+      setResultado(await api(`/clientes/${id}/publicar-pix`, { method: 'POST' }));
     });
   }
 
@@ -36,7 +42,16 @@ function CartaoPix({ id, codigo }) {
         <button type="button" className="btn" onClick={publicar} disabled={publicacao.enviando}>Publicar Pix</button>
       </div>
       <Aviso erro={publicacao.erro} />
-      {mensagem && <p>{mensagem}</p>}
+      {resultado && (
+        resultado.url ? (
+          <p>
+            Publicado! <strong>{resultado.url}</strong>{' '}
+            <button type="button" className="btn" onClick={copiarLink}>{linkCopiado ? 'Copiado!' : 'Copiar link'}</button>
+          </p>
+        ) : (
+          <p>Publicado! Configure a URL do site em Configurações pra eu te dar o link completo — por enquanto, cole a URL /pix/{id} no campo "URL" do QR do Canva.</p>
+        )
+      )}
     </>
   );
 }
