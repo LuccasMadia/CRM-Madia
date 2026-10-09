@@ -6,6 +6,7 @@ import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from '../components/Campo.jsx';
 import { Aviso } from '../components/Aviso.jsx';
+import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 
 export function Config() {
   const { dados: config, erro } = useCarregar(() => api('/config'), []);
@@ -14,12 +15,60 @@ export function Config() {
       <header className="pagina__topo"><h1>Configurações</h1></header>
       <Aviso erro={erro} />
       {config && <Repositorio inicial={config} />}
+      {config && <PrecosServicos inicial={config} />}
       <Publicacao />
       <section className="cartao">
         <h2>Backup</h2>
         <p>Baixa um .zip com o banco de dados e todas as imagens enviadas.</p>
         <a className="btn" href="/api/backup" download>Exportar backup (.zip)</a>
       </section>
+    </section>
+  );
+}
+
+function PrecosServicos({ inicial }) {
+  const { valores, campo } = useFormulario({
+    preco_sistemas: centavosParaTexto(inicial.preco_servico_sistemas_centavos ?? 0),
+    preco_saas: centavosParaTexto(inicial.preco_servico_saas_centavos ?? 0),
+    preco_gmn: centavosParaTexto(inicial.preco_servico_google_meu_negocio_centavos ?? 0),
+  });
+  const { erros, erro, enviando, executar, setErros } = useEnvio();
+  const [salvo, setSalvo] = useState(false);
+
+  function salvar(e) {
+    e.preventDefault();
+    setSalvo(false);
+    const sistemas = paraCentavos(valores.preco_sistemas);
+    const saas = paraCentavos(valores.preco_saas);
+    const gmn = paraCentavos(valores.preco_gmn);
+    if ([sistemas, saas, gmn].some((v) => v === null || Number.isNaN(v))) {
+      setErros([{ campo: 'preco_servico_sistemas_centavos', mensagem: 'Valores inválidos' }]);
+      return;
+    }
+    executar(async () => {
+      await api('/config', {
+        method: 'PUT',
+        body: {
+          preco_servico_sistemas_centavos: sistemas,
+          preco_servico_saas_centavos: saas,
+          preco_servico_google_meu_negocio_centavos: gmn,
+        },
+      });
+      setSalvo(true);
+    });
+  }
+
+  return (
+    <section className="cartao">
+      <h2>Preços padrão de serviços</h2>
+      <form onSubmit={salvar} className="form" noValidate>
+        <Campo rotulo="Sistemas (R$)" nome="preco_servico_sistemas_centavos" erros={erros} inputMode="decimal" {...campo('preco_sistemas')} />
+        <Campo rotulo="SaaS (R$)" nome="preco_servico_saas_centavos" erros={erros} inputMode="decimal" {...campo('preco_saas')} />
+        <Campo rotulo="Google Meu Negócio (R$)" nome="preco_servico_google_meu_negocio_centavos" erros={erros} inputMode="decimal" {...campo('preco_gmn')} />
+        <Aviso erro={erro} />
+        {salvo && <p className="aviso aviso--ok" role="status">Preços salvos.</p>}
+        <div><button className="btn btn--primario" disabled={enviando}>Salvar preços</button></div>
+      </form>
     </section>
   );
 }

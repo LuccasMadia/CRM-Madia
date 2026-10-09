@@ -71,4 +71,28 @@ describe('Config', () => {
     await user.click(await screen.findByRole('button', { name: 'Importar do portfólio' }));
     expect(await screen.findByText('Importados: Canecas da Dri. Ignorados: Popy.')).toBeInTheDocument();
   });
+
+  it('salva os preços padrão de serviço', async () => {
+    const { chamadas } = mockApi({
+      'GET /config': { portfolio_repo_path: null, preco_servico_sistemas_centavos: 0, preco_servico_saas_centavos: 0, preco_servico_google_meu_negocio_centavos: 0 },
+      'PUT /config': { preco_servico_sistemas_centavos: 150000, preco_servico_saas_centavos: 9900, preco_servico_google_meu_negocio_centavos: 20000 },
+    });
+    renderizar(<Config />);
+    const user = userEvent.setup();
+    const sistemas = await screen.findByLabelText('Sistemas (R$)');
+    await user.clear(sistemas);
+    await user.type(sistemas, '1500');
+    const saas = screen.getByLabelText('SaaS (R$)');
+    await user.clear(saas);
+    await user.type(saas, '99');
+    const gmn = screen.getByLabelText('Google Meu Negócio (R$)');
+    await user.clear(gmn);
+    await user.type(gmn, '200');
+    await user.click(screen.getByRole('button', { name: 'Salvar preços' }));
+    expect(await screen.findByText('Preços salvos.')).toBeInTheDocument();
+    const put = chamadas.find((c) => c.caminho === '/config' && c.metodo === 'PUT');
+    expect(put.corpo).toEqual({
+      preco_servico_sistemas_centavos: 150000, preco_servico_saas_centavos: 9900, preco_servico_google_meu_negocio_centavos: 20000,
+    });
+  });
 });
