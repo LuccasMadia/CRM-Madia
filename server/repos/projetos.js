@@ -1,7 +1,7 @@
 import { criarRepo, linha } from './crud.js';
 
 export const CAMPOS_PROJETO = [
-  'cliente_id', 'titulo', 'descricao', 'etapa', 'valor_total_centavos',
+  'cliente_id', 'titulo', 'descricao', 'etapa', 'valor_total_centavos', 'desconto_centavos',
   'data_inicio', 'prazo_entrega', 'data_entrega', 'notas',
   'mensalidade_ativa', 'mensalidade_valor_centavos', 'mensalidade_dia_vencimento',
   'postou_instagram', 'ficticio',

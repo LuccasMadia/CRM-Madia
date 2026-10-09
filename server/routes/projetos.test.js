@@ -116,3 +116,80 @@ describe('/api/projetos', () => {
     expect(res2.body.map((p) => p.titulo)).toEqual(['B']);
   });
 });
+
+describe('/api/projetos com serviços', () => {
+  async function criarModeloDePlaca(precoVendaCentavos = 8000) {
+    return (await ctx.http.post('/api/placas/modelos').send({ nome: 'Placa 10x10 PVC', preco_venda_centavos: precoVendaCentavos }).expect(201)).body;
+  }
+
+  it('cria com 1 serviço de placas e calcula o valor a partir do preço do modelo', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    const res = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Placa pra loja',
+      servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+    }).expect(201);
+    expect(res.body.valor_total_centavos).toBe(16000);
+    expect(res.body.desconto_centavos).toBe(0);
+    expect(res.body.servicos).toEqual([
+      expect.objectContaining({ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2, valor_unitario_centavos: 8000, venda_id: null, modelo_nome: 'Placa 10x10 PVC' }),
+    ]);
+  });
+
+  it('cria com 2 serviços (placas + saas) somando os dois, com valor customizado por linha', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    const res = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Site + placa',
+      servicos: [
+        { tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 },
+        { tipo: 'saas', valor_unitario_centavos: 15000 },
+      ],
+    }).expect(201);
+    expect(res.body.valor_total_centavos).toBe(23000);
+    expect(res.body.servicos.map((s) => s.tipo).sort()).toEqual(['placas_nfc', 'saas']);
+  });
+
+  it('serviço sem valor_unitario_centavos usa o preço padrão configurado', async () => {
+    await ctx.http.put('/api/config').send({ preco_servico_sistemas_centavos: 50000 }).expect(200);
+    const res = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Sistema sob medida', servicos: [{ tipo: 'sistemas' }],
+    }).expect(201);
+    expect(res.body.valor_total_centavos).toBe(50000);
+    expect(res.body.servicos[0]).toMatchObject({ tipo: 'sistemas', modelo_id: null, quantidade: 1, valor_unitario_centavos: 50000 });
+  });
+
+  it('desconto reduz o total, nunca ficando negativo', async () => {
+    const res = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Com desconto',
+      servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }], desconto_centavos: 30000,
+    }).expect(201);
+    expect(res.body.valor_total_centavos).toBe(0);
+  });
+
+  it('sem servicos no corpo, mantém o comportamento atual de valor manual', async () => {
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Simples', valor_total_centavos: 12000 }).expect(201);
+    expect(res.body.valor_total_centavos).toBe(12000);
+    expect(res.body.servicos).toEqual([]);
+  });
+
+  it('valida tipo de serviço desconhecido', async () => {
+    const res = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'X', servicos: [{ tipo: 'inexistente' }],
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'servicos[0].tipo', mensagem: 'Tipo de serviço inválido' }]);
+  });
+
+  it('placas_nfc exige modelo_id válido', async () => {
+    const res = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'X', servicos: [{ tipo: 'placas_nfc', modelo_id: 999, quantidade: 1 }],
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'servicos[0].modelo_id', mensagem: 'Modelo de placa não encontrado' }]);
+  });
+
+  it('funciona também no fluxo de criar com novo_cliente', async () => {
+    const res = await ctx.http.post('/api/projetos').send({
+      titulo: 'Loja nova', novo_cliente: { nome: 'Diego' }, servicos: [{ tipo: 'google_meu_negocio', valor_unitario_centavos: 20000 }],
+    }).expect(201);
+    expect(res.body.valor_total_centavos).toBe(20000);
+    expect(res.body.cliente_nome).toBe('Diego');
+  });
+});
