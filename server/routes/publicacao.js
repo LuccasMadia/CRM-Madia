@@ -11,6 +11,11 @@ import { commitarPortfolio } from '../portfolio/git.js';
 import { importarPortfolio } from '../portfolio/import.js';
 
 const CHAVE_REPO = 'portfolio_repo_path';
+const CHAVES_PRECO_SERVICO = [
+  'preco_servico_sistemas_centavos',
+  'preco_servico_saas_centavos',
+  'preco_servico_google_meu_negocio_centavos',
+];
 
 export function rotasPublicacao({ db, dataDir, hoje }) {
   const uploadsDir = path.join(dataDir, 'uploads');
@@ -45,6 +50,7 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
 
   r.get('/config', (req, res) => res.json({
     portfolio_repo_path: obterConfig(db, CHAVE_REPO),
+    ...Object.fromEntries(CHAVES_PRECO_SERVICO.map((chave) => [chave, Number(obterConfig(db, chave) ?? 0)])),
   }));
 
   r.put('/config', (req, res) => {
@@ -56,8 +62,20 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
       if (errosRepo.length) erros.push(...errosRepo.map((mensagem) => ({ campo: CHAVE_REPO, mensagem })));
       else definirConfig(db, CHAVE_REPO, caminho);
     }
+    for (const chave of CHAVES_PRECO_SERVICO) {
+      if (!(chave in corpo)) continue;
+      const valor = Number(corpo[chave]);
+      if (!Number.isInteger(valor) || valor < 0) {
+        erros.push({ campo: chave, mensagem: 'Deve ser um número inteiro maior ou igual a zero' });
+        continue;
+      }
+      definirConfig(db, chave, String(valor));
+    }
     if (erros.length) throw new ErroValidacao(erros);
-    res.json({ portfolio_repo_path: obterConfig(db, CHAVE_REPO) });
+    res.json({
+      portfolio_repo_path: obterConfig(db, CHAVE_REPO),
+      ...Object.fromEntries(CHAVES_PRECO_SERVICO.map((chave) => [chave, Number(obterConfig(db, chave) ?? 0)])),
+    });
   });
 
   r.post('/portfolio/previa', (req, res) => {

@@ -20,7 +20,40 @@ describe('configuração', () => {
     const res = await ctx.http.put('/api/config').send({ portfolio_repo_path: path.join(repo, 'nada') }).expect(400);
     expect(res.body.erros[0].campo).toBe('portfolio_repo_path');
     await ctx.http.put('/api/config').send({ portfolio_repo_path: repo }).expect(200);
-    expect((await ctx.http.get('/api/config')).body).toEqual({ portfolio_repo_path: repo });
+    expect((await ctx.http.get('/api/config')).body).toEqual({
+      portfolio_repo_path: repo,
+      preco_servico_sistemas_centavos: 0,
+      preco_servico_saas_centavos: 0,
+      preco_servico_google_meu_negocio_centavos: 0,
+    });
+  });
+
+  it('salva e devolve os preços padrão de serviço', async () => {
+    await ctx.http.put('/api/config').send({
+      preco_servico_sistemas_centavos: 150000,
+      preco_servico_saas_centavos: 9900,
+      preco_servico_google_meu_negocio_centavos: 20000,
+    }).expect(200);
+    const res = await ctx.http.get('/api/config').expect(200);
+    expect(res.body).toMatchObject({
+      preco_servico_sistemas_centavos: 150000,
+      preco_servico_saas_centavos: 9900,
+      preco_servico_google_meu_negocio_centavos: 20000,
+    });
+  });
+
+  it('sem configurar ainda, os preços padrão de serviço vêm como 0', async () => {
+    const res = await ctx.http.get('/api/config').expect(200);
+    expect(res.body).toMatchObject({
+      preco_servico_sistemas_centavos: 0,
+      preco_servico_saas_centavos: 0,
+      preco_servico_google_meu_negocio_centavos: 0,
+    });
+  });
+
+  it('recusa preço de serviço negativo', async () => {
+    const res = await ctx.http.put('/api/config').send({ preco_servico_saas_centavos: -100 }).expect(400);
+    expect(res.body.erros[0].campo).toBe('preco_servico_saas_centavos');
   });
 
   it('publicação sem configuração responde 400 com mensagem', async () => {
