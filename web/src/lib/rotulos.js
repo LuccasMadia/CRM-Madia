@@ -19,3 +19,11 @@ export const ROTULO_CATEGORIA_QR = { avaliacao: 'Avaliação', cardapio: 'Cardá
 export const CATEGORIAS_QR = Object.keys(ROTULO_CATEGORIA_QR);
 export const ROTULO_STATUS_QR = { ativo: 'Ativo', arquivado: 'Arquivado' };
 export const STATUS_QR = Object.keys(ROTULO_STATUS_QR);
+
+export const ROTULO_TIPO_SERVICO = {
+  placas_nfc: 'Placas NFC',
+  sistemas: 'Sistemas',
+  saas: 'SaaS',
+  google_meu_negocio: 'Google Meu Negócio',
+};
+export const TIPOS_SERVICO = Object.keys(ROTULO_TIPO_SERVICO);
