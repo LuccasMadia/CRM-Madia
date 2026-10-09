@@ -78,4 +78,43 @@ describe('Projeto', () => {
     const put = chamadas.find((c) => c.metodo === 'PUT');
     expect(put.corpo).toMatchObject({ postou_instagram: true });
   });
+
+  it('projeto com serviços existentes mostra o bloco de serviços e some o campo Valor manual', async () => {
+    const projetoComServico = {
+      ...projetoExemplo,
+      valor_total_centavos: 15000,
+      desconto_centavos: 0,
+      servicos: [{ id: 1, tipo: 'saas', modelo_id: null, quantidade: 1, valor_unitario_centavos: 15000, venda_id: null, modelo_nome: null }],
+    };
+    mockApi({
+      'GET /projetos/5': projetoComServico, 'GET /clientes': [{ id: 1, nome: 'Ana' }],
+      'GET /placas/modelos': [], 'GET /config': {},
+    });
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    expect(await screen.findByLabelText('SaaS')).toBeChecked();
+    expect(screen.queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
+  });
+
+  it('trocar os serviços e salvar envia servicos/desconto, sem valor_total_centavos manual', async () => {
+    const projetoComServico = {
+      ...projetoExemplo,
+      valor_total_centavos: 15000,
+      desconto_centavos: 0,
+      servicos: [{ id: 1, tipo: 'saas', modelo_id: null, quantidade: 1, valor_unitario_centavos: 15000, venda_id: null, modelo_nome: null }],
+    };
+    const { chamadas } = mockApi({
+      'GET /projetos/5': projetoComServico, 'GET /clientes': [{ id: 1, nome: 'Ana' }],
+      'GET /placas/modelos': [], 'GET /config': { preco_servico_google_meu_negocio_centavos: 20000 },
+      'PUT /projetos/5': { ...projetoComServico, atualizado_em: 'T2' },
+    });
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('SaaS'));
+    await user.click(screen.getByLabelText('Google Meu Negócio'));
+    await user.click(screen.getByRole('button', { name: 'Salvar projeto' }));
+    await screen.findByRole('heading', { name: 'Site Ana' });
+    const put = chamadas.find((c) => c.metodo === 'PUT');
+    expect(put.corpo.servicos).toEqual([{ tipo: 'google_meu_negocio', valor_unitario_centavos: 20000 }]);
+    expect(put.corpo).not.toHaveProperty('valor_total_centavos');
+  });
 });
