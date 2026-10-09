@@ -163,11 +163,25 @@ export function rotasProjetos({ db, hoje }) {
     const id = lerId(req.params.id);
     const atual = projetos.obter(id);
     if (!atual) throw naoEncontrado('Projeto');
-    const dados = aplicarRegrasProjeto(atual, validar(req.body, REGRAS_PROJETO, { parcial: true }), hoje());
-    exigirDadosMensalidade(atual, dados);
-    if (dados.cliente_id !== undefined) exigirCliente(dados.cliente_id);
-    projetos.atualizar(id, dados);
-    res.json(projetos.obterComCliente(id));
+    const corpo = req.body ?? {};
+    const temServicos = corpo.servicos !== undefined;
+    const servicosValidados = temServicos ? validarServicos(corpo.servicos, { modelosRepo: modelos, db }) : null;
+
+    const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
+    exigirDadosMensalidade(atual, dadosBase);
+    if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
+
+    emTransacao(db, () => {
+      let dados = dadosBase;
+      if (temServicos) {
+        projetosServicos.removerPorProjetoSemVenda(id);
+        criarServicosDoProjeto(id, servicosValidados);
+        const descontoCentavos = dados.desconto_centavos ?? atual.desconto_centavos ?? 0;
+        dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(projetosServicos.listar(id), descontoCentavos) };
+      }
+      projetos.atualizar(id, dados);
+    });
+    res.json(comServicos(projetos.obterComCliente(id)));
   });
 
   r.delete('/:id', (req, res) => {

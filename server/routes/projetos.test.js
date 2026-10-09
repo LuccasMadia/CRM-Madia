@@ -192,4 +192,28 @@ describe('/api/projetos com serviços', () => {
     expect(res.body.valor_total_centavos).toBe(20000);
     expect(res.body.cliente_nome).toBe('Diego');
   });
+
+  it('atualizar trocando os serviços recalcula o total', async () => {
+    const res1 = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }],
+    }).expect(201);
+    const res2 = await ctx.http.put(`/api/projetos/${res1.body.id}`).send({
+      servicos: [{ tipo: 'google_meu_negocio', valor_unitario_centavos: 7000 }], desconto_centavos: 1000,
+    }).expect(200);
+    expect(res2.body.valor_total_centavos).toBe(6000);
+    expect(res2.body.servicos).toEqual([
+      expect.objectContaining({ tipo: 'google_meu_negocio', valor_unitario_centavos: 7000 }),
+    ]);
+  });
+
+  it('atualizar sem servicos no corpo não toca em projetos_servicos', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }],
+    })).body;
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ titulo: 'Projeto renomeado' }).expect(200);
+    expect(res.body.titulo).toBe('Projeto renomeado');
+    expect(res.body.valor_total_centavos).toBe(10000);
+    expect(res.body.servicos).toHaveLength(1);
+  });
+
 });
