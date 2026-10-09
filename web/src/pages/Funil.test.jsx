@@ -32,7 +32,7 @@ describe('Funil', () => {
   });
 
   it('nova oportunidade: valor inválido não chama a API', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [] });
+    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -44,7 +44,9 @@ describe('Funil', () => {
   });
 
   it('nova oportunidade com cliente novo envia novo_cliente e valor em centavos', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 } });
+    const { chamadas } = mockApi({
+      'GET /projetos?ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 }, 'GET /placas/modelos': [], 'GET /config': {},
+    });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -60,7 +62,7 @@ describe('Funil', () => {
   });
 
   it('nova oportunidade: marcar "fictício" restringe etapa a andamento/entregue', async () => {
-    mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [] });
+    mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -88,6 +90,7 @@ describe('Funil', () => {
   it('+ Oportunidade na aba Fictícios cria com ficticio travado e etapa andamento', async () => {
     const { chamadas } = mockApi({
       'GET /projetos?ficticio=0': [], 'GET /projetos?ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
+      'GET /placas/modelos': [], 'GET /config': {},
     });
     abrir();
     const user = userEvent.setup();
@@ -116,5 +119,41 @@ describe('Funil', () => {
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
     await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Case Padaria'), 'entregue');
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/5', corpo: { etapa: 'entregue' } });
+  });
+
+  it('nova oportunidade com serviço marcado esconde o campo Valor manual e envia servicos', async () => {
+    const { chamadas } = mockApi({
+      'GET /projetos?ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
+      'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
+    });
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
+    await user.type(screen.getByLabelText('Título'), 'Site');
+    await user.selectOptions(screen.getByLabelText('Cliente'), '3');
+    await user.click(await screen.findByLabelText('SaaS'));
+    expect(screen.queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
+    const corpo = chamadas.find((c) => c.metodo === 'POST').corpo;
+    expect(corpo).toEqual({
+      titulo: 'Site', etapa: 'contato', prazo_entrega: '', ficticio: false, cliente_id: 3,
+      servicos: [{ tipo: 'saas', valor_unitario_centavos: 15000 }], desconto_centavos: 0,
+    });
+    expect(corpo).not.toHaveProperty('valor_total_centavos');
+  });
+
+  it('desmarcar o único serviço volta a mostrar o campo Valor manual', async () => {
+    mockApi({
+      'GET /projetos?ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
+    });
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
+    const checkboxSaas = await screen.findByLabelText('SaaS');
+    await user.click(checkboxSaas);
+    expect(screen.queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
+    await user.click(checkboxSaas);
+    expect(screen.getByLabelText('Valor (R$)')).toBeInTheDocument();
   });
 });
