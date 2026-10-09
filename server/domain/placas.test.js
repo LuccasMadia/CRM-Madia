@@ -3,6 +3,7 @@ import {
   custoUnitarioLote, custoAtualMaterial, estoqueMaterial, custoReceitaModelo,
   lucroPrevisto, lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
   custoItensAvaria, quantidadeConsumidaAvariaMaterial, resumoPrejuizoAvarias,
+  calcularCustoUnitarioModelo,
 } from './placas.js';
 
 const PLACA = 1;
@@ -205,5 +206,20 @@ describe('resumoPrejuizoAvarias', () => {
     expect(resumo.total_centavos).toBe(376 * 2 + 400 + 2055);
     const do10x10 = resumo.por_modelo.find((r) => r.modelo_id === MODELO_10x10);
     expect(do10x10).toMatchObject({ quantidade: 3, total_centavos: 376 * 2 + 400, modelo_nome: 'Placa 10x10 PVC' });
+  });
+});
+
+describe('calcularCustoUnitarioModelo', () => {
+  it('reproduz o custo da receita: placa 10x10 = R$ 3,76', () => {
+    expect(calcularCustoUnitarioModelo(MODELO_10x10, itensModelo, lotes)).toEqual({ custoUnitarioCentavos: 376 });
+  });
+
+  it('retorna erro sem_receita quando o modelo não tem itens', () => {
+    expect(calcularCustoUnitarioModelo(999, itensModelo, lotes)).toEqual({ erro: 'sem_receita' });
+  });
+
+  it('retorna erro sem_lote quando algum material da receita não tem lote comprado', () => {
+    const itensSemLote = [{ modelo_id: 999, material_id: 888, quantidade: 1 }];
+    expect(calcularCustoUnitarioModelo(999, itensSemLote, lotes)).toEqual({ erro: 'sem_lote' });
   });
 });

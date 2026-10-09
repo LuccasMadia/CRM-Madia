@@ -99,3 +99,15 @@ export function resumoPrejuizoAvarias(avarias, modelos) {
     por_modelo: porModeloComNome,
   };
 }
+
+export function calcularCustoUnitarioModelo(modeloId, itensModelo, lotes) {
+  const itens = itensModelo.filter((i) => i.modelo_id === modeloId);
+  if (!itens.length) return { erro: 'sem_receita' };
+  let custoUnitarioCentavos = 0;
+  for (const item of itens) {
+    const custo = custoAtualMaterial(item.material_id, lotes);
+    if (custo === null) return { erro: 'sem_lote' };
+    custoUnitarioCentavos += custo * item.quantidade;
+  }
+  return { custoUnitarioCentavos };
+}

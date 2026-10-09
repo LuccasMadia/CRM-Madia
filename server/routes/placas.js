@@ -10,7 +10,7 @@ import { ErroValidacao, naoEncontrado } from '../http/erros.js';
 import {
   estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto,
   lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
-  custoItensAvaria, resumoPrejuizoAvarias,
+  custoItensAvaria, resumoPrejuizoAvarias, calcularCustoUnitarioModelo,
 } from '../domain/placas.js';
 
 const REGRAS_MATERIAL = {
@@ -267,17 +267,15 @@ export function rotasPlacas({ db }) {
     if (!modelo) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
 
     const itensDoModelo = itensModelo.listar({ modelo_id: modelo.id });
-    if (!itensDoModelo.length) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
-
     const lotesTodos = lotes.listar();
-    let custoUnitario = 0;
-    for (const item of itensDoModelo) {
-      const custo = custoAtualMaterial(item.material_id, lotesTodos);
-      if (custo === null) {
-        throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
-      }
-      custoUnitario += custo * item.quantidade;
+    const resultadoCusto = calcularCustoUnitarioModelo(modelo.id, itensModelo.listar(), lotesTodos);
+    if (resultadoCusto.erro === 'sem_receita') {
+      throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
     }
+    if (resultadoCusto.erro === 'sem_lote') {
+      throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
+    }
+    const custoUnitario = resultadoCusto.custoUnitarioCentavos;
 
     const venda = vendas.criar({
       modelo_id: modelo.id,
