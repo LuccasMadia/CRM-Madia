@@ -216,4 +216,63 @@ describe('/api/projetos com serviços', () => {
     expect(res.body.servicos).toHaveLength(1);
   });
 
+  async function prepararReceita(modeloId) {
+    const material = (await ctx.http.post('/api/placas/materiais').send({ nome: 'Placa' })).body;
+    await ctx.http.post('/api/placas/lotes').send({ material_id: material.id, quantidade: 10, valor_kit_centavos: 2490, valor_frete_centavos: 0, data_compra: '2026-09-01' });
+    await ctx.http.put(`/api/placas/modelos/${modeloId}`).send({ itens: [{ material_id: material.id, quantidade: 1 }] });
+  }
+
+  it('atualizar preserva linha de placas_nfc já vendida (com venda_id) ao trocar os serviços', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    await prepararReceita(modelo.id);
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+    })).body;
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ servicos: [{ tipo: 'saas', valor_unitario_centavos: 5000 }] }).expect(200);
+    const tipos = res.body.servicos.map((s) => s.tipo).sort();
+    expect(tipos).toEqual(['placas_nfc', 'saas']);
+    expect(res.body.valor_total_centavos).toBe(8000 + 5000);
+  });
+
+  it('mudar etapa para entregue com serviço de placas cria a venda e marca venda_id', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    await prepararReceita(modelo.id);
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+    })).body;
+
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+    expect(res.body.servicos[0].venda_id).not.toBeNull();
+
+    const vendas = (await ctx.http.get('/api/placas/vendas')).body;
+    expect(vendas).toHaveLength(1);
+    expect(vendas[0]).toMatchObject({ modelo_id: modelo.id, quantidade: 2, preco_vendido_centavos: 8000, cliente_id: cliente.id, custo_unitario_centavos: 249 });
+  });
+
+  it('mudar etapa para entregue de novo não duplica a venda (idempotência)', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    await prepararReceita(modelo.id);
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+    })).body;
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'proposta' }).expect(200);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+
+    const vendas = (await ctx.http.get('/api/placas/vendas')).body;
+    expect(vendas).toHaveLength(1);
+  });
+
+  it('modelo sem receita bloqueia a transição para entregue com erro claro', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+    })).body;
+
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Modelo de placa sem receita cadastrada, não é possível registrar a venda' }]);
+    expect((await ctx.http.get(`/api/projetos/${criado.id}`)).body.etapa).toBe('contato');
+  });
 });

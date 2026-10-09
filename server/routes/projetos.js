@@ -101,6 +101,34 @@ export function rotasProjetos({ db, hoje }) {
     for (const s of servicosValidados) projetosServicos.criar({ ...s, projeto_id: projetoId });
   }
 
+  function processarEntregaDePlacas(atual, dados, projetoId) {
+    const vaiEntregar = atual.etapa !== 'entregue' && dados.etapa === 'entregue';
+    if (!vaiEntregar) return;
+    const pendentes = projetosServicos.listarPlacasPendentes(projetoId);
+    if (!pendentes.length) return;
+    const itensModeloTodos = itensModelo.listar();
+    const lotesTodos = lotes.listar();
+    for (const linhaServico of pendentes) {
+      const resultado = calcularCustoUnitarioModelo(linhaServico.modelo_id, itensModeloTodos, lotesTodos);
+      if (resultado.erro === 'sem_receita') {
+        throw new ErroValidacao([{ campo: 'servicos', mensagem: 'Modelo de placa sem receita cadastrada, não é possível registrar a venda' }]);
+      }
+      if (resultado.erro === 'sem_lote') {
+        throw new ErroValidacao([{ campo: 'servicos', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
+      }
+      const venda = vendas.criar({
+        modelo_id: linhaServico.modelo_id,
+        quantidade: linhaServico.quantidade,
+        preco_vendido_centavos: linhaServico.valor_unitario_centavos,
+        custo_unitario_centavos: resultado.custoUnitarioCentavos,
+        cliente_id: atual.cliente_id,
+        comprador_nome: null,
+        data_venda: hoje(),
+      });
+      projetosServicos.atualizar(linhaServico.id, { venda_id: venda.id });
+    }
+  }
+
   r.get('/', (req, res) => {
     res.json(projetos.listarComCliente({
       etapa: req.query.etapa,
@@ -179,6 +207,7 @@ export function rotasProjetos({ db, hoje }) {
         const descontoCentavos = dados.desconto_centavos ?? atual.desconto_centavos ?? 0;
         dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(projetosServicos.listar(id), descontoCentavos) };
       }
+      processarEntregaDePlacas(atual, dados, id);
       projetos.atualizar(id, dados);
     });
     res.json(comServicos(projetos.obterComCliente(id)));
