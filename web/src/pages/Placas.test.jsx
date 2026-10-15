@@ -252,7 +252,7 @@ describe('Placas', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     const post = chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/placas/modelos');
     expect(post.corpo).toEqual({
-      nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, itens: [{ material_id: 1, quantidade: 1 }],
+      nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, itens: [{ material_id: 1, quantidade: 1 }], packs: [],
     });
   });
 

@@ -44,6 +44,7 @@ export function AbaModelos() {
       <tr key={m.id} className={m.ativo ? undefined : 'tabela__linha--inativa'}>
         <td>{m.nome}</td>
         <td className="num">{formatarDinheiro(m.preco_venda_centavos)}</td>
+        <td>{(m.packs ?? []).length ? m.packs.map((p) => `${p.quantidade} = ${formatarDinheiro(p.preco_total_centavos)}`).join(' · ') : '—'}</td>
         <td className="num">{m.custo_previsto_centavos === null ? '—' : formatarDinheiro(m.custo_previsto_centavos)}</td>
         <td className="num">{m.lucro_previsto_centavos === null ? '—' : formatarDinheiro(m.lucro_previsto_centavos)}</td>
         <td>
@@ -71,10 +72,10 @@ export function AbaModelos() {
       <Aviso erro={erro} />
       {modelos && (modelos.length ? (
         <table className="tabela">
-          <thead><tr><th>Nome</th><th className="num">Preço de venda</th><th className="num">Custo previsto</th><th className="num">Lucro previsto</th><th></th></tr></thead>
+          <thead><tr><th>Nome</th><th className="num">Preço de venda</th><th>Packs</th><th className="num">Custo previsto</th><th className="num">Lucro previsto</th><th></th></tr></thead>
           <tbody>
             {ativos.map(linhaModelo)}
-            {inativos.length > 0 && <tr className="tabela__divisoria"><td colSpan={5}>Inativos</td></tr>}
+            {inativos.length > 0 && <tr className="tabela__divisoria"><td colSpan={6}>Inativos</td></tr>}
             {inativos.map(linhaModelo)}
           </tbody>
         </table>

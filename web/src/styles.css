@@ -63,6 +63,8 @@ code { font-size: 0.9em; }
 input, select, textarea { font: inherit; color: inherit; background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px; padding: 8px 10px; }
 [aria-invalid='true'] { border-color: var(--perigo); }
 .campo__erro { color: var(--perigo); font-size: 0.85rem; margin: 0; }
+.form__ajuda { font-size: 0.85rem; color: var(--texto-suave); margin: 4px 0 0; }
+.form__ajuda--aviso { color: var(--perigo); }
 
 .btn { font: inherit; cursor: pointer; border: 1px solid var(--borda); background: var(--superficie); color: var(--texto); border-radius: 8px; padding: 8px 14px; text-decoration: none; display: inline-block; }
 .btn:disabled { opacity: 0.6; cursor: wait; }
