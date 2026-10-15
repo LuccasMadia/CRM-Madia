@@ -42,7 +42,7 @@ Abordagem A: **todo serviço é um registro em `projetos`, com um tipo**. GMN e 
 | Campos próprios | — | `link_perfil` | QR codes ligados |
 | Fictício | permitido | não | não |
 
-- `servico` é definido na criação e **não muda** depois (PUT ignora ou rejeita alteração: rejeita com 400 `{campo: 'servico', mensagem: 'Não é possível mudar o tipo de serviço'}`).
+- `servico` é definido na criação e **não muda** depois (PUT com outro valor dá 400 `{campo: 'servico', mensagem: 'Não é possível mudar o tipo de serviço'}`).
 - GMN e placas são criados já em `andamento`; enviar outra etapa dá 400.
 - Linha `placas_nfc` ou `google_meu_negocio` em projeto `site_sistema` dá 400. Os tipos de linha `google_meu_negocio` deixam de ser oferecidos; o valor continua aceito no CHECK da tabela para não exigir recriá-la.
 - QR ligado precisa ser do mesmo cliente do projeto: senão 400 `{campo: 'qrcodes', mensagem: 'QR não pertence a este cliente'}`. Só projetos `placas_nfc` aceitam `qrcodes`.
