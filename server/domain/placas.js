@@ -111,3 +111,27 @@ export function calcularCustoUnitarioModelo(modeloId, itensModelo, lotes) {
   }
   return { custoUnitarioCentavos };
 }
+
+export function precosPorPosicao(modelo, packs) {
+  const totais = [{ quantidade: 1, preco_total_centavos: modelo.preco_venda_centavos }, ...packs.filter((p) => p.quantidade >= 2)]
+    .sort((a, b) => a.quantidade - b.quantidade);
+  const degraus = [];
+  let anterior = { quantidade: 0, preco_total_centavos: 0 };
+  for (const pack of totais) {
+    const posicoes = pack.quantidade - anterior.quantidade;
+    const diferenca = pack.preco_total_centavos - anterior.preco_total_centavos;
+    const base = Math.floor(diferenca / posicoes);
+    for (let i = 0; i < posicoes; i++) degraus.push(i === posicoes - 1 ? diferenca - base * (posicoes - 1) : base);
+    anterior = pack;
+  }
+  return degraus;
+}
+
+export function precoPlacas(modelo, packs, jaComprou, quantidade) {
+  const degraus = precosPorPosicao(modelo, packs);
+  const precoPorPlaca = [];
+  for (let posicao = jaComprou + 1; posicao <= jaComprou + quantidade; posicao++) {
+    precoPorPlaca.push(degraus[Math.min(posicao, degraus.length) - 1]);
+  }
+  return { total_centavos: precoPorPlaca.reduce((soma, p) => soma + p, 0), preco_por_placa_centavos: precoPorPlaca };
+}

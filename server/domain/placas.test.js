@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  precosPorPosicao, precoPlacas,
   custoUnitarioLote, custoAtualMaterial, estoqueMaterial, custoReceitaModelo,
   lucroPrevisto, lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
   custoItensAvaria, quantidadeConsumidaAvariaMaterial, resumoPrejuizoAvarias,
@@ -221,5 +222,53 @@ describe('calcularCustoUnitarioModelo', () => {
   it('retorna erro sem_lote quando algum material da receita não tem lote comprado', () => {
     const itensSemLote = [{ modelo_id: 999, material_id: 888, quantidade: 1 }];
     expect(calcularCustoUnitarioModelo(999, itensSemLote, lotes)).toEqual({ erro: 'sem_lote' });
+  });
+});
+
+const MOD_10x10 = { preco_venda_centavos: 8000 };
+const PACKS_10x10 = [{ quantidade: 2, preco_total_centavos: 14000 }, { quantidade: 3, preco_total_centavos: 20000 }];
+const MOD_10x15 = { preco_venda_centavos: 10000 };
+const PACKS_10x15 = [{ quantidade: 3, preco_total_centavos: 25000 }, { quantidade: 2, preco_total_centavos: 18000 }];
+
+describe('precosPorPosicao', () => {
+  it('deriva o preço de cada posição pela diferença entre packs (ordem dos packs não importa)', () => {
+    expect(precosPorPosicao(MOD_10x10, PACKS_10x10)).toEqual([8000, 6000, 6000]);
+    expect(precosPorPosicao(MOD_10x15, PACKS_10x15)).toEqual([10000, 8000, 7000]);
+  });
+
+  it('sem packs, só tem a posição 1', () => {
+    expect(precosPorPosicao(MOD_10x10, [])).toEqual([8000]);
+  });
+
+  it('tabela com buraco divide a diferença e joga o resto na última posição do intervalo', () => {
+    expect(precosPorPosicao({ preco_venda_centavos: 10000 }, [{ quantidade: 3, preco_total_centavos: 25001 }])).toEqual([10000, 7500, 7501]);
+  });
+});
+
+describe('precoPlacas', () => {
+  it('cliente novo paga exatamente o pack', () => {
+    expect(precoPlacas(MOD_10x15, PACKS_10x15, 0, 1).total_centavos).toBe(10000);
+    expect(precoPlacas(MOD_10x15, PACKS_10x15, 0, 2).total_centavos).toBe(18000);
+    expect(precoPlacas(MOD_10x15, PACKS_10x15, 0, 3).total_centavos).toBe(25000);
+  });
+
+  it('acima do maior pack repete o último degrau', () => {
+    expect(precoPlacas(MOD_10x15, PACKS_10x15, 0, 4)).toEqual({ total_centavos: 32000, preco_por_placa_centavos: [10000, 8000, 7000, 7000] });
+    expect(precoPlacas(MOD_10x10, PACKS_10x10, 0, 5).total_centavos).toBe(32000);
+  });
+
+  it('recompra continua do ponto em que o cliente parou', () => {
+    expect(precoPlacas(MOD_10x15, PACKS_10x15, 1, 2)).toEqual({ total_centavos: 15000, preco_por_placa_centavos: [8000, 7000] });
+    expect(precoPlacas(MOD_10x15, PACKS_10x15, 3, 1).total_centavos).toBe(7000);
+    expect(precoPlacas(MOD_10x10, PACKS_10x10, 1, 1).total_centavos).toBe(6000);
+  });
+
+  it('modelo sem packs cobra preço cheio em toda posição', () => {
+    expect(precoPlacas(MOD_10x10, [], 2, 3).total_centavos).toBe(24000);
+  });
+
+  it('tabela com buraco mantém o pack exato para cliente novo', () => {
+    const packs = [{ quantidade: 3, preco_total_centavos: 25001 }];
+    expect(precoPlacas({ preco_venda_centavos: 10000 }, packs, 0, 3).total_centavos).toBe(25001);
   });
 });

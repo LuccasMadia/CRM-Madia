@@ -35,3 +35,13 @@ describe('calcularValorTotal', () => {
     expect(calcularValorTotal([], 0)).toBe(0);
   });
 });
+
+describe('valorLinhaServico com valor_total_centavos', () => {
+  it('usa o total da linha quando existe', () => {
+    expect(valorLinhaServico({ valor_unitario_centavos: 6667, quantidade: 3, valor_total_centavos: 20000 })).toBe(20000);
+  });
+
+  it('sem total (null), continua unitário × quantidade', () => {
+    expect(valorLinhaServico({ valor_unitario_centavos: 5000, quantidade: 2, valor_total_centavos: null })).toBe(10000);
+  });
+});
