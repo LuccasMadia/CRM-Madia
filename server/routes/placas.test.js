@@ -443,3 +443,105 @@ describe('/api/placas/modelos ativar e desativar', () => {
     await ctx.http.post('/api/placas/modelos/999/desativar').expect(404);
   });
 });
+
+describe('/api/placas/modelos packs', () => {
+  function criarComPacks(packs, overrides = {}) {
+    return ctx.http.post('/api/placas/modelos').send({ nome: '10x15', preco_venda_centavos: 10000, packs, ...overrides });
+  }
+
+  it('cria e lista o modelo com os packs ordenados', async () => {
+    await criarComPacks([{ quantidade: 3, preco_total_centavos: 25000 }, { quantidade: 2, preco_total_centavos: 18000 }]).expect(201);
+    const res = await ctx.http.get('/api/placas/modelos').expect(200);
+    expect(res.body[0].packs).toEqual([{ quantidade: 2, preco_total_centavos: 18000 }, { quantidade: 3, preco_total_centavos: 25000 }]);
+  });
+
+  it('modelo sem packs vem com lista vazia', async () => {
+    await criarComPacks(undefined).expect(201);
+    expect((await ctx.http.get('/api/placas/modelos')).body[0].packs).toEqual([]);
+  });
+
+  it('PUT com packs substitui todos; PUT sem packs mantém', async () => {
+    const modelo = (await criarComPacks([{ quantidade: 2, preco_total_centavos: 18000 }])).body;
+    await ctx.http.put(`/api/placas/modelos/${modelo.id}`).send({ packs: [{ quantidade: 3, preco_total_centavos: 25000 }] }).expect(200);
+    const res = await ctx.http.put(`/api/placas/modelos/${modelo.id}`).send({ nome: 'Novo nome' }).expect(200);
+    expect(res.body.packs).toEqual([{ quantidade: 3, preco_total_centavos: 25000 }]);
+  });
+
+  it('rejeita quantidade menor que 2', async () => {
+    const res = await criarComPacks([{ quantidade: 1, preco_total_centavos: 9000 }]).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'packs[0].quantidade', mensagem: 'Deve ser no mínimo 2' }]);
+  });
+
+  it('rejeita quantidade repetida', async () => {
+    const res = await criarComPacks([{ quantidade: 2, preco_total_centavos: 18000 }, { quantidade: 2, preco_total_centavos: 17000 }]).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'packs[1].quantidade', mensagem: 'Quantidade repetida' }]);
+  });
+
+  it('rejeita pack com total menor que um pack menor', async () => {
+    const res = await criarComPacks([{ quantidade: 2, preco_total_centavos: 9000 }]).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'packs[0].preco_total_centavos', mensagem: 'Não pode ser menor que o pack de 1' }]);
+  });
+
+  it('rejeita subir o preço de venda acima de um pack existente', async () => {
+    const modelo = (await criarComPacks([{ quantidade: 2, preco_total_centavos: 18000 }])).body;
+    const res = await ctx.http.put(`/api/placas/modelos/${modelo.id}`).send({ preco_venda_centavos: 19000 }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'packs[0].preco_total_centavos', mensagem: 'Não pode ser menor que o pack de 1' }]);
+  });
+
+  it('excluir o modelo remove os packs', async () => {
+    const modelo = (await criarComPacks([{ quantidade: 2, preco_total_centavos: 18000 }])).body;
+    await ctx.http.delete(`/api/placas/modelos/${modelo.id}`).expect(204);
+    expect(ctx.db.prepare('SELECT COUNT(*) AS n FROM placas_modelos_packs').get().n).toBe(0);
+  });
+});
+
+describe('/api/placas/modelos/:id/preco', () => {
+  let modelo;
+  let ana;
+  let bia;
+  beforeEach(async () => {
+    modelo = (await ctx.http.post('/api/placas/modelos').send({
+      nome: '10x15', preco_venda_centavos: 10000,
+      packs: [{ quantidade: 2, preco_total_centavos: 18000 }, { quantidade: 3, preco_total_centavos: 25000 }],
+    })).body;
+    ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    bia = (await ctx.http.post('/api/clientes').send({ nome: 'Bia' })).body;
+  });
+
+  function venda(clienteId, quantidade) {
+    const t = '2026-10-01T00:00:00.000Z';
+    return ctx.db.prepare(`INSERT INTO placas_vendas (modelo_id, quantidade, preco_vendido_centavos, custo_unitario_centavos, cliente_id, data_venda, criado_em, atualizado_em)
+      VALUES (?, ?, 8000, 700, ?, '2026-10-01', ?, ?)`).run(modelo.id, quantidade, clienteId, t, t).lastInsertRowid;
+  }
+
+  it('sem cliente devolve o preço do pack', async () => {
+    const res = await ctx.http.get(`/api/placas/modelos/${modelo.id}/preco?quantidade=2`).expect(200);
+    expect(res.body).toEqual({ total_centavos: 18000, ja_comprou: 0, recompra: false, preco_por_placa_centavos: [10000, 8000] });
+  });
+
+  it('com cliente que já comprou devolve o preço de recompra, ignorando vendas de outros clientes', async () => {
+    venda(ana.id, 1);
+    venda(bia.id, 5);
+    const res = await ctx.http.get(`/api/placas/modelos/${modelo.id}/preco?quantidade=2&cliente_id=${ana.id}`).expect(200);
+    expect(res.body).toMatchObject({ total_centavos: 15000, ja_comprou: 1, recompra: true });
+  });
+
+  it('ignora as vendas da própria oportunidade (projeto_id)', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: ana.id, titulo: 'P' })).body;
+    const vendaId = venda(ana.id, 2);
+    ctx.db.prepare(`INSERT INTO projetos_servicos (projeto_id, tipo, modelo_id, quantidade, valor_unitario_centavos, valor_total_centavos, venda_id, criado_em, atualizado_em)
+      VALUES (?, 'placas_nfc', ?, 2, 9000, 18000, ?, 'x', 'x')`).run(projeto.id, modelo.id, vendaId);
+    const res = await ctx.http.get(`/api/placas/modelos/${modelo.id}/preco?quantidade=2&cliente_id=${ana.id}&projeto_id=${projeto.id}`).expect(200);
+    expect(res.body).toMatchObject({ total_centavos: 18000, ja_comprou: 0 });
+  });
+
+  it('quantidade ausente ou menor que 1 responde 400', async () => {
+    const res = await ctx.http.get(`/api/placas/modelos/${modelo.id}/preco?quantidade=0`).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'quantidade', mensagem: 'Deve ser no mínimo 1' }]);
+    await ctx.http.get(`/api/placas/modelos/${modelo.id}/preco`).expect(400);
+  });
+
+  it('modelo inexistente responde 404', async () => {
+    await ctx.http.get('/api/placas/modelos/999/preco?quantidade=1').expect(404);
+  });
+});

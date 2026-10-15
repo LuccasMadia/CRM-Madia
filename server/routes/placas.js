@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   repoPlacasMateriais, repoPlacasLotes, repoPlacasModelos, repoPlacasModelosItens, repoPlacasVendas,
-  repoPlacasAvarias, repoPlacasAvariasItens,
+  repoPlacasAvarias, repoPlacasAvariasItens, repoPlacasModelosPacks, precoSugeridoPlacas,
 } from '../repos/placas.js';
 import { repoClientes } from '../repos/clientes.js';
 import { emTransacao } from '../repos/crud.js';
@@ -52,6 +52,7 @@ export function rotasPlacas({ db }) {
   const lotes = repoPlacasLotes(db);
   const modelos = repoPlacasModelos(db);
   const itensModelo = repoPlacasModelosItens(db);
+  const packsModelo = repoPlacasModelosPacks(db);
   const vendas = repoPlacasVendas(db);
   const clientes = repoClientes(db);
   const avarias = repoPlacasAvarias(db);
@@ -92,12 +93,46 @@ export function rotasPlacas({ db }) {
     });
   }
 
+  function validarPacks(packsBrutos, precoVendaCentavos) {
+    if (!Array.isArray(packsBrutos)) throw new ErroValidacao([{ campo: 'packs', mensagem: 'Deve ser uma lista' }]);
+    const vistas = new Set();
+    const packs = packsBrutos.map((pack, i) => {
+      const quantidade = Number(pack.quantidade);
+      const preco = Number(pack.preco_total_centavos);
+      if (!Number.isInteger(quantidade) || quantidade < 2) {
+        throw new ErroValidacao([{ campo: `packs[${i}].quantidade`, mensagem: 'Deve ser no mínimo 2' }]);
+      }
+      if (vistas.has(quantidade)) throw new ErroValidacao([{ campo: `packs[${i}].quantidade`, mensagem: 'Quantidade repetida' }]);
+      vistas.add(quantidade);
+      if (!Number.isInteger(preco) || preco < 0) {
+        throw new ErroValidacao([{ campo: `packs[${i}].preco_total_centavos`, mensagem: 'Valor inválido' }]);
+      }
+      return { quantidade, preco_total_centavos: preco, indice: i };
+    });
+    const ordenados = [{ quantidade: 1, preco_total_centavos: precoVendaCentavos }, ...packs].sort((a, b) => a.quantidade - b.quantidade);
+    for (let k = 1; k < ordenados.length; k++) {
+      if (ordenados[k].preco_total_centavos < ordenados[k - 1].preco_total_centavos) {
+        throw new ErroValidacao([{
+          campo: `packs[${ordenados[k].indice}].preco_total_centavos`,
+          mensagem: `Não pode ser menor que o pack de ${ordenados[k - 1].quantidade}`,
+        }]);
+      }
+    }
+    return packs.map(({ quantidade, preco_total_centavos }) => ({ quantidade, preco_total_centavos }));
+  }
+
+  function gravarPacks(modeloId, packs) {
+    packsModelo.removerPorModelo(modeloId);
+    for (const pack of packs) packsModelo.criar({ ...pack, modelo_id: modeloId });
+  }
+
   function montarModelo(modelo) {
     const todosItens = itensModelo.listar();
     const custoReceita = custoReceitaModelo(modelo.id, todosItens, lotes.listar());
     return {
       ...modelo,
       itens: todosItens.filter((i) => i.modelo_id === modelo.id),
+      packs: packsModelo.listar({ modelo_id: modelo.id }).map((p) => ({ quantidade: p.quantidade, preco_total_centavos: p.preco_total_centavos })),
       custo_previsto_centavos: custoReceita,
       lucro_previsto_centavos: lucroPrevisto(modelo, custoReceita),
     };
@@ -189,9 +224,11 @@ export function rotasPlacas({ db }) {
   r.post('/placas/modelos', (req, res) => {
     const dados = validar(req.body, REGRAS_MODELO);
     const itens = validarItens(req.body.itens ?? []);
+    const packs = validarPacks(req.body.packs ?? [], dados.preco_venda_centavos);
     const criado = emTransacao(db, () => {
       const modelo = modelos.criar(dados);
       for (const item of itens) itensModelo.criar({ ...item, modelo_id: modelo.id });
+      gravarPacks(modelo.id, packs);
       return modelo;
     });
     res.status(201).json(montarModelo(criado));
@@ -199,15 +236,21 @@ export function rotasPlacas({ db }) {
 
   r.put('/placas/modelos/:id', (req, res) => {
     const id = lerId(req.params.id);
-    if (!modelos.obter(id)) throw naoEncontrado('Modelo');
+    const atual = modelos.obter(id);
+    if (!atual) throw naoEncontrado('Modelo');
     const dados = validar(req.body, REGRAS_MODELO, { parcial: true });
     const itens = req.body.itens !== undefined ? validarItens(req.body.itens) : null;
+    const precoVenda = dados.preco_venda_centavos ?? atual.preco_venda_centavos;
+    let packs = null;
+    if (req.body.packs !== undefined) packs = validarPacks(req.body.packs, precoVenda);
+    else if (dados.preco_venda_centavos !== undefined) validarPacks(packsModelo.listar({ modelo_id: id }), precoVenda);
     emTransacao(db, () => {
       if (Object.keys(dados).length) modelos.atualizar(id, dados);
       if (itens) {
         itensModelo.removerPorModelo(id);
         for (const item of itens) itensModelo.criar({ ...item, modelo_id: id });
       }
+      if (packs) gravarPacks(id, packs);
     });
     res.json(montarModelo(modelos.obter(id)));
   });
@@ -223,6 +266,7 @@ export function rotasPlacas({ db }) {
     }
     emTransacao(db, () => {
       itensModelo.removerPorModelo(id);
+      packsModelo.removerPorModelo(id);
       modelos.remover(id);
     });
     res.status(204).end();
@@ -240,6 +284,18 @@ export function rotasPlacas({ db }) {
     const atualizado = modelos.atualizar(id, { ativo: 1 });
     if (!atualizado) throw naoEncontrado('Modelo');
     res.json(montarModelo(atualizado));
+  });
+
+  r.get('/placas/modelos/:id/preco', (req, res) => {
+    const modelo = modelos.obter(lerId(req.params.id));
+    if (!modelo) throw naoEncontrado('Modelo');
+    const quantidade = Number(req.query.quantidade);
+    if (!Number.isInteger(quantidade) || quantidade < 1) {
+      throw new ErroValidacao([{ campo: 'quantidade', mensagem: 'Deve ser no mínimo 1' }]);
+    }
+    const clienteId = Number(req.query.cliente_id) || null;
+    const projetoId = Number(req.query.projeto_id) || null;
+    res.json(precoSugeridoPlacas(db, { modelo, quantidade, clienteId, projetoId }));
   });
 
   r.get('/placas/vendas', (req, res) => {
