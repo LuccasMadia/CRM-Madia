@@ -2,13 +2,13 @@ import { Router } from 'express';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
-import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasVendas } from '../repos/placas.js';
+import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasVendas, precoSugeridoPlacas } from '../repos/placas.js';
 import { obterConfig } from '../repos/config.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { ETAPAS, aplicarRegrasProjeto } from '../domain/regras.js';
-import { TIPOS_SERVICO, calcularValorTotal } from '../domain/servicos.js';
+import { TIPOS_SERVICO, calcularValorTotal, valorLinhaServico } from '../domain/servicos.js';
 import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { REGRAS_CLIENTE } from './clientes.js';
 
@@ -41,7 +41,7 @@ function exigirDadosMensalidade(atual, dados) {
   if (erros.length) throw new ErroValidacao(erros);
 }
 
-function validarServicos(servicosBrutos, { modelosRepo, db }) {
+function validarServicos(servicosBrutos, { modelosRepo, db, clienteId = null, projetoId = null }) {
   if (!Array.isArray(servicosBrutos)) throw new ErroValidacao([{ campo: 'servicos', mensagem: 'Deve ser uma lista' }]);
   return servicosBrutos.map((s, i) => {
     if (!TIPOS_SERVICO.includes(s.tipo)) {
@@ -55,11 +55,17 @@ function validarServicos(servicosBrutos, { modelosRepo, db }) {
       if (!Number.isInteger(quantidade) || quantidade < 1) {
         throw new ErroValidacao([{ campo: `servicos[${i}].quantidade`, mensagem: 'Deve ser no mínimo 1' }]);
       }
-      const valorUnitario = s.valor_unitario_centavos ?? modelo.preco_venda_centavos;
-      if (!Number.isInteger(valorUnitario) || valorUnitario < 0) {
-        throw new ErroValidacao([{ campo: `servicos[${i}].valor_unitario_centavos`, mensagem: 'Valor inválido' }]);
+      let valorTotal;
+      if (s.valor_total_centavos != null) valorTotal = s.valor_total_centavos;
+      else if (s.valor_unitario_centavos != null) valorTotal = s.valor_unitario_centavos * quantidade;
+      else valorTotal = precoSugeridoPlacas(db, { modelo, quantidade, clienteId, projetoId }).total_centavos;
+      if (!Number.isInteger(valorTotal) || valorTotal < 0) {
+        throw new ErroValidacao([{ campo: `servicos[${i}].valor_total_centavos`, mensagem: 'Valor inválido' }]);
       }
-      return { tipo: s.tipo, modelo_id: modeloId, quantidade, valor_unitario_centavos: valorUnitario };
+      return {
+        tipo: s.tipo, modelo_id: modeloId, quantidade,
+        valor_total_centavos: valorTotal, valor_unitario_centavos: Math.round(valorTotal / quantidade),
+      };
     }
     const precoPadrao = Number(obterConfig(db, `preco_servico_${s.tipo}_centavos`) ?? 0);
     const valorUnitario = s.valor_unitario_centavos ?? precoPadrao;
@@ -119,7 +125,7 @@ export function rotasProjetos({ db, hoje }) {
       const venda = vendas.criar({
         modelo_id: linhaServico.modelo_id,
         quantidade: linhaServico.quantidade,
-        preco_vendido_centavos: linhaServico.valor_unitario_centavos,
+        preco_vendido_centavos: Math.round(valorLinhaServico(linhaServico) / linhaServico.quantidade),
         custo_unitario_centavos: resultado.custoUnitarioCentavos,
         cliente_id: atual.cliente_id,
         comprador_nome: null,
@@ -141,7 +147,10 @@ export function rotasProjetos({ db, hoje }) {
   r.post('/', (req, res) => {
     const corpo = req.body ?? {};
     const temServicos = corpo.servicos !== undefined;
-    const servicosValidados = temServicos ? validarServicos(corpo.servicos, { modelosRepo: modelos, db }) : null;
+    const clienteDaOportunidade = corpo.novo_cliente ? null : (Number(corpo.cliente_id) || null);
+    const servicosValidados = temServicos
+      ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: clienteDaOportunidade })
+      : null;
 
     function comValorDosServicos(dados) {
       if (!temServicos) return dados;
@@ -193,7 +202,9 @@ export function rotasProjetos({ db, hoje }) {
     if (!atual) throw naoEncontrado('Projeto');
     const corpo = req.body ?? {};
     const temServicos = corpo.servicos !== undefined;
-    const servicosValidados = temServicos ? validarServicos(corpo.servicos, { modelosRepo: modelos, db }) : null;
+    const servicosValidados = temServicos
+      ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: Number(corpo.cliente_id) || atual.cliente_id, projetoId: id })
+      : null;
 
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
     exigirDadosMensalidade(atual, dadosBase);
