@@ -1,4 +1,5 @@
 import { criarRepo } from './crud.js';
+import { precoPlacas } from '../domain/placas.js';
 
 export const CAMPOS_MATERIAL = ['nome', 'ativo'];
 export function repoPlacasMateriais(db) {
@@ -41,13 +42,39 @@ export function repoPlacasModelosItens(db) {
   };
 }
 
+export const CAMPOS_PACK = ['modelo_id', 'quantidade', 'preco_total_centavos'];
+export function repoPlacasModelosPacks(db) {
+  const base = criarRepo(db, 'placas_modelos_packs', CAMPOS_PACK);
+  return {
+    ...base,
+    listar({ modelo_id } = {}) {
+      const filtro = {};
+      if (modelo_id) filtro.modelo_id = Number(modelo_id);
+      return base.listar(filtro, 'modelo_id, quantidade');
+    },
+    removerPorModelo(modeloId) {
+      db.prepare('DELETE FROM placas_modelos_packs WHERE modelo_id = ?').run(modeloId);
+    },
+  };
+}
+
 export const CAMPOS_VENDA = [
   'modelo_id', 'quantidade', 'preco_vendido_centavos', 'custo_unitario_centavos',
   'cliente_id', 'comprador_nome', 'data_venda',
 ];
 export function repoPlacasVendas(db) {
   const base = criarRepo(db, 'placas_vendas', CAMPOS_VENDA);
-  return { ...base, listar: () => base.listar({}, 'data_venda DESC, id DESC') };
+  return {
+    ...base,
+    listar: () => base.listar({}, 'data_venda DESC, id DESC'),
+    quantidadeDoCliente(clienteId, { excluirProjetoId = null } = {}) {
+      return db.prepare(`
+        SELECT COALESCE(SUM(quantidade), 0) AS n FROM placas_vendas
+        WHERE cliente_id = ?
+          AND id NOT IN (SELECT venda_id FROM projetos_servicos WHERE projeto_id = ? AND venda_id IS NOT NULL)
+      `).get(clienteId, excluirProjetoId ?? -1).n;
+    },
+  };
 }
 
 export const CAMPOS_AVARIA = ['modelo_id', 'quantidade', 'custo_unitario_centavos', 'observacao', 'data_avaria'];
@@ -70,4 +97,11 @@ export function repoPlacasAvariasItens(db) {
       db.prepare('DELETE FROM placas_avarias_itens WHERE avaria_id = ?').run(avariaId);
     },
   };
+}
+
+export function precoSugeridoPlacas(db, { modelo, quantidade, clienteId = null, projetoId = null }) {
+  const packs = repoPlacasModelosPacks(db).listar({ modelo_id: modelo.id });
+  const jaComprou = clienteId ? repoPlacasVendas(db).quantidadeDoCliente(clienteId, { excluirProjetoId: projetoId }) : 0;
+  const { total_centavos, preco_por_placa_centavos } = precoPlacas(modelo, packs, jaComprou, quantidade);
+  return { total_centavos, ja_comprou: jaComprou, recompra: jaComprou > 0, preco_por_placa_centavos };
 }
