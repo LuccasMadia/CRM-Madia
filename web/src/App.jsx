@@ -1,4 +1,5 @@
-import { NavLink, Route, Routes } from 'react-router';
+import { Route, Routes } from 'react-router';
+import { Sidebar } from './components/Sidebar.jsx';
 import { Inicio } from './pages/Inicio.jsx';
 import { Funil } from './pages/Funil.jsx';
 import { Projetos } from './pages/Projetos.jsx';
@@ -12,31 +13,10 @@ import { Conteudo } from './pages/Conteudo.jsx';
 import { Financeiro } from './pages/Financeiro.jsx';
 import { Config } from './pages/Config.jsx';
 
-const NAVEGACAO = [
-  { para: '/', rotulo: 'Início' },
-  { para: '/funil', rotulo: 'Funil' },
-  { para: '/projetos', rotulo: 'Projetos' },
-  { para: '/clientes', rotulo: 'Clientes' },
-  { para: '/qrcodes', rotulo: 'QR Codes' },
-  { para: '/placas', rotulo: 'Placas' },
-  { para: '/conteudo', rotulo: 'Conteúdo' },
-  { para: '/financeiro', rotulo: 'Financeiro' },
-  { para: '/configuracoes', rotulo: 'Configurações' },
-];
-
 export function App() {
   return (
     <div className="app">
-      <nav className="sidebar" aria-label="Principal">
-        <p className="sidebar__marca">CRM Madia</p>
-        <ul>
-          {NAVEGACAO.map((item) => (
-            <li key={item.para}>
-              <NavLink to={item.para} end={item.para === '/'}>{item.rotulo}</NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Sidebar />
       <main className="conteudo">
         <Routes>
           <Route path="/" element={<Inicio />} />

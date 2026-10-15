@@ -1,0 +1,56 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
+import { Sidebar } from './Sidebar.jsx';
+
+function renderizarSidebar() {
+  return render(<MemoryRouter><Sidebar /></MemoryRouter>);
+}
+
+describe('Sidebar', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('começa aberta, com ícone e nome de cada item', () => {
+    renderizarSidebar();
+    const nav = screen.getByRole('navigation', { name: 'Principal' });
+    expect(nav).not.toHaveClass('sidebar--recolhida');
+    expect(screen.getByRole('link', { name: 'Funil' })).toBeInTheDocument();
+    expect(screen.getByText('Configurações')).toBeVisible();
+    expect(nav.querySelectorAll('a svg')).toHaveLength(9);
+  });
+
+  it('recolher deixa só os ícones, com o nome como dica', async () => {
+    renderizarSidebar();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Recolher menu' }));
+    const nav = screen.getByRole('navigation', { name: 'Principal' });
+    expect(nav).toHaveClass('sidebar--recolhida');
+    const link = screen.getByRole('link', { name: 'Funil' });
+    expect(link).toHaveAttribute('title', 'Funil');
+    expect(screen.getByRole('button', { name: 'Expandir menu' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('lembra a escolha entre aberturas', async () => {
+    const { unmount } = renderizarSidebar();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Recolher menu' }));
+    unmount();
+    renderizarSidebar();
+    expect(screen.getByRole('navigation', { name: 'Principal' })).toHaveClass('sidebar--recolhida');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Expandir menu' }));
+    expect(screen.getByRole('navigation', { name: 'Principal' })).not.toHaveClass('sidebar--recolhida');
+    expect(localStorage.getItem('crm.sidebarRecolhida')).toBe('0');
+  });
+
+  it('funciona mesmo se o localStorage falhar', async () => {
+    const original = Storage.prototype.getItem;
+    Storage.prototype.getItem = () => { throw new Error('bloqueado'); };
+    try {
+      renderizarSidebar();
+      expect(screen.getByRole('navigation', { name: 'Principal' })).not.toHaveClass('sidebar--recolhida');
+    } finally {
+      Storage.prototype.getItem = original;
+    }
+  });
+});
