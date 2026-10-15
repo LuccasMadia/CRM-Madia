@@ -117,4 +117,25 @@ describe('Projeto', () => {
     expect(put.corpo.servicos).toEqual([{ tipo: 'google_meu_negocio', valor_unitario_centavos: 20000 }]);
     expect(put.corpo).not.toHaveProperty('valor_total_centavos');
   });
+
+  it('salvar sem mexer nos serviços reenvia o total exato da linha de placas', async () => {
+    const projetoComPlacas = {
+      ...projetoExemplo,
+      valor_total_centavos: 20000,
+      desconto_centavos: 0,
+      servicos: [{ id: 1, tipo: 'placas_nfc', modelo_id: 2, quantidade: 3, valor_unitario_centavos: 6667, valor_total_centavos: 20000, venda_id: null, modelo_nome: 'Placa 10x15' }],
+    };
+    const { chamadas } = mockApi({
+      'GET /projetos/5': projetoComPlacas, 'GET /clientes': [{ id: 1, nome: 'Ana' }],
+      'GET /placas/modelos': [{ id: 2, nome: 'Placa 10x15', ativo: 1, preco_venda_centavos: 10000 }], 'GET /config': {},
+      'PUT /projetos/5': { ...projetoComPlacas, atualizado_em: 'T2' },
+    });
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    expect(await screen.findByLabelText('Placas NFC')).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Salvar projeto' }));
+    await screen.findByRole('heading', { name: 'Site Ana' });
+    const put = chamadas.find((c) => c.metodo === 'PUT');
+    expect(put.corpo.servicos).toEqual([{ tipo: 'placas_nfc', modelo_id: 2, quantidade: 3, valor_unitario_centavos: 6667, valor_total_centavos: 20000 }]);
+  });
 });

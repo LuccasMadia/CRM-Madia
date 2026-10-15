@@ -69,6 +69,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false }) {
       <CamposServicos
         servicos={servicos}
         desconto={descontoCentavos}
+        clienteId={valores.cliente_id && valores.cliente_id !== 'novo' ? Number(valores.cliente_id) : null}
         onChange={({ servicos: proximos, desconto_centavos: proximoDesconto }) => {
           setServicos(proximos);
           setDescontoCentavos(proximoDesconto);

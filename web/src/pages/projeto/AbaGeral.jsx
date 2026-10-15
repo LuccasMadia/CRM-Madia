@@ -30,7 +30,10 @@ export function AbaGeral({ projeto, onSalvo }) {
     ficticio: Boolean(projeto.ficticio),
   });
   const [servicos, setServicos] = useState(
-    (projeto.servicos ?? []).map((s) => ({ tipo: s.tipo, modelo_id: s.modelo_id, quantidade: s.quantidade, valor_unitario_centavos: s.valor_unitario_centavos })),
+    (projeto.servicos ?? []).map((s) => ({
+      tipo: s.tipo, modelo_id: s.modelo_id, quantidade: s.quantidade, valor_unitario_centavos: s.valor_unitario_centavos,
+      ...(s.tipo === 'placas_nfc' ? { valor_total_centavos: s.valor_total_centavos } : {}),
+    })),
   );
   const [descontoCentavos, setDescontoCentavos] = useState(projeto.desconto_centavos ?? 0);
   const { erros, erro, enviando, executar, setErros } = useEnvio();
@@ -99,6 +102,8 @@ export function AbaGeral({ projeto, onSalvo }) {
       <CamposServicos
         servicos={servicos}
         desconto={descontoCentavos}
+        clienteId={Number(valores.cliente_id) || null}
+        projetoId={projeto.id}
         onChange={({ servicos: proximos, desconto_centavos: proximoDesconto }) => {
           setServicos(proximos);
           setDescontoCentavos(proximoDesconto);
