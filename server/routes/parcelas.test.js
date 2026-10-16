@@ -161,3 +161,21 @@ describe('mensalidade automática', () => {
     expect(res.body.parcelas[0].vencimento).toBe('2026-02-28');
   });
 });
+
+describe('GET /api/parcelas por serviço', () => {
+  it('inclui servico e cliente_id e filtra por ?servico=', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const site = (await ctx.http.post('/api/projetos').send({ cliente_id: ana.id, titulo: 'Site' })).body;
+    await ctx.http.post(`/api/projetos/${site.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-10-01' });
+    await ctx.http.post('/api/projetos').send({
+      cliente_id: ana.id, titulo: 'Google Meu Negócio', servico: 'google_meu_negocio', valor_total_centavos: 2000, vencimento: '2026-10-02',
+    }).expect(201);
+
+    const todas = (await ctx.http.get('/api/parcelas').expect(200)).body;
+    expect(todas.map((p) => [p.servico, p.cliente_id])).toEqual([['site_sistema', ana.id], ['google_meu_negocio', ana.id]]);
+    const gmn = (await ctx.http.get('/api/parcelas?servico=google_meu_negocio').expect(200)).body;
+    expect(gmn.map((p) => p.valor_centavos)).toEqual([2000]);
+    await ctx.http.get('/api/parcelas?servico=nada').expect(400);
+  });
+});

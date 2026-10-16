@@ -6,6 +6,7 @@ import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
 import { estadoParcela, resumoParcelas, recebidoPorMes } from '../domain/financeiro.js';
 import { mesDe, somarMeses, dataNoMes } from '../domain/datas.js';
+import { SERVICOS } from '../domain/servicos.js';
 
 const REGRAS_PARCELA = {
   descricao: { tipo: 'texto' },
@@ -91,19 +92,20 @@ export function rotasParcelas({ db, hoje }) {
   });
 
   r.get('/parcelas', (req, res) => {
-    const { estado, mes } = req.query;
+    const { estado, mes, servico } = req.query;
     if (estado && !ESTADOS.includes(estado)) throw new ErroHttp(400, 'Estado inválido');
     if (mes && !/^\d{4}-\d{2}$/.test(mes)) throw new ErroHttp(400, 'Mês inválido (use AAAA-MM)');
+    if (servico && !SERVICOS.includes(servico)) throw new ErroHttp(400, 'Serviço inválido');
     const lista = db
       .prepare(
-        `SELECT pa.*, p.titulo AS projeto_titulo, c.nome AS cliente_nome
+        `SELECT pa.*, p.titulo AS projeto_titulo, p.servico, p.cliente_id, c.nome AS cliente_nome
          FROM parcelas pa JOIN projetos p ON p.id = pa.projeto_id JOIN clientes c ON c.id = p.cliente_id
          WHERE p.ficticio = 0
          ORDER BY pa.vencimento, pa.id`,
       )
       .all()
       .map((row) => comEstado(linha(row)))
-      .filter((p) => (!estado || p.estado === estado) && (!mes || mesDe(p.vencimento) === mes));
+      .filter((p) => (!estado || p.estado === estado) && (!mes || mesDe(p.vencimento) === mes) && (!servico || p.servico === servico));
     res.json(lista);
   });
 
