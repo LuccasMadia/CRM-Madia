@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
-import { repoQrcodes } from '../repos/qrcodes.js';
 import { repoPlacasVendas } from '../repos/placas.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
@@ -19,7 +18,6 @@ export const REGRAS_CLIENTE = {
 export function rotasClientes({ db }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
-  const qrcodes = repoQrcodes(db);
   const vendasPlacas = repoPlacasVendas(db);
   const r = Router();
 
@@ -36,7 +34,6 @@ export function rotasClientes({ db }) {
     res.json({
       ...cliente,
       projetos: projetos.listarComCliente({ cliente_id: cliente.id }),
-      qrcodes: qrcodes.listar({ cliente_id: cliente.id }),
       total_faturado_centavos: clientes.totalFaturado(cliente.id),
     });
   });
@@ -63,10 +60,8 @@ export function rotasClientes({ db }) {
     if (clientes.contarProjetos(id) > 0) {
       throw new ErroHttp(409, 'Este cliente tem projetos. Exclua ou mova os projetos antes de excluir o cliente.');
     }
-    if (clientes.contarQrcodes(id) > 0) {
-      throw new ErroHttp(409, 'Este cliente tem QR codes. Exclua-os antes de excluir o cliente.');
-    }
-    if (!clientes.remover(id)) throw naoEncontrado('Cliente');
+    // QR codes saíram do app; os que sobraram no banco vão junto com o cliente
+    if (!clientes.removerComQrcodes(id)) throw naoEncontrado('Cliente');
     res.status(204).end();
   });
 

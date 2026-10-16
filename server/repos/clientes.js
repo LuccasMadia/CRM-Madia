@@ -1,4 +1,4 @@
-import { criarRepo, linha } from './crud.js';
+import { criarRepo, linha, emTransacao } from './crud.js';
 
 export const CAMPOS_CLIENTE = ['nome', 'empresa', 'email', 'telefone', 'instagram', 'origem', 'notas'];
 
@@ -25,8 +25,12 @@ export function repoClientes(db) {
     contarProjetos(id) {
       return db.prepare('SELECT COUNT(*) AS n FROM projetos WHERE cliente_id = ?').get(id).n;
     },
-    contarQrcodes(id) {
-      return db.prepare('SELECT COUNT(*) AS n FROM qrcodes WHERE cliente_id = ?').get(id).n;
+    removerComQrcodes(id) {
+      return emTransacao(db, () => {
+        db.prepare('DELETE FROM projetos_qrcodes WHERE qrcode_id IN (SELECT id FROM qrcodes WHERE cliente_id = ?)').run(id);
+        db.prepare('DELETE FROM qrcodes WHERE cliente_id = ?').run(id);
+        return base.remover(id);
+      });
     },
   };
 }

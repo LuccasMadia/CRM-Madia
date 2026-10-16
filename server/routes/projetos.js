@@ -2,8 +2,6 @@ import { Router } from 'express';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
-import { repoProjetosQrcodes } from '../repos/projetosQrcodes.js';
-import { repoQrcodes } from '../repos/qrcodes.js';
 import { repoParcelas } from '../repos/parcelas.js';
 import { planejarCobrancaUnica } from '../domain/cobranca.js';
 import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasVendas, precoSugeridoPlacas } from '../repos/placas.js';
@@ -92,8 +90,6 @@ export function rotasProjetos({ db, hoje }) {
   const itensModelo = repoPlacasModelosItens(db);
   const lotes = repoPlacasLotes(db);
   const vendas = repoPlacasVendas(db);
-  const projetosQrcodes = repoProjetosQrcodes(db);
-  const qrcodes = repoQrcodes(db);
   const parcelas = repoParcelas(db);
   const r = Router();
 
@@ -129,7 +125,6 @@ export function rotasProjetos({ db, hoje }) {
         ...s,
         modelo_nome: s.tipo === 'placas_nfc' ? (modelosTodos.find((m) => m.id === s.modelo_id)?.nome ?? '—') : null,
       })),
-      qrcodes: projetosQrcodes.listar(projeto.id),
     };
   }
 
@@ -145,21 +140,6 @@ export function rotasProjetos({ db, hoje }) {
       throw new ErroValidacao([{ campo: 'servicos', mensagem: 'Venda já entregue: modelo, quantidade e valor não podem mudar' }]);
     }
     return null;
-  }
-
-  function validarQrcodes(qrcodesBrutos, { servico, clienteId }) {
-    if (qrcodesBrutos === undefined) return null;
-    if (servico !== 'placas_nfc') throw new ErroValidacao([{ campo: 'qrcodes', mensagem: 'Só vendas de placas têm QR codes' }]);
-    if (!Array.isArray(qrcodesBrutos) || !qrcodesBrutos.every((qrId) => Number.isInteger(qrId) && qrId > 0)) {
-      throw new ErroValidacao([{ campo: 'qrcodes', mensagem: 'Deve ser uma lista de QR codes' }]);
-    }
-    const ids = [...new Set(qrcodesBrutos)];
-    for (const qrId of ids) {
-      if (qrcodes.obter(qrId)?.cliente_id !== clienteId) {
-        throw new ErroValidacao([{ campo: 'qrcodes', mensagem: 'QR não pertence a este cliente' }]);
-      }
-    }
-    return ids;
   }
 
   function criarServicosDoProjeto(projetoId, servicosValidados) {
@@ -214,7 +194,6 @@ export function rotasProjetos({ db, hoje }) {
       ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: clienteDaOportunidade })
       : null;
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
-    let qrcodesValidados = null;
 
     function prepararDados(dadosValidados) {
       const servico = dadosValidados.servico ?? 'site_sistema';
@@ -229,7 +208,6 @@ export function rotasProjetos({ db, hoje }) {
         dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(servicosValidados, descontoCentavos) };
       }
       exigirDadosMensalidade(null, dados);
-      qrcodesValidados = validarQrcodes(corpo.qrcodes, { servico, clienteId: dados.cliente_id ?? null });
       if (servico !== 'site_sistema' && !dados.mensalidade_ativa && dados.valor_total_centavos > 0 && !vencimento) {
         throw new ErroValidacao([{ campo: 'vencimento', mensagem: 'Obrigatório para cobrança única' }]);
       }
@@ -239,7 +217,6 @@ export function rotasProjetos({ db, hoje }) {
     function criarProjetoCompleto(dados) {
       const projeto = projetos.criar(dados);
       if (temServicos) criarServicosDoProjeto(projeto.id, servicosValidados);
-      if (qrcodesValidados) projetosQrcodes.substituir(projeto.id, qrcodesValidados);
       sincronizarCobrancaUnica(projeto.id, vencimento);
       return projeto;
     }
@@ -291,7 +268,6 @@ export function rotasProjetos({ db, hoje }) {
       servico: atual.servico, etapa: dadosBase.etapa, ficticio: dadosBase.ficticio,
       tiposLinhas: servicosValidados?.map((s) => s.tipo) ?? null, criando: false,
     });
-    const qrcodesValidados = validarQrcodes(corpo.qrcodes, { servico: atual.servico, clienteId: dadosBase.cliente_id ?? atual.cliente_id });
     const linhasNovas = atual.servico === 'placas_nfc' ? linhasParaTrocar(id, servicosValidados) : servicosValidados;
     exigirDadosMensalidade(atual, dadosBase);
     if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
@@ -307,7 +283,6 @@ export function rotasProjetos({ db, hoje }) {
       processarEntregaDePlacas(atual, dados, id);
       projetos.atualizar(id, dados);
       sincronizarCobrancaUnica(id, vencimento);
-      if (qrcodesValidados) projetosQrcodes.substituir(id, qrcodesValidados);
     });
     res.json(comServicos(projetos.obterComCliente(id)));
   });
