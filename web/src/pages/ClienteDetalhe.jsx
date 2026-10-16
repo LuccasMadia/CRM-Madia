@@ -9,6 +9,7 @@ import { FormCliente } from '../components/FormCliente.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { AbaSites } from './cliente/AbaSites.jsx';
 import { AbaGmn } from './cliente/AbaGmn.jsx';
+import { AbaPlacas } from './cliente/AbaPlacas.jsx';
 
 const ABAS = [
   ['sites', 'Sites e Sistemas', 'site_sistema'],
@@ -81,7 +82,7 @@ export function ClienteDetalhe() {
       <div role="tabpanel">
         {aba === 'sites' && <AbaSites cliente={cliente} projetos={doServico('site_sistema')} />}
         {aba === 'gmn' && <AbaGmn cliente={cliente} projetos={doServico('google_meu_negocio')} onMudou={mudou} />}
-        {aba === 'placas' && <p className="vazio">Em breve.</p>}
+        {aba === 'placas' && <AbaPlacas cliente={cliente} projetos={doServico('placas_nfc')} onMudou={mudou} />}
       </div>
       {editando && (
         <Modal titulo="Editar dados" onFechar={() => setEditando(false)}>
