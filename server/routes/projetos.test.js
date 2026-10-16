@@ -126,7 +126,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloDePlaca(8000);
     const res = await ctx.http.post('/api/projetos').send({
       cliente_id: cliente.id, titulo: 'Placa pra loja',
-      servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(16000);
     expect(res.body.desconto_centavos).toBe(0);
@@ -135,17 +135,13 @@ describe('/api/projetos com serviços', () => {
     ]);
   });
 
-  it('cria com 2 serviços (placas + saas) somando os dois, com valor customizado por linha', async () => {
-    const modelo = await criarModeloDePlaca(8000);
+  it('cria com 2 serviços (sistemas + saas) somando os dois, com valor customizado por linha', async () => {
     const res = await ctx.http.post('/api/projetos').send({
       cliente_id: cliente.id, titulo: 'Site + placa',
-      servicos: [
-        { tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 },
-        { tipo: 'saas', valor_unitario_centavos: 15000 },
-      ],
+      servicos: [{ tipo: 'sistemas', valor_unitario_centavos: 8000 }, { tipo: 'saas', valor_unitario_centavos: 15000 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(23000);
-    expect(res.body.servicos.map((s) => s.tipo).sort()).toEqual(['placas_nfc', 'saas']);
+    expect(res.body.servicos.map((s) => s.tipo).sort()).toEqual(['saas', 'sistemas']);
   });
 
   it('serviço sem valor_unitario_centavos usa o preço padrão configurado', async () => {
@@ -187,7 +183,7 @@ describe('/api/projetos com serviços', () => {
 
   it('funciona também no fluxo de criar com novo_cliente', async () => {
     const res = await ctx.http.post('/api/projetos').send({
-      titulo: 'Loja nova', novo_cliente: { nome: 'Diego' }, servicos: [{ tipo: 'google_meu_negocio', valor_unitario_centavos: 20000 }],
+      titulo: 'Loja nova', novo_cliente: { nome: 'Diego' }, servicos: [{ tipo: 'saas', valor_unitario_centavos: 20000 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(20000);
     expect(res.body.cliente_nome).toBe('Diego');
@@ -198,11 +194,11 @@ describe('/api/projetos com serviços', () => {
       cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }],
     }).expect(201);
     const res2 = await ctx.http.put(`/api/projetos/${res1.body.id}`).send({
-      servicos: [{ tipo: 'google_meu_negocio', valor_unitario_centavos: 7000 }], desconto_centavos: 1000,
+      servicos: [{ tipo: 'sistemas', valor_unitario_centavos: 7000 }], desconto_centavos: 1000,
     }).expect(200);
     expect(res2.body.valor_total_centavos).toBe(6000);
     expect(res2.body.servicos).toEqual([
-      expect.objectContaining({ tipo: 'google_meu_negocio', valor_unitario_centavos: 7000 }),
+      expect.objectContaining({ tipo: 'sistemas', valor_unitario_centavos: 7000 }),
     ]);
   });
 
@@ -222,25 +218,11 @@ describe('/api/projetos com serviços', () => {
     await ctx.http.put(`/api/placas/modelos/${modeloId}`).send({ itens: [{ material_id: material.id, quantidade: 1 }] });
   }
 
-  it('atualizar preserva linha de placas_nfc já vendida (com venda_id) ao trocar os serviços', async () => {
-    const modelo = await criarModeloDePlaca(8000);
-    await prepararReceita(modelo.id);
-    const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
-    })).body;
-    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
-
-    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ servicos: [{ tipo: 'saas', valor_unitario_centavos: 5000 }] }).expect(200);
-    const tipos = res.body.servicos.map((s) => s.tipo).sort();
-    expect(tipos).toEqual(['placas_nfc', 'saas']);
-    expect(res.body.valor_total_centavos).toBe(8000 + 5000);
-  });
-
   it('mudar etapa para entregue com serviço de placas cria a venda e marca venda_id', async () => {
     const modelo = await criarModeloDePlaca(8000);
     await prepararReceita(modelo.id);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     })).body;
 
     const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
@@ -255,10 +237,10 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloDePlaca(8000);
     await prepararReceita(modelo.id);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
     })).body;
     await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
-    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'proposta' }).expect(200);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'andamento' }).expect(200);
     await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
 
     const vendas = (await ctx.http.get('/api/placas/vendas')).body;
@@ -268,12 +250,12 @@ describe('/api/projetos com serviços', () => {
   it('modelo sem receita bloqueia a transição para entregue com erro claro', async () => {
     const modelo = await criarModeloDePlaca(8000);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
     })).body;
 
     const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(400);
     expect(res.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Modelo de placa sem receita cadastrada, não é possível registrar a venda' }]);
-    expect((await ctx.http.get(`/api/projetos/${criado.id}`)).body.etapa).toBe('contato');
+    expect((await ctx.http.get(`/api/projetos/${criado.id}`)).body.etapa).toBe('andamento');
   });
 
   async function criarModeloComPacks() {
@@ -292,7 +274,7 @@ describe('/api/projetos com serviços', () => {
   it('placas sem valor informado usam o preço de pack para cliente sem histórico', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(25000);
     expect(res.body.servicos[0]).toMatchObject({ valor_total_centavos: 25000, valor_unitario_centavos: 8333 });
@@ -302,7 +284,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloComPacks();
     registrarVendaAnterior(modelo.id, 1);
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(15000);
   });
@@ -310,7 +292,7 @@ describe('/api/projetos com serviços', () => {
   it('cliente novo (novo_cliente) usa o preço de pack', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      titulo: 'P', novo_cliente: { nome: 'Caio' }, servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      titulo: 'P', novo_cliente: { nome: 'Caio' }, servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(18000);
   });
@@ -318,7 +300,7 @@ describe('/api/projetos com serviços', () => {
   it('valor_total_centavos explícito é respeitado', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(20000);
     expect(res.body.servicos[0]).toMatchObject({ valor_total_centavos: 20000, valor_unitario_centavos: 6667 });
@@ -327,7 +309,7 @@ describe('/api/projetos com serviços', () => {
   it('valor_total_centavos inválido responde 400', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: -1 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: -1 }],
     }).expect(400);
     expect(res.body.erros).toEqual([{ campo: 'servicos[0].valor_total_centavos', mensagem: 'Valor inválido' }]);
   });
@@ -335,7 +317,7 @@ describe('/api/projetos com serviços', () => {
   it('reenviar a linha com valor_total_centavos não muda o total (sem arredondar para 20001)', async () => {
     const modelo = await criarModeloComPacks();
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
     })).body;
     const linha = criado.servicos[0];
     const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({
@@ -348,7 +330,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloComPacks();
     await prepararReceita(modelo.id);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
     })).body;
     await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
     const vendas = (await ctx.http.get('/api/placas/vendas')).body;
@@ -377,5 +359,41 @@ describe('/api/projetos — tipo de serviço', () => {
     expect(gmn.map((p) => p.titulo)).toEqual(['GMN']);
     expect((await ctx.http.get('/api/projetos').expect(200)).body).toHaveLength(2);
     await ctx.http.get('/api/projetos?servico=nada').expect(400);
+  });
+
+  it('GMN nasce em andamento; etapa diferente na criação dá 400', async () => {
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', link_perfil: 'https://g.page/ana' }).expect(201);
+    expect(res.body).toMatchObject({ servico: 'google_meu_negocio', etapa: 'andamento', link_perfil: 'https://g.page/ana' });
+    const erro = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', etapa: 'proposta' }).expect(400);
+    expect(erro.body.erros).toEqual([{ campo: 'etapa', mensagem: 'Etapa inválida para este serviço' }]);
+  });
+
+  it('GMN vai para entregue mas não para proposta', async () => {
+    const gmn = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' })).body;
+    await ctx.http.put(`/api/projetos/${gmn.id}`).send({ etapa: 'proposta' }).expect(400);
+    const res = await ctx.http.put(`/api/projetos/${gmn.id}`).send({ etapa: 'entregue' }).expect(200);
+    expect(res.body).toMatchObject({ etapa: 'entregue', data_entrega: '2026-09-23' });
+  });
+
+  it('servico não muda depois de criado', async () => {
+    const site = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' })).body;
+    const res = await ctx.http.put(`/api/projetos/${site.id}`).send({ servico: 'google_meu_negocio' }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'servico', mensagem: 'Não é possível mudar o tipo de serviço' }]);
+    await ctx.http.put(`/api/projetos/${site.id}`).send({ servico: 'site_sistema', titulo: 'Site 2' }).expect(200);
+  });
+
+  it('GMN não pode ser fictício', async () => {
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', ficticio: true }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'ficticio', mensagem: 'Só sites e sistemas podem ser fictícios' }]);
+  });
+
+  it('site não aceita linha de placas e placas exige a linha', async () => {
+    const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Placa', preco_venda_centavos: 8000 })).body;
+    const site = await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Site', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+    }).expect(400);
+    expect(site.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Sites e sistemas só aceitam Sistemas e SaaS' }]);
+    const placas = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Placas', servico: 'placas_nfc' }).expect(400);
+    expect(placas.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Venda de placas precisa de exatamente uma linha de placas' }]);
   });
 });

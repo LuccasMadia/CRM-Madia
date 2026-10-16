@@ -8,7 +8,7 @@ import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { ETAPAS, aplicarRegrasProjeto } from '../domain/regras.js';
-import { SERVICOS, TIPOS_SERVICO, calcularValorTotal, valorLinhaServico } from '../domain/servicos.js';
+import { SERVICOS, TIPOS_SERVICO, calcularValorTotal, errosDoServico, valorLinhaServico } from '../domain/servicos.js';
 import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { REGRAS_CLIENTE } from './clientes.js';
 
@@ -28,6 +28,8 @@ const REGRAS_PROJETO = {
   mensalidade_dia_vencimento: { tipo: 'inteiro', min: 1, max: 31 },
   postou_instagram: { tipo: 'bool', padrao: 0 },
   ficticio: { tipo: 'bool', padrao: 0 },
+  servico: { tipo: 'enum', valores: SERVICOS },
+  link_perfil: { tipo: 'texto' },
 };
 
 function exigirDadosMensalidade(atual, dados) {
@@ -90,6 +92,11 @@ export function rotasProjetos({ db, hoje }) {
     if (!clientes.obter(clienteId)) {
       throw new ErroValidacao([{ campo: 'cliente_id', mensagem: 'Cliente não encontrado' }]);
     }
+  }
+
+  function exigirRegrasDoServico(contexto) {
+    const erros = errosDoServico(contexto);
+    if (erros.length) throw new ErroValidacao(erros);
   }
 
   function comServicos(projeto) {
@@ -155,10 +162,26 @@ export function rotasProjetos({ db, hoje }) {
       ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: clienteDaOportunidade })
       : null;
 
-    function comValorDosServicos(dados) {
-      if (!temServicos) return dados;
-      const descontoCentavos = dados.desconto_centavos ?? 0;
-      return { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(servicosValidados, descontoCentavos) };
+    function prepararDados(dadosValidados) {
+      const servico = dadosValidados.servico ?? 'site_sistema';
+      exigirRegrasDoServico({
+        servico, etapa: dadosValidados.etapa, ficticio: dadosValidados.ficticio,
+        tiposLinhas: servicosValidados?.map((s) => s.tipo) ?? null, criando: true,
+      });
+      let dados = { ...dadosValidados, servico };
+      if (servico !== 'site_sistema') dados.etapa = 'andamento';
+      if (temServicos) {
+        const descontoCentavos = dados.desconto_centavos ?? 0;
+        dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(servicosValidados, descontoCentavos) };
+      }
+      exigirDadosMensalidade(null, dados);
+      return dados;
+    }
+
+    function criarProjetoCompleto(dados) {
+      const projeto = projetos.criar(dados);
+      if (temServicos) criarServicosDoProjeto(projeto.id, servicosValidados);
+      return projeto;
     }
 
     if (corpo.novo_cliente) {
@@ -170,26 +193,16 @@ export function rotasProjetos({ db, hoje }) {
         throw new ErroValidacao(erro.erros.map((e) => ({ ...e, campo: `novo_cliente.${e.campo}` })));
       }
       const { cliente_id: _ignorado, ...regrasSemCliente } = REGRAS_PROJETO;
-      const dados = comValorDosServicos(aplicarRegrasProjeto(null, validar(corpo, regrasSemCliente), hoje()));
-      exigirDadosMensalidade(null, dados);
+      const dados = prepararDados(aplicarRegrasProjeto(null, validar(corpo, regrasSemCliente), hoje()));
       const criado = emTransacao(db, () => {
         const cliente = clientes.criar(dadosCliente);
-        const projeto = projetos.criar({ ...dados, cliente_id: cliente.id });
-        if (temServicos) criarServicosDoProjeto(projeto.id, servicosValidados);
-        return projeto;
+        return criarProjetoCompleto({ ...dados, cliente_id: cliente.id });
       });
       return res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
     }
-    const dados = comValorDosServicos(aplicarRegrasProjeto(null, validar(corpo, REGRAS_PROJETO), hoje()));
-    exigirDadosMensalidade(null, dados);
+    const dados = prepararDados(aplicarRegrasProjeto(null, validar(corpo, REGRAS_PROJETO), hoje()));
     exigirCliente(dados.cliente_id);
-    const criado = temServicos
-      ? emTransacao(db, () => {
-          const projeto = projetos.criar(dados);
-          criarServicosDoProjeto(projeto.id, servicosValidados);
-          return projeto;
-        })
-      : projetos.criar(dados);
+    const criado = emTransacao(db, () => criarProjetoCompleto(dados));
     res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
   });
 
@@ -210,6 +223,13 @@ export function rotasProjetos({ db, hoje }) {
       : null;
 
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
+    if (dadosBase.servico !== undefined && dadosBase.servico !== atual.servico) {
+      throw new ErroValidacao([{ campo: 'servico', mensagem: 'Não é possível mudar o tipo de serviço' }]);
+    }
+    exigirRegrasDoServico({
+      servico: atual.servico, etapa: dadosBase.etapa, ficticio: dadosBase.ficticio,
+      tiposLinhas: servicosValidados?.map((s) => s.tipo) ?? null, criando: false,
+    });
     exigirDadosMensalidade(atual, dadosBase);
     if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
 
