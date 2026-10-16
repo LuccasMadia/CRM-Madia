@@ -5,9 +5,16 @@ import { Aviso } from '../components/Aviso.jsx';
 import { Numero } from '../components/Numero.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { formatarData } from '../lib/datas.js';
+import { ABA_DO_SERVICO } from '../lib/rotulos.js';
 
 const ROTULO_ITEM = { parcela: 'Parcela', entrega: 'Entrega', conteudo: 'Conteúdo' };
-const destino = (item) => (item.projeto_id ? `/projetos/${item.projeto_id}` : '/conteudo');
+const ROTULO_ENTREGA = { google_meu_negocio: 'Google Meu Negócio', placas_nfc: 'Placas NFC' };
+const paginaDoServico = (item) => `/clientes/${item.cliente_id}?aba=${ABA_DO_SERVICO[item.servico]}`;
+function destino(item) {
+  if (item.servico && item.servico !== 'site_sistema') return paginaDoServico(item);
+  return item.projeto_id ? `/projetos/${item.projeto_id}` : '/conteudo';
+}
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
 function ColunaTarefas({ titulo, projetos }) {
   return (
@@ -38,7 +45,7 @@ export function Inicio() {
   const { dados, erro } = useCarregar(() => api('/painel'), []);
   if (erro) return <Aviso erro={erro} />;
   if (!dados) return <p>Carregando…</p>;
-  const { cartoes, tarefas_por_projeto: tarefasPorProjeto, proximos } = dados;
+  const { cartoes, tarefas_por_projeto: tarefasPorProjeto, proximos, para_entregar: paraEntregar = { gmn: 0, placas: 0, itens: [] } } = dados;
 
   return (
     <section>
@@ -53,6 +60,20 @@ export function Inicio() {
           {cartoes.propostas.quantidade} · {formatarDinheiro(cartoes.propostas.total_centavos)}
         </Numero>
       </div>
+
+      <section className="cartao">
+        <h2>Para entregar</h2>
+        <p>{`${plural(paraEntregar.gmn, 'GMN pendente', 'GMN pendentes')} · ${plural(paraEntregar.placas, 'venda de placas a entregar', 'vendas de placas a entregar')}`}</p>
+        {paraEntregar.itens.length > 0 && (
+          <ul className="lista">
+            {paraEntregar.itens.map((item) => (
+              <li key={item.projeto_id}>
+                <Link to={paginaDoServico(item)}>{`${item.cliente_nome} — ${ROTULO_ENTREGA[item.servico]}`}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="grade-2">
         <ColunaTarefas titulo="Projetos reais" projetos={tarefasPorProjeto.reais} />

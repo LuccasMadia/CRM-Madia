@@ -55,4 +55,26 @@ describe('Inicio', () => {
     expect(await screen.findByText('Nada para os próximos 7 dias.')).toBeInTheDocument();
     expect(screen.getAllByText('Nenhuma tarefa pendente.')).toHaveLength(2);
   });
+
+  it('mostra o que falta entregar e leva parcela de GMN ao perfil', async () => {
+    mockApi({
+      'GET /painel': {
+        cartoes: { a_receber_mes_centavos: 0, atrasadas: { quantidade: 0, total_centavos: 0 }, em_andamento: 0, propostas: { quantidade: 0, total_centavos: 0 } },
+        tarefas_por_projeto: { reais: [], ficticios: [] },
+        proximos: [{ tipo: 'parcela', id: 3, projeto_id: 6, titulo: 'Pagamento', contexto: 'Google Meu Negócio', data: '2026-09-25', atrasado: false, valor_centavos: 20000, servico: 'google_meu_negocio', cliente_id: 1 }],
+        para_entregar: {
+          gmn: 1, placas: 1,
+          itens: [
+            { projeto_id: 6, cliente_id: 1, cliente_nome: 'Ana', servico: 'google_meu_negocio' },
+            { projeto_id: 8, cliente_id: 2, cliente_nome: 'Bruno', servico: 'placas_nfc' },
+          ],
+        },
+      },
+    });
+    renderizar(<Inicio />);
+    expect(await screen.findByText('1 GMN pendente · 1 venda de placas a entregar')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ana — Google Meu Negócio' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
+    expect(screen.getByRole('link', { name: 'Bruno — Placas NFC' })).toHaveAttribute('href', '/clientes/2?aba=placas');
+    expect(screen.getByRole('link', { name: 'Pagamento' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
+  });
 });
