@@ -10,14 +10,21 @@ export function rotasPainel({ db, hoje }) {
   r.get('/painel', (req, res) => {
     const dia = hoje();
     const parcelasAbertas = todas(
-      `SELECT pa.*, p.titulo AS projeto_titulo FROM parcelas pa
+      `SELECT pa.*, p.titulo AS projeto_titulo, p.servico, p.cliente_id FROM parcelas pa
        JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NULL AND p.ficticio = 0`,
     );
     const atrasadas = parcelasAbertas.filter((p) => estadoParcela(p, dia) === 'atrasada');
-    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa = 'proposta' AND ficticio = 0");
+    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa = 'proposta' AND ficticio = 0 AND servico = 'site_sistema'");
     const entregas = todas(
       `SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.etapa = 'andamento' AND p.ficticio = 0`,
+       WHERE p.etapa = 'andamento' AND p.ficticio = 0 AND p.servico = 'site_sistema'`,
+    );
+
+    const paraEntregar = todas(
+      `SELECT p.id AS projeto_id, p.cliente_id, c.nome AS cliente_nome, p.servico
+       FROM projetos p JOIN clientes c ON c.id = p.cliente_id
+       WHERE p.servico <> 'site_sistema' AND p.etapa = 'andamento' AND p.ficticio = 0
+       ORDER BY c.nome COLLATE NOCASE, p.id`,
     );
 
     res.json({
@@ -33,6 +40,11 @@ export function rotasPainel({ db, hoje }) {
           total_centavos: propostas.reduce((s, p) => s + p.valor_total_centavos, 0),
         },
       },
+      para_entregar: {
+        gmn: paraEntregar.filter((i) => i.servico === 'google_meu_negocio').length,
+        placas: paraEntregar.filter((i) => i.servico === 'placas_nfc').length,
+        itens: paraEntregar,
+      },
       tarefas_por_projeto: agruparTarefasPorProjeto([
         ...todas(
           `SELECT t.id, t.texto, t.prazo, p.id AS projeto_id, p.titulo AS projeto_titulo, p.ficticio
@@ -44,7 +56,7 @@ export function rotasPainel({ db, hoje }) {
           todas(
             `SELECT p.id, p.titulo, p.ficticio, p.postou_instagram, COALESCE(pf.publicar, 0) AS portfolio_publicado
              FROM projetos p LEFT JOIN portfolio pf ON pf.projeto_id = p.id
-             WHERE p.etapa = 'entregue' AND (p.postou_instagram = 0 OR COALESCE(pf.publicar, 0) = 0)
+             WHERE p.etapa = 'entregue' AND p.servico = 'site_sistema' AND (p.postou_instagram = 0 OR COALESCE(pf.publicar, 0) = 0)
              ORDER BY p.titulo`,
           ),
         ),

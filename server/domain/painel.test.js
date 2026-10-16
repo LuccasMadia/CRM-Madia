@@ -29,6 +29,11 @@ describe('montarProximos', () => {
     const itens = montarProximos({ parcelas: [{ ...entrada.parcelas[0], descricao: null }] }, HOJE);
     expect(itens[0].titulo).toBe('Parcela');
   });
+
+  it('parcela leva servico e cliente_id para o link certo', () => {
+    const [item] = montarProximos({ parcelas: [{ id: 1, projeto_id: 2, descricao: 'Pagamento', projeto_titulo: 'GMN', vencimento: '2026-09-24', valor_centavos: 100, servico: 'google_meu_negocio', cliente_id: 3 }] }, '2026-09-23');
+    expect(item).toMatchObject({ tipo: 'parcela', servico: 'google_meu_negocio', cliente_id: 3 });
+  });
 });
 
 describe('agruparTarefasPorProjeto', () => {

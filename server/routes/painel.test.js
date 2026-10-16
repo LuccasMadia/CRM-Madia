@@ -75,4 +75,25 @@ describe('GET /api/painel', () => {
     expect(res.body.proximos.some((i) => i.tipo === 'tarefa')).toBe(false);
     expect(res.body.divulgacao_pendente).toBeUndefined();
   });
+
+  it('conta só sites nos cartões, ignora GMN/placas na divulgação e lista o que falta entregar', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    await ctx.http.post('/api/projetos').send({ cliente_id: ana.id, titulo: 'Site', etapa: 'andamento' });
+    const gmn = (await ctx.http.post('/api/projetos').send({
+      cliente_id: ana.id, titulo: 'Google Meu Negócio', servico: 'google_meu_negocio', valor_total_centavos: 2000, vencimento: '2026-09-25',
+    })).body;
+    const gmnPronto = (await ctx.http.post('/api/projetos').send({ cliente_id: ana.id, titulo: 'GMN antigo', servico: 'google_meu_negocio' })).body;
+    await ctx.http.put(`/api/projetos/${gmnPronto.id}`).send({ etapa: 'entregue' }).expect(200);
+
+    const res = await ctx.http.get('/api/painel').expect(200);
+    expect(res.body.cartoes.em_andamento).toBe(1);
+    expect(res.body.para_entregar).toEqual({
+      gmn: 1, placas: 0,
+      itens: [{ projeto_id: gmn.id, cliente_id: ana.id, cliente_nome: 'Ana', servico: 'google_meu_negocio' }],
+    });
+    const divulgacao = [...res.body.tarefas_por_projeto.reais].filter((p) => p.projeto_id === gmnPronto.id);
+    expect(divulgacao).toEqual([]);
+    expect(res.body.proximos.find((i) => i.tipo === 'parcela')).toMatchObject({ servico: 'google_meu_negocio', cliente_id: ana.id });
+  });
 });

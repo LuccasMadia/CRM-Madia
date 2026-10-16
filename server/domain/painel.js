@@ -9,6 +9,7 @@ export function montarProximos({ tarefas = [], parcelas = [], entregas = [], con
     ...parcelas.map((p) => ({
       tipo: 'parcela', id: p.id, projeto_id: p.projeto_id, titulo: p.descricao || 'Parcela',
       contexto: p.projeto_titulo, data: p.vencimento, valor_centavos: p.valor_centavos,
+      servico: p.servico, cliente_id: p.cliente_id,
     })),
     ...entregas.map((e) => ({
       tipo: 'entrega', id: e.id, projeto_id: e.id, titulo: e.titulo, contexto: e.cliente_nome, data: e.prazo_entrega,
