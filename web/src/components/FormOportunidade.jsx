@@ -9,10 +9,10 @@ import { CamposServicos } from './CamposServicos.jsx';
 import { paraCentavos } from '../lib/dinheiro.js';
 import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
-export function FormOportunidade({ onSalvar, ficticioFixo = false }) {
+export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicial = null }) {
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
   const { valores, campo, setValores } = useFormulario({
-    titulo: '', cliente_id: '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
+    titulo: '', cliente_id: clienteInicial ? String(clienteInicial) : '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
     etapa: ficticioFixo ? 'andamento' : 'contato', ficticio: ficticioFixo,
   });
   const [servicos, setServicos] = useState([]);
@@ -69,7 +69,6 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false }) {
       <CamposServicos
         servicos={servicos}
         desconto={descontoCentavos}
-        clienteId={valores.cliente_id && valores.cliente_id !== 'novo' ? Number(valores.cliente_id) : null}
         onChange={({ servicos: proximos, desconto_centavos: proximoDesconto }) => {
           setServicos(proximos);
           setDescontoCentavos(proximoDesconto);

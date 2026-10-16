@@ -11,7 +11,7 @@ export function Projetos() {
   const [clienteId, setClienteId] = useState('');
   const [instagram, setInstagram] = useState('');
   const consulta = new URLSearchParams(
-    Object.entries({ etapa, cliente_id: clienteId, postou_instagram: instagram }).filter(([, v]) => v),
+    Object.entries({ servico: 'site_sistema', etapa, cliente_id: clienteId, postou_instagram: instagram }).filter(([, v]) => v),
   ).toString();
 
   const { dados: projetos, erro } = useCarregar(() => api(`/projetos${consulta ? `?${consulta}` : ''}`), [consulta]);

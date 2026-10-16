@@ -102,8 +102,6 @@ export function AbaGeral({ projeto, onSalvo }) {
       <CamposServicos
         servicos={servicos}
         desconto={descontoCentavos}
-        clienteId={Number(valores.cliente_id) || null}
-        projetoId={projeto.id}
         onChange={({ servicos: proximos, desconto_centavos: proximoDesconto }) => {
           setServicos(proximos);
           setDescontoCentavos(proximoDesconto);

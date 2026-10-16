@@ -14,7 +14,7 @@ const abrir = () => renderizar(<Funil />, { rota: '/funil', padrao: '/funil' });
 
 describe('Funil', () => {
   it('mostra cards por etapa e recolhe "Perdido"', async () => {
-    mockApi({ 'GET /projetos?ficticio=0': projetos });
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos });
     abrir();
     const contato = await screen.findByRole('region', { name: 'Contato' });
     expect(within(contato).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
@@ -25,14 +25,14 @@ describe('Funil', () => {
   });
 
   it('muda a etapa pelo menu do card', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'proposta' } });
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'proposta' } });
     abrir();
     await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Site Ana'), 'proposta');
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/1', corpo: { etapa: 'proposta' } });
   });
 
   it('nova oportunidade: valor inválido não chama a API', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -45,7 +45,7 @@ describe('Funil', () => {
 
   it('nova oportunidade com cliente novo envia novo_cliente e valor em centavos', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos?ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 }, 'GET /placas/modelos': [], 'GET /config': {},
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 }, 'GET /placas/modelos': [], 'GET /config': {},
     });
     abrir();
     const user = userEvent.setup();
@@ -62,7 +62,7 @@ describe('Funil', () => {
   });
 
   it('nova oportunidade: marcar "fictício" restringe etapa a andamento/entregue', async () => {
-    mockApi({ 'GET /projetos?ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -75,7 +75,7 @@ describe('Funil', () => {
     const ficticios = [
       { id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null },
     ];
-    mockApi({ 'GET /projetos?ficticio=0': projetos, 'GET /projetos?ficticio=1': ficticios });
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'GET /projetos?servico=site_sistema&ficticio=1': ficticios });
     abrir();
     await screen.findByRole('region', { name: 'Contato' });
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
@@ -89,7 +89,7 @@ describe('Funil', () => {
 
   it('+ Oportunidade na aba Fictícios cria com ficticio travado e etapa andamento', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos?ficticio=0': [], 'GET /projetos?ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
       'GET /placas/modelos': [], 'GET /config': {},
     });
     abrir();
@@ -113,7 +113,7 @@ describe('Funil', () => {
   it('move um card fictício pelo menu do card', async () => {
     const ficticios = [{ id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null }];
     const { chamadas } = mockApi({
-      'GET /projetos?ficticio=0': [], 'GET /projetos?ficticio=1': ficticios, 'PUT /projetos/5': { ...ficticios[0], etapa: 'entregue' },
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': ficticios, 'PUT /projetos/5': { ...ficticios[0], etapa: 'entregue' },
     });
     abrir();
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
@@ -123,7 +123,7 @@ describe('Funil', () => {
 
   it('nova oportunidade com serviço marcado esconde o campo Valor manual e envia servicos', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos?ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
       'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
     });
     abrir();
@@ -145,7 +145,7 @@ describe('Funil', () => {
 
   it('desmarcar o único serviço volta a mostrar o campo Valor manual', async () => {
     mockApi({
-      'GET /projetos?ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
     });
     abrir();
     const user = userEvent.setup();
@@ -155,5 +155,11 @@ describe('Funil', () => {
     expect(screen.queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
     await user.click(checkboxSaas);
     expect(screen.getByLabelText('Valor (R$)')).toBeInTheDocument();
+  });
+
+  it('o nome do cliente no card leva ao perfil', async () => {
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [{ ...projetos[0], cliente_id: 7 }] });
+    abrir();
+    expect(await screen.findByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/7');
   });
 });

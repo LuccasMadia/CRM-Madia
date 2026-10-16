@@ -22,7 +22,7 @@ const abrir = () => renderizar(<Projetos />, { rota: '/projetos', padrao: '/proj
 
 describe('Projetos', () => {
   it('lista projetos ativos mais recentes primeiro e oculta perdidos', async () => {
-    mockApi({ 'GET /projetos': [antigo, recente, perdido], 'GET /clientes': [] });
+    mockApi({ 'GET /projetos?servico=site_sistema': [antigo, recente, perdido], 'GET /clientes': [] });
     abrir();
     const linhas = await screen.findAllByRole('row');
     expect(within(linhas[1]).getByRole('link', { name: 'Loja Bruno' })).toHaveAttribute('href', '/projetos/2');
@@ -36,21 +36,21 @@ describe('Projetos', () => {
 
   it('filtra por etapa mostrando perdidos quando selecionado explicitamente', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos': [antigo, recente, perdido],
-      'GET /projetos?etapa=perdido': [perdido],
+      'GET /projetos?servico=site_sistema': [antigo, recente, perdido],
+      'GET /projetos?servico=site_sistema&etapa=perdido': [perdido],
       'GET /clientes': [],
     });
     abrir();
     await screen.findByText('Site Ana');
     await userEvent.setup().selectOptions(screen.getByLabelText('Etapa'), 'perdido');
     await screen.findByText('App Carla');
-    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?etapa=perdido');
+    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?servico=site_sistema&etapa=perdido');
   });
 
   it('filtra por cliente', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos': [antigo, recente],
-      'GET /projetos?cliente_id=10': [antigo],
+      'GET /projetos?servico=site_sistema': [antigo, recente],
+      'GET /projetos?servico=site_sistema&cliente_id=10': [antigo],
       'GET /clientes': [{ id: 10, nome: 'Ana' }],
     });
     abrir();
@@ -58,19 +58,19 @@ describe('Projetos', () => {
     await userEvent.setup().selectOptions(screen.getByLabelText('Cliente'), '10');
     await screen.findByText('Site Ana');
     expect(screen.queryByText('Loja Bruno')).not.toBeInTheDocument();
-    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?cliente_id=10');
+    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?servico=site_sistema&cliente_id=10');
   });
 
   it('mostra estado vazio', async () => {
-    mockApi({ 'GET /projetos': [], 'GET /clientes': [] });
+    mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /clientes': [] });
     abrir();
     expect(await screen.findByText('Nenhum projeto encontrado.')).toBeInTheDocument();
   });
 
   it('filtra por instagram', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos': [antigo, recente],
-      'GET /projetos?postou_instagram=1': [recente],
+      'GET /projetos?servico=site_sistema': [antigo, recente],
+      'GET /projetos?servico=site_sistema&postou_instagram=1': [recente],
       'GET /clientes': [],
     });
     abrir();
@@ -78,6 +78,6 @@ describe('Projetos', () => {
     await userEvent.setup().selectOptions(screen.getByLabelText('Instagram'), '1');
     await screen.findByText('Loja Bruno');
     expect(screen.queryByText('Site Ana')).not.toBeInTheDocument();
-    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?postou_instagram=1');
+    expect(chamadas.map((c) => c.caminho)).toContain('/projetos?servico=site_sistema&postou_instagram=1');
   });
 });

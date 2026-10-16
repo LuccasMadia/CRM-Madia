@@ -20,7 +20,7 @@ export function Funil() {
   const [aba, setAba] = useState('reais');
   const ficticio = aba === 'ficticios';
   const { dados: projetos, erro, recarregar } = useCarregar(
-    () => api(`/projetos?ficticio=${ficticio ? 1 : 0}`),
+    () => api(`/projetos?servico=site_sistema&ficticio=${ficticio ? 1 : 0}`),
     [ficticio],
   );
   const [criando, setCriando] = useState(false);
@@ -66,7 +66,7 @@ export function Funil() {
           renderItem={(p) => (
             <>
               <Link to={`/projetos/${p.id}`} className="kanban__titulo">{p.titulo}</Link>
-              <p className="kanban__meta">{p.cliente_nome}</p>
+              <p className="kanban__meta"><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></p>
               <p className="kanban__meta">{formatarDinheiro(p.valor_total_centavos)} · prazo {formatarData(p.prazo_entrega)}</p>
             </>
           )}
