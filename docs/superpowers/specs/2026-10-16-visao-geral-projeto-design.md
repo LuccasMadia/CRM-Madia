@@ -90,7 +90,7 @@ Seguem o padrão das rotas existentes:
 
 - O projeto passa a aceitar `categorias: number[]` (ids) e `nicho_id`. O GET devolve `categorias: [{ id, nome }]`, em ordem, e `nicho_nome`.
 - Em projeto `site_sistema`:
-  - ao criar, `categorias` é obrigatório e precisa ter pelo menos 1 id existente; senão, erro 400 em `categorias` com "Escolha pelo menos uma categoria";
+  - ao criar, `categorias` precisa ter pelo menos 1 id existente; uma lista vazia dá erro 400 em `categorias` com "Escolha pelo menos uma categoria". Se o campo não vier no corpo (chamadas antigas e testes), o servidor usa "Site". Quem obriga a escolher é a tela;
   - ao editar, se `categorias` vier no corpo, vale a mesma regra.
 - Em projeto GMN/placas, mandar `categorias` responde 400 com "Só sites e sistemas têm categorias".
 - Site/sistema deixa de aceitar `servicos` (linhas) e `desconto_centavos`. O valor vem de `valor_total_centavos`. As linhas de placas continuam como estão.
