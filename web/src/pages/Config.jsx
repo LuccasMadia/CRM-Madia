@@ -7,6 +7,7 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from '../components/Campo.jsx';
 import { Aviso } from '../components/Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
+import { ConexaoInstagram } from './config/ConexaoInstagram.jsx';
 
 export function Config() {
   const { dados: config, erro } = useCarregar(() => api('/config'), []);
@@ -14,6 +15,7 @@ export function Config() {
     <section>
       <header className="pagina__topo"><h1>Configurações</h1></header>
       <Aviso erro={erro} />
+      <ConexaoInstagram />
       {config && <Repositorio inicial={config} />}
       {config && <PrecosServicos inicial={config} />}
       <Publicacao />
