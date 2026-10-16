@@ -133,6 +133,20 @@ export function rotasProjetos({ db, hoje }) {
     };
   }
 
+  // Venda de placas já entregue: só aceita reenviar a mesma linha (o formulário pode reenviar sem mudar nada).
+  function linhasParaTrocar(projetoId, servicosValidados) {
+    if (!servicosValidados) return null;
+    const vendida = projetosServicos.listar(projetoId).find((l) => l.tipo === 'placas_nfc' && l.venda_id);
+    if (!vendida) return servicosValidados;
+    const [nova] = servicosValidados;
+    const igual = nova && nova.modelo_id === vendida.modelo_id && nova.quantidade === vendida.quantidade
+      && valorLinhaServico(nova) === valorLinhaServico(vendida);
+    if (!igual) {
+      throw new ErroValidacao([{ campo: 'servicos', mensagem: 'Venda já entregue: modelo, quantidade e valor não podem mudar' }]);
+    }
+    return null;
+  }
+
   function validarQrcodes(qrcodesBrutos, { servico, clienteId }) {
     if (qrcodesBrutos === undefined) return null;
     if (servico !== 'placas_nfc') throw new ErroValidacao([{ campo: 'qrcodes', mensagem: 'Só vendas de placas têm QR codes' }]);
@@ -278,14 +292,15 @@ export function rotasProjetos({ db, hoje }) {
       tiposLinhas: servicosValidados?.map((s) => s.tipo) ?? null, criando: false,
     });
     const qrcodesValidados = validarQrcodes(corpo.qrcodes, { servico: atual.servico, clienteId: dadosBase.cliente_id ?? atual.cliente_id });
+    const linhasNovas = atual.servico === 'placas_nfc' ? linhasParaTrocar(id, servicosValidados) : servicosValidados;
     exigirDadosMensalidade(atual, dadosBase);
     if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
 
     emTransacao(db, () => {
       let dados = dadosBase;
-      if (temServicos) {
+      if (linhasNovas) {
         projetosServicos.removerPorProjetoSemVenda(id);
-        criarServicosDoProjeto(id, servicosValidados);
+        criarServicosDoProjeto(id, linhasNovas);
         const descontoCentavos = dados.desconto_centavos ?? atual.desconto_centavos ?? 0;
         dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(projetosServicos.listar(id), descontoCentavos) };
       }

@@ -336,6 +336,36 @@ describe('/api/projetos com serviços', () => {
     const vendas = (await ctx.http.get('/api/placas/vendas')).body;
     expect(vendas[0]).toMatchObject({ quantidade: 3, preco_vendido_centavos: 6667 });
   });
+  it('venda de placas entregue não aceita troca de modelo, quantidade ou valor', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    await prepararReceita(modelo.id);
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+    })).body;
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({
+      servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2, valor_total_centavos: 16000 }],
+    }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Venda já entregue: modelo, quantidade e valor não podem mudar' }]);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ notas: 'Instalada no balcão' }).expect(200);
+  });
+
+  it('reenviar a mesma linha depois de entregue não duplica nem gera nova venda', async () => {
+    const modelo = await criarModeloDePlaca(8000);
+    await prepararReceita(modelo.id);
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: 8000 }],
+    })).body;
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({
+      servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: 8000 }],
+    }).expect(200);
+    expect(res.body.servicos).toHaveLength(1);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'andamento' }).expect(200);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+    expect((await ctx.http.get('/api/placas/vendas')).body).toHaveLength(1);
+  });
+
 });
 
 describe('/api/projetos — tipo de serviço', () => {

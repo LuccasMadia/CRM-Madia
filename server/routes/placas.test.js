@@ -296,6 +296,23 @@ describe('/api/placas/vendas', () => {
     await ctx.http.put('/api/placas/vendas/999').send({ preco_vendido_centavos: 100 }).expect(404);
     await ctx.http.delete('/api/placas/vendas/999').expect(404);
   });
+  it('não exclui venda ligada a um serviço do perfil do cliente', async () => {
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Placa', preco_venda_centavos: 8000 })).body;
+    const t = 'x';
+    const { lastInsertRowid: vendaId } = ctx.db.prepare(`INSERT INTO placas_vendas (modelo_id, quantidade, preco_vendido_centavos, custo_unitario_centavos, cliente_id, data_venda, criado_em, atualizado_em)
+      VALUES (?, 1, 8000, 100, ?, '2026-09-01', ?, ?)`).run(modelo.id, cliente.id, t, t);
+    const { lastInsertRowid: projetoId } = ctx.db.prepare(`INSERT INTO projetos (cliente_id, titulo, etapa, servico, criado_em, atualizado_em)
+      VALUES (?, 'Placas NFC', 'entregue', 'placas_nfc', ?, ?)`).run(cliente.id, t, t);
+    ctx.db.prepare(`INSERT INTO projetos_servicos (projeto_id, tipo, modelo_id, quantidade, valor_unitario_centavos, valor_total_centavos, venda_id, criado_em, atualizado_em)
+      VALUES (?, 'placas_nfc', ?, 1, 8000, 8000, ?, ?, ?)`).run(projetoId, modelo.id, vendaId, t, t);
+
+    const res = await ctx.http.delete(`/api/placas/vendas/${vendaId}`).expect(409);
+    expect(res.body.erro).toBe('Esta venda está ligada a um serviço no perfil do cliente. Exclua o serviço por lá antes.');
+    await ctx.http.delete(`/api/projetos/${projetoId}`).expect(204);
+    await ctx.http.delete(`/api/placas/vendas/${vendaId}`).expect(204);
+  });
+
 });
 
 async function criarAvaria(modeloId, overrides = {}) {

@@ -18,5 +18,8 @@ export function repoProjetosServicos(db) {
         .all(projetoId)
         .map(linha);
     },
+    projetoDaVenda(vendaId) {
+      return db.prepare('SELECT projeto_id FROM projetos_servicos WHERE venda_id = ?').get(vendaId)?.projeto_id ?? null;
+    },
   };
 }

@@ -4,9 +4,10 @@ import {
   repoPlacasAvarias, repoPlacasAvariasItens, repoPlacasModelosPacks, precoSugeridoPlacas,
 } from '../repos/placas.js';
 import { repoClientes } from '../repos/clientes.js';
+import { repoProjetosServicos } from '../repos/servicos.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
-import { ErroValidacao, naoEncontrado } from '../http/erros.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import {
   estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto,
   lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
@@ -57,6 +58,7 @@ export function rotasPlacas({ db }) {
   const clientes = repoClientes(db);
   const avarias = repoPlacasAvarias(db);
   const itensAvaria = repoPlacasAvariasItens(db);
+  const projetosServicos = repoProjetosServicos(db);
   const r = Router();
 
   function comCalculo(material) {
@@ -364,7 +366,11 @@ export function rotasPlacas({ db }) {
   });
 
   r.delete('/placas/vendas/:id', (req, res) => {
-    if (!vendas.remover(lerId(req.params.id))) throw naoEncontrado('Venda');
+    const id = lerId(req.params.id);
+    if (projetosServicos.projetoDaVenda(id)) {
+      throw new ErroHttp(409, 'Esta venda está ligada a um serviço no perfil do cliente. Exclua o serviço por lá antes.');
+    }
+    if (!vendas.remover(id)) throw naoEncontrado('Venda');
     res.status(204).end();
   });
 
