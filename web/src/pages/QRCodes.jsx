@@ -51,7 +51,7 @@ export function QRCodes() {
           <tbody>
             {qrcodes.map((q) => (
               <tr key={q.id}>
-                <td><Link to={`/qrcodes/${q.id}`}>{q.nome}</Link></td>
+                <td><span className="vazio">{`#${q.id}`}</span> <Link to={`/qrcodes/${q.id}`}>{q.nome}</Link></td>
                 <td>{nomeCliente(q.cliente_id)}</td>
                 <td>{ROTULO_CATEGORIA_QR[q.categoria]}</td>
                 <td>{ROTULO_STATUS_QR[q.status]}</td>

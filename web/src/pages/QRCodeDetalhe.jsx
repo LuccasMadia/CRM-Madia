@@ -51,6 +51,7 @@ export function QRCodeDetalhe() {
         <div>
           <p className="sobretitulo"><Link to="/qrcodes">QR Codes</Link></p>
           <h1>{qrcode.nome}</h1>
+          <p className="vazio">{`#${qrcode.id}`}</p>
         </div>
         <button type="button" className="btn btn--perigo" onClick={excluir}>Excluir</button>
       </header>

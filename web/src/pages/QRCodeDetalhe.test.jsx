@@ -16,6 +16,7 @@ describe('QRCodeDetalhe', () => {
     mockApi({ 'GET /clientes': [ana], 'GET /qrcodes/5': qr });
     renderizar(<QRCodeDetalhe />, { rota: '/qrcodes/5', padrao: '/qrcodes/:id' });
     expect(await screen.findByDisplayValue('QR balcão')).toBeInTheDocument();
+    expect(screen.getByText('#5')).toBeInTheDocument();
   });
 
   it('edita o nome', async () => {

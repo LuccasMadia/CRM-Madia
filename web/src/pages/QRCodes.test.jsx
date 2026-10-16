@@ -16,6 +16,7 @@ describe('QRCodes', () => {
     mockApi({ 'GET /clientes': [ana], 'GET /qrcodes?': [qr] });
     renderizar(<QRCodes />, { rota: '/qrcodes', padrao: '/qrcodes' });
     expect(await screen.findByRole('link', { name: 'QR balcão' })).toHaveAttribute('href', '/qrcodes/5');
+    expect(screen.getByText('#5')).toBeInTheDocument();
     const tabela = within(screen.getByRole('table'));
     expect(tabela.getByText('Ana')).toBeInTheDocument();
     expect(tabela.getByText('Cardápio')).toBeInTheDocument();
