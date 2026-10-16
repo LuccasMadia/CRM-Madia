@@ -3,7 +3,7 @@ import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Aviso } from '../../components/Aviso.jsx';
-import { formatarData } from '../../lib/datas.js';
+import { diaLocal, formatarData } from '../../lib/datas.js';
 import { ROTULO_TIPO } from '../../lib/rotulos.js';
 
 const NUMEROS = [
@@ -72,7 +72,7 @@ export function PainelMidia({ midia, onMudou }) {
   return (
     <aside className="cartao painel-midia" aria-label="Detalhes do post">
       {midia.capa_url && <img className="painel-midia__capa" src={midia.capa_url} alt="" />}
-      <p className="kanban__meta">{ROTULO_TIPO[midia.tipo]} · {formatarData(midia.publicado_em.slice(0, 10))}</p>
+      <p className="kanban__meta">{ROTULO_TIPO[midia.tipo]} · {formatarData(diaLocal(midia.publicado_em))}</p>
       {midia.legenda && (
         <details className="painel-midia__legenda">
           <summary>{midia.legenda.split('\n')[0]}</summary>

@@ -160,3 +160,15 @@ describe('Conteudo', () => {
     expect(within(dia).getByRole('button', { name: 'Reels Popy' })).toBeInTheDocument();
   });
 });
+
+describe('Conteudo — datas', () => {
+  it('mostra a data do post no dia local, não no dia UTC', async () => {
+    const iso = '2026-10-17T01:00:00.000Z'; // 21h do dia 16 em UTC-4
+    const diaLocal = new Date(iso).toLocaleDateString('sv-SE');
+    mockApi(rotas({ 'GET /instagram/grid': { prontos: [], midias: [{ ...MIDIAS[0], publicado_em: iso }] } }));
+    abrir();
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Ver post Reels Popy' }));
+    const painel = screen.getByRole('complementary', { name: 'Detalhes do post' });
+    expect(within(painel).getByText(`Reels · ${formatarData(diaLocal)}`)).toBeInTheDocument();
+  });
+});

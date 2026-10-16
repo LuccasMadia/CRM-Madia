@@ -25,3 +25,6 @@ export function semanasDoMes(ano, mes) {
   } while (cursor.getUTCMonth() === mes - 1);
   return semanas;
 }
+
+// Dia (AAAA-MM-DD) no fuso local de um instante ISO — publicado_em vem em UTC.
+export const diaLocal = (iso) => new Date(iso).toLocaleDateString('sv-SE');

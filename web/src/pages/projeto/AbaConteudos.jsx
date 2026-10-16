@@ -4,7 +4,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormConteudo } from '../../components/FormConteudo.jsx';
-import { formatarData } from '../../lib/datas.js';
+import { diaLocal, formatarData } from '../../lib/datas.js';
 import { salvarConteudo } from '../../lib/conteudos.js';
 import { ROTULO_ESTADO_CONTEUDO, ROTULO_TIPO } from '../../lib/rotulos.js';
 
@@ -55,7 +55,7 @@ export function AbaConteudos({ projetoId }) {
             <li key={m.id}>
               {m.capa_url ? <img src={m.capa_url} alt="" /> : <span className="lista-publicados__sem-capa" />}
               <div>
-                <p>{ROTULO_TIPO[m.tipo]} · {formatarData(m.publicado_em.slice(0, 10))}</p>
+                <p>{ROTULO_TIPO[m.tipo]} · {formatarData(diaLocal(m.publicado_em))}</p>
                 <p className="kanban__meta">{m.curtidas ?? 0} curtidas</p>
                 {m.permalink && <a href={m.permalink} target="_blank" rel="noreferrer">Abrir no Instagram</a>}
               </div>

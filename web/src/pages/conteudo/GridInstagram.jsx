@@ -1,4 +1,4 @@
-import { formatarData } from '../../lib/datas.js';
+import { diaLocal, formatarData } from '../../lib/datas.js';
 import { ROTULO_TIPO } from '../../lib/rotulos.js';
 
 const ICONE_TIPO = { reels: '▶', carrossel: '❐' };
@@ -27,7 +27,7 @@ function Pronto({ item, indice, total, onEditar, onMover }) {
 }
 
 function Publicado({ midia, selecionado, onSelecionar }) {
-  const nome = midia.legenda?.trim() || `${ROTULO_TIPO[midia.tipo]} de ${formatarData(midia.publicado_em.slice(0, 10))}`;
+  const nome = midia.legenda?.trim() || `${ROTULO_TIPO[midia.tipo]} de ${formatarData(diaLocal(midia.publicado_em))}`;
   return (
     <li className={`grid-ig__item${selecionado ? ' grid-ig__item--selecionado' : ''}`}>
       <button type="button" className="grid-ig__abrir" aria-label={`Ver post ${nome}`} aria-pressed={selecionado} onClick={() => onSelecionar(midia.id)}>

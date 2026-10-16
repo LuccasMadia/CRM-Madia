@@ -8,6 +8,7 @@ import { Modal } from '../components/Modal.jsx';
 import { Calendario } from '../components/Calendario.jsx';
 import { FormConteudo } from '../components/FormConteudo.jsx';
 import { salvarConteudo } from '../lib/conteudos.js';
+import { diaLocal } from '../lib/datas.js';
 import { ResumoCrescimento } from './conteudo/ResumoCrescimento.jsx';
 import { GridInstagram } from './conteudo/GridInstagram.jsx';
 import { PainelMidia } from './conteudo/PainelMidia.jsx';
@@ -73,7 +74,7 @@ export function Conteudo() {
     ...[...prontos, ...(rascunhos.dados ?? [])].filter((c) => c.data_planejada)
       .map((c) => ({ id: `c${c.id}`, titulo: c.titulo, dia: c.data_planejada, abrir: () => setEditando(c) })),
     ...midias.map((m) => ({
-      id: m.id, titulo: m.legenda?.trim() || m.tipo, dia: m.publicado_em.slice(0, 10),
+      id: m.id, titulo: m.legenda?.trim() || m.tipo, dia: diaLocal(m.publicado_em),
       abrir: () => { setSelecionada(m.id); setVisao('grid'); },
     })),
   ];
