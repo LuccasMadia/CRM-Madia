@@ -70,6 +70,8 @@ code { font-size: 0.9em; }
 input, select, textarea { font: inherit; color: inherit; background: var(--superficie-2); border: 1px solid var(--borda); border-radius: var(--raio-controle); padding: 9px 12px; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--primaria); outline-offset: -1px; border-color: transparent; }
 input[type='checkbox'], input[type='radio'] { accent-color: var(--primaria); }
+fieldset { border: 1px solid var(--borda); border-radius: var(--raio-controle); padding: 10px 12px; margin: 0; }
+legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 [aria-invalid='true'] { border-color: var(--perigo); }
 .campo__erro { color: var(--perigo); font-size: 0.85rem; margin: 0; }
 .form__ajuda { font-size: 0.85rem; color: var(--texto-suave); margin: 4px 0 0; }
