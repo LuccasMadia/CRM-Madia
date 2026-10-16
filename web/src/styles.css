@@ -115,6 +115,16 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .abas__aba:hover { color: var(--texto); }
 .abas__aba[aria-selected='true'] { color: var(--primaria); border-bottom-color: var(--primaria); }
 
+.cards-servico { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card-servico { font: inherit; text-align: left; color: var(--texto); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 16px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 12px; cursor: pointer; box-shadow: var(--sombra); transition: border-color 0.15s, background 0.15s; }
+.card-servico:hover { border-color: var(--t5); }
+.card-servico:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.card-servico[aria-selected='true'] { border-color: var(--primaria); background: var(--primaria-suave); }
+.card-servico__icone { grid-row: span 2; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--superficie-2); color: var(--primaria); }
+.card-servico[aria-selected='true'] .card-servico__icone { background: var(--primaria); color: var(--primaria-texto); }
+.card-servico__nome { font-weight: 600; }
+.card-servico__numero { color: var(--texto-suave); font-size: 0.9rem; min-height: 1.2em; }
+
 .kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); gap: 12px; overflow-x: auto; align-items: start; padding-bottom: 8px; }
 .kanban__coluna { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px; min-height: 120px; display: grid; gap: 8px; align-content: start; box-shadow: var(--sombra); }
 .kanban__coluna--alvo { outline: 2px dashed var(--primaria); }

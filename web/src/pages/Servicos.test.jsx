@@ -18,7 +18,12 @@ const gmnConfigurado = {
   valor_total_centavos: 15000, link_perfil: null, data_entrega: '2026-09-15', atualizado_em: '2026-09-15T10:00:00.000Z',
 };
 
+const placasPendente = { id: 8, servico: 'placas_nfc', etapa: 'andamento' };
+const placasEntregue = { id: 9, servico: 'placas_nfc', etapa: 'entregue' };
+const siteContato = { ...site, id: 2, etapa: 'contato' };
+
 const rotas = {
+  'GET /projetos': [{ ...site, servico: 'site_sistema' }, siteContato, gmnPendente, gmnConfigurado, placasPendente, placasEntregue],
   'GET /projetos?servico=site_sistema': [site],
   'GET /projetos?servico=google_meu_negocio': [gmnPendente, gmnConfigurado],
   'GET /clientes': [],
@@ -27,23 +32,24 @@ const rotas = {
 const abrir = (rota = '/servicos') => renderizar(<Servicos />, { rota, padrao: '/servicos' });
 
 describe('Servicos', () => {
-  it('abre em Sites e Sistemas, com as três abas', async () => {
+  it('abre em Sites e Sistemas, com um card por serviço', async () => {
     mockApi(rotas);
     abrir();
     expect(screen.getByRole('heading', { name: 'Serviços' })).toBeInTheDocument();
-    const abas = screen.getAllByRole('tab').map((a) => a.textContent);
-    expect(abas).toEqual(['Sites e Sistemas', 'Google Meu Negócio', 'Placas NFC']);
-    expect(screen.getByRole('tab', { name: 'Sites e Sistemas' })).toHaveAttribute('aria-selected', 'true');
+    const cards = screen.getAllByRole('tab');
+    expect(cards.map((c) => c.querySelector('.card-servico__nome').textContent)).toEqual(['Sites e Sistemas', 'Google Meu Negócio', 'Placas NFC']);
+    expect(cards.every((c) => c.classList.contains('card-servico') && c.querySelector('svg'))).toBe(true);
+    expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
   });
 
   it('a aba vem do endereço e trocar de aba atualiza o endereço', async () => {
     mockApi({ ...rotas, 'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } } });
     abrir('/servicos?aba=gmn');
-    expect(screen.getByRole('tab', { name: 'Google Meu Negócio' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Google Meu Negócio/ })).toHaveAttribute('aria-selected', 'true');
     await screen.findByRole('link', { name: 'Bruno' });
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Placas NFC' }));
-    expect(screen.getByRole('tab', { name: 'Placas NFC' })).toHaveAttribute('aria-selected', 'true');
+    await userEvent.setup().click(screen.getByRole('tab', { name: /Placas NFC/ }));
+    expect(screen.getByRole('tab', { name: /Placas NFC/ })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByRole('tab', { name: 'Resumo' })).toBeInTheDocument();
   });
 
@@ -76,5 +82,30 @@ describe('Servicos', () => {
     mockApi({ ...rotas, 'GET /projetos?servico=google_meu_negocio': [] });
     abrir('/servicos?aba=gmn');
     expect(await screen.findByText('Nenhum Google Meu Negócio encontrado.')).toBeInTheDocument();
+  });
+
+  it('cada card mostra o número do que está pendente', async () => {
+    mockApi(rotas);
+    abrir();
+    expect(await screen.findByText('1 em andamento')).toBeInTheDocument();
+    expect(screen.getByText('1 pendente')).toBeInTheDocument();
+    expect(screen.getByText('1 a entregar')).toBeInTheDocument();
+  });
+
+  it('usa plural nos números', async () => {
+    mockApi({ ...rotas, 'GET /projetos': [gmnPendente, { ...gmnPendente, id: 10 }] });
+    abrir();
+    expect(await screen.findByText('2 pendentes')).toBeInTheDocument();
+    expect(screen.getByText('0 em andamento')).toBeInTheDocument();
+    expect(screen.getByText('0 a entregar')).toBeInTheDocument();
+  });
+
+  it('se a contagem falhar, os cards aparecem sem número', async () => {
+    const { rotas: r } = mockApi({ ...rotas });
+    delete r['GET /projetos'];
+    abrir();
+    expect(await screen.findByRole('link', { name: 'Site Ana' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Placas NFC/ })).toBeInTheDocument();
+    expect(screen.queryByText(/em andamento/)).toBeNull();
   });
 });

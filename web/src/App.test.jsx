@@ -11,14 +11,14 @@ describe('App', () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /clientes': [] });
     abrir('/projetos');
     expect(await screen.findByRole('heading', { name: 'Serviços' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Sites e Sistemas' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('endereço antigo /placas abre Serviços em Placas NFC', async () => {
     mockApi({});
     abrir('/placas');
     expect(await screen.findByRole('heading', { name: 'Serviços' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Placas NFC' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /Placas NFC/ })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('QR codes não têm mais página', () => {
