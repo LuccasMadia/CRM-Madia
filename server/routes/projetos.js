@@ -4,6 +4,8 @@ import { repoProjetos } from '../repos/projetos.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
 import { repoProjetosQrcodes } from '../repos/projetosQrcodes.js';
 import { repoQrcodes } from '../repos/qrcodes.js';
+import { repoParcelas } from '../repos/parcelas.js';
+import { planejarCobrancaUnica } from '../domain/cobranca.js';
 import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasVendas, precoSugeridoPlacas } from '../repos/placas.js';
 import { obterConfig } from '../repos/config.js';
 import { emTransacao } from '../repos/crud.js';
@@ -33,6 +35,8 @@ const REGRAS_PROJETO = {
   servico: { tipo: 'enum', valores: SERVICOS },
   link_perfil: { tipo: 'texto' },
 };
+
+const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
 
 function exigirDadosMensalidade(atual, dados) {
   const ativa = dados.mensalidade_ativa ?? atual?.mensalidade_ativa ?? 0;
@@ -90,7 +94,21 @@ export function rotasProjetos({ db, hoje }) {
   const vendas = repoPlacasVendas(db);
   const projetosQrcodes = repoProjetosQrcodes(db);
   const qrcodes = repoQrcodes(db);
+  const parcelas = repoParcelas(db);
   const r = Router();
+
+  function sincronizarCobrancaUnica(projetoId, vencimento) {
+    const projeto = projetos.obter(projetoId);
+    if (projeto.servico === 'site_sistema') return;
+    const plano = planejarCobrancaUnica(parcelas.listarAvulsas(projetoId), { valorCentavos: projeto.valor_total_centavos, vencimento });
+    if (plano.acao === 'criar') {
+      parcelas.criar({ projeto_id: projetoId, descricao: 'Pagamento', valor_centavos: plano.valor_centavos, vencimento: plano.vencimento });
+    } else if (plano.acao === 'atualizar') {
+      parcelas.atualizar(plano.id, { valor_centavos: plano.valor_centavos, vencimento: plano.vencimento });
+    } else if (plano.acao === 'remover') {
+      parcelas.remover(plano.id);
+    }
+  }
 
   function exigirCliente(clienteId) {
     if (!clientes.obter(clienteId)) {
@@ -181,6 +199,7 @@ export function rotasProjetos({ db, hoje }) {
     const servicosValidados = temServicos
       ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: clienteDaOportunidade })
       : null;
+    const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
     let qrcodesValidados = null;
 
     function prepararDados(dadosValidados) {
@@ -197,6 +216,9 @@ export function rotasProjetos({ db, hoje }) {
       }
       exigirDadosMensalidade(null, dados);
       qrcodesValidados = validarQrcodes(corpo.qrcodes, { servico, clienteId: dados.cliente_id ?? null });
+      if (servico !== 'site_sistema' && !dados.mensalidade_ativa && dados.valor_total_centavos > 0 && !vencimento) {
+        throw new ErroValidacao([{ campo: 'vencimento', mensagem: 'Obrigatório para cobrança única' }]);
+      }
       return dados;
     }
 
@@ -204,6 +226,7 @@ export function rotasProjetos({ db, hoje }) {
       const projeto = projetos.criar(dados);
       if (temServicos) criarServicosDoProjeto(projeto.id, servicosValidados);
       if (qrcodesValidados) projetosQrcodes.substituir(projeto.id, qrcodesValidados);
+      sincronizarCobrancaUnica(projeto.id, vencimento);
       return projeto;
     }
 
@@ -246,6 +269,7 @@ export function rotasProjetos({ db, hoje }) {
       : null;
 
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
+    const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
     if (dadosBase.servico !== undefined && dadosBase.servico !== atual.servico) {
       throw new ErroValidacao([{ campo: 'servico', mensagem: 'Não é possível mudar o tipo de serviço' }]);
     }
@@ -267,6 +291,7 @@ export function rotasProjetos({ db, hoje }) {
       }
       processarEntregaDePlacas(atual, dados, id);
       projetos.atualizar(id, dados);
+      sincronizarCobrancaUnica(id, vencimento);
       if (qrcodesValidados) projetosQrcodes.substituir(id, qrcodesValidados);
     });
     res.json(comServicos(projetos.obterComCliente(id)));

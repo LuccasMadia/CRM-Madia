@@ -126,7 +126,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloDePlaca(8000);
     const res = await ctx.http.post('/api/projetos').send({
       cliente_id: cliente.id, titulo: 'Placa pra loja',
-      servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(16000);
     expect(res.body.desconto_centavos).toBe(0);
@@ -222,7 +222,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloDePlaca(8000);
     await prepararReceita(modelo.id);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     })).body;
 
     const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
@@ -237,7 +237,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloDePlaca(8000);
     await prepararReceita(modelo.id);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
     })).body;
     await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
     await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'andamento' }).expect(200);
@@ -250,7 +250,7 @@ describe('/api/projetos com serviços', () => {
   it('modelo sem receita bloqueia a transição para entregue com erro claro', async () => {
     const modelo = await criarModeloDePlaca(8000);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
+      cliente_id: cliente.id, titulo: 'Projeto', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
     })).body;
 
     const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(400);
@@ -274,7 +274,7 @@ describe('/api/projetos com serviços', () => {
   it('placas sem valor informado usam o preço de pack para cliente sem histórico', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(25000);
     expect(res.body.servicos[0]).toMatchObject({ valor_total_centavos: 25000, valor_unitario_centavos: 8333 });
@@ -284,7 +284,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloComPacks();
     registrarVendaAnterior(modelo.id, 1);
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(15000);
   });
@@ -292,7 +292,7 @@ describe('/api/projetos com serviços', () => {
   it('cliente novo (novo_cliente) usa o preço de pack', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      titulo: 'P', novo_cliente: { nome: 'Caio' }, servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
+      titulo: 'P', novo_cliente: { nome: 'Caio' }, servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(18000);
   });
@@ -300,7 +300,7 @@ describe('/api/projetos com serviços', () => {
   it('valor_total_centavos explícito é respeitado', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(20000);
     expect(res.body.servicos[0]).toMatchObject({ valor_total_centavos: 20000, valor_unitario_centavos: 6667 });
@@ -309,7 +309,7 @@ describe('/api/projetos com serviços', () => {
   it('valor_total_centavos inválido responde 400', async () => {
     const modelo = await criarModeloComPacks();
     const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: -1 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: -1 }],
     }).expect(400);
     expect(res.body.erros).toEqual([{ campo: 'servicos[0].valor_total_centavos', mensagem: 'Valor inválido' }]);
   });
@@ -317,7 +317,7 @@ describe('/api/projetos com serviços', () => {
   it('reenviar a linha com valor_total_centavos não muda o total (sem arredondar para 20001)', async () => {
     const modelo = await criarModeloComPacks();
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
     })).body;
     const linha = criado.servicos[0];
     const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({
@@ -330,7 +330,7 @@ describe('/api/projetos com serviços', () => {
     const modelo = await criarModeloComPacks();
     await prepararReceita(modelo.id);
     const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
+      cliente_id: cliente.id, titulo: 'P', servico: 'placas_nfc', vencimento: '2026-10-05', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 3, valor_total_centavos: 20000 }],
     })).body;
     await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
     const vendas = (await ctx.http.get('/api/placas/vendas')).body;
@@ -402,7 +402,7 @@ describe('/api/projetos — QR codes da venda de placas', () => {
   let modelo;
   const criarQr = async (clienteId, nome) => (await ctx.http.post('/api/qrcodes').send({ cliente_id: clienteId, nome, categoria: 'cardapio' }).expect(201)).body;
   const venda = (extra = {}) => ({
-    cliente_id: cliente.id, titulo: 'Placas NFC', servico: 'placas_nfc',
+    cliente_id: cliente.id, titulo: 'Placas NFC', servico: 'placas_nfc', vencimento: '2026-10-05',
     servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: 8000 }], ...extra,
   });
 
@@ -438,5 +438,70 @@ describe('/api/projetos — QR codes da venda de placas', () => {
     expect(res.body.qrcodes).toEqual([{ id: qr2.id, nome: 'Mesa' }]);
     await ctx.http.delete(`/api/qrcodes/${qr2.id}`).expect(204);
     expect((await ctx.http.get(`/api/projetos/${criado.id}`)).body.qrcodes).toEqual([]);
+  });
+});
+
+describe('/api/projetos — cobrança de GMN e placas', () => {
+  const parcelasDe = async (id) => (await ctx.http.get(`/api/projetos/${id}/parcelas`)).body.parcelas;
+  const gmn = (extra = {}) => ({ cliente_id: cliente.id, titulo: 'Google Meu Negócio', servico: 'google_meu_negocio', ...extra });
+
+  it('cobrança única cria a parcela "Pagamento"', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send(gmn({ valor_total_centavos: 20000, vencimento: '2026-10-05' })).expect(201)).body;
+    expect(await parcelasDe(criado.id)).toEqual([
+      expect.objectContaining({ descricao: 'Pagamento', valor_centavos: 20000, vencimento: '2026-10-05', pago_em: null, mensalidade: 0 }),
+    ]);
+  });
+
+  it('cobrança única com valor exige vencimento', async () => {
+    const res = await ctx.http.post('/api/projetos').send(gmn({ valor_total_centavos: 20000 })).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'vencimento', mensagem: 'Obrigatório para cobrança única' }]);
+  });
+
+  it('editar o valor atualiza a parcela aberta; parcela paga não muda', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send(gmn({ valor_total_centavos: 20000, vencimento: '2026-10-05' }))).body;
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ valor_total_centavos: 25000, vencimento: '2026-10-20' }).expect(200);
+    const [parcela] = await parcelasDe(criado.id);
+    expect(parcela).toMatchObject({ valor_centavos: 25000, vencimento: '2026-10-20' });
+    await ctx.http.put(`/api/parcelas/${parcela.id}`).send({ pago_em: '2026-10-01' }).expect(200);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ valor_total_centavos: 1 }).expect(200);
+    expect((await parcelasDe(criado.id))[0]).toMatchObject({ valor_centavos: 25000, pago_em: '2026-10-01' });
+  });
+
+  it('passar para mensalidade remove a parcela única ainda não paga', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send(gmn({ valor_total_centavos: 20000, vencimento: '2026-10-05' }))).body;
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({
+      valor_total_centavos: 0, mensalidade_ativa: true, mensalidade_valor_centavos: 5000, mensalidade_dia_vencimento: 10,
+    }).expect(200);
+    const parcelas = await parcelasDe(criado.id);
+    expect(parcelas).toEqual([expect.objectContaining({ descricao: 'Mensalidade', valor_centavos: 5000, mensalidade: 1 })]);
+  });
+
+  it('marcar configurado sem vencimento, depois de apagar a parcela no Financeiro, não dá erro nem recria', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send(gmn({ valor_total_centavos: 20000, vencimento: '2026-10-05' }))).body;
+    const [parcela] = await parcelasDe(criado.id);
+    await ctx.http.delete(`/api/parcelas/${parcela.id}`).expect(204);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'entregue' }).expect(200);
+    expect(await parcelasDe(criado.id)).toEqual([]);
+  });
+
+  it('com parcelas feitas à mão no Financeiro, a sincronização não mexe', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send(gmn({ valor_total_centavos: 20000, vencimento: '2026-10-05' }))).body;
+    await ctx.http.post(`/api/projetos/${criado.id}/parcelas`).send({ valor_centavos: 100, vencimento: '2026-11-05' }).expect(201);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ valor_total_centavos: 30000 }).expect(200);
+    expect((await parcelasDe(criado.id)).map((p) => p.valor_centavos)).toEqual([20000, 100]);
+  });
+
+  it('venda de placas cobra o valor total da linha', async () => {
+    const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Placa', preco_venda_centavos: 8000 })).body;
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Placas NFC', servico: 'placas_nfc', vencimento: '2026-10-05',
+      servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 2, valor_total_centavos: 15000 }],
+    }).expect(201)).body;
+    expect(await parcelasDe(criado.id)).toEqual([expect.objectContaining({ descricao: 'Pagamento', valor_centavos: 15000 })]);
+  });
+
+  it('site não ganha parcela automática', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site', valor_total_centavos: 50000, vencimento: '2026-10-05' }).expect(201)).body;
+    expect(await parcelasDe(criado.id)).toEqual([]);
   });
 });

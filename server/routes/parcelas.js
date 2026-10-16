@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { criarRepo, linha, emTransacao } from '../repos/crud.js';
+import { linha, emTransacao } from '../repos/crud.js';
+import { repoParcelas } from '../repos/parcelas.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
@@ -20,7 +21,7 @@ const REGRAS_LOTE = {
 const ESTADOS = ['paga', 'atrasada', 'pendente'];
 
 export function rotasParcelas({ db, hoje }) {
-  const parcelas = criarRepo(db, 'parcelas', ['projeto_id', 'descricao', 'valor_centavos', 'vencimento', 'pago_em', 'mensalidade']);
+  const parcelas = repoParcelas(db);
   const projetos = repoProjetos(db);
   const r = Router();
   const comEstado = (p) => ({ ...p, estado: estadoParcela(p, hoje()) });
