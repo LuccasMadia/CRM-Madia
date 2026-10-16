@@ -5,21 +5,22 @@ import { fileURLToPath } from 'node:url';
 
 const PASTA_MIGRACOES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
-export function openDb(arquivo = ':memory:') {
+export function openDb(arquivo = ':memory:', opcoes = {}) {
   if (arquivo !== ':memory:') mkdirSync(path.dirname(arquivo), { recursive: true });
   const db = new DatabaseSync(arquivo);
   db.exec('PRAGMA foreign_keys = ON;');
   if (arquivo !== ':memory:') db.exec('PRAGMA journal_mode = WAL;');
-  migrate(db);
+  migrate(db, opcoes);
   return db;
 }
 
-export function migrate(db) {
+// `ate`: aplica só as migrações com nome <= ate (usado nos testes de migração).
+export function migrate(db, { ate } = {}) {
   db.exec('CREATE TABLE IF NOT EXISTS schema_migrations (nome TEXT PRIMARY KEY, aplicada_em TEXT NOT NULL)');
   const aplicadas = new Set(db.prepare('SELECT nome FROM schema_migrations').all().map((r) => r.nome));
   const arquivos = readdirSync(PASTA_MIGRACOES).filter((f) => f.endsWith('.sql')).sort();
   for (const arquivo of arquivos) {
-    if (aplicadas.has(arquivo)) continue;
+    if (aplicadas.has(arquivo) || (ate && arquivo > ate)) continue;
     db.exec('BEGIN');
     try {
       db.exec(readFileSync(path.join(PASTA_MIGRACOES, arquivo), 'utf8'));

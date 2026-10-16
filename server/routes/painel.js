@@ -68,7 +68,7 @@ export function rotasPainel({ db, hoje }) {
           entregas,
           conteudos: todas(
             `SELECT c.* FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id
-             WHERE c.status <> 'publicado' AND c.data_planejada IS NOT NULL AND (p.id IS NULL OR p.ficticio = 0)`,
+             WHERE c.midia_id IS NULL AND c.data_planejada IS NOT NULL AND (p.id IS NULL OR p.ficticio = 0)`,
           ),
         },
         dia,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aplicarRegrasProjeto, aplicarRegrasConteudo } from './regras.js';
+import { aplicarRegrasProjeto } from './regras.js';
 
 describe('aplicarRegrasProjeto', () => {
   it('preenche data_entrega ao mover para entregue', () => {
@@ -24,16 +24,3 @@ describe('aplicarRegrasProjeto', () => {
   });
 });
 
-describe('aplicarRegrasConteudo', () => {
-  it('preenche data_publicada ao marcar publicado', () => {
-    expect(aplicarRegrasConteudo({ data_publicada: null }, { status: 'publicado' }, '2026-09-23')).toEqual({
-      status: 'publicado',
-      data_publicada: '2026-09-23',
-    });
-  });
-  it('mantém data_publicada existente', () => {
-    expect(aplicarRegrasConteudo({ data_publicada: '2026-09-01' }, { status: 'publicado' }, '2026-09-23')).toEqual({
-      status: 'publicado',
-    });
-  });
-});

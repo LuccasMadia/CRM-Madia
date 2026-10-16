@@ -13,7 +13,7 @@ describe('GET /api/painel', () => {
     await ctx.http.post(parcelas).send({ valor_centavos: 1000, vencimento: '2026-09-10' });
     await ctx.http.post(parcelas).send({ valor_centavos: 2000, vencimento: '2026-09-30' });
     await ctx.http.post(`/api/projetos/${emAndamento.id}/tarefas`).send({ texto: 'Revisar', prazo: '2026-09-24' });
-    await ctx.http.post('/api/conteudos').send({ titulo: 'Post', canal: 'instagram', tipo: 'post', data_planejada: '2026-09-25' });
+    await ctx.http.post('/api/conteudos').send({ titulo: 'Post', tipo: 'post', data_planejada: '2026-09-25' });
 
     const res = await ctx.http.get('/api/painel').expect(200);
     expect(res.body.cartoes).toEqual({

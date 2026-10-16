@@ -10,7 +10,7 @@ describe('montarProximos', () => {
     ],
     parcelas: [{ id: 3, projeto_id: 10, descricao: 'Entrada', projeto_titulo: 'Site A', vencimento: '2026-09-20', valor_centavos: 5000 }],
     entregas: [{ id: 10, titulo: 'Site A', cliente_nome: 'Ana', prazo_entrega: '2026-09-30' }],
-    conteudos: [{ id: 4, projeto_id: null, titulo: 'Post case', canal: 'instagram', data_planejada: '2026-09-23' }],
+    conteudos: [{ id: 4, projeto_id: null, titulo: 'Post case', data_planejada: '2026-09-23' }],
   };
 
   it('junta os tipos, filtra até hoje + 7 e ordena por data (atrasados primeiro)', () => {

@@ -15,7 +15,7 @@ export function montarProximos({ tarefas = [], parcelas = [], entregas = [], con
       tipo: 'entrega', id: e.id, projeto_id: e.id, titulo: e.titulo, contexto: e.cliente_nome, data: e.prazo_entrega,
     })),
     ...conteudos.map((c) => ({
-      tipo: 'conteudo', id: c.id, projeto_id: c.projeto_id ?? null, titulo: c.titulo, contexto: c.canal, data: c.data_planejada,
+      tipo: 'conteudo', id: c.id, projeto_id: c.projeto_id ?? null, titulo: c.titulo, contexto: 'Instagram', data: c.data_planejada,
     })),
   ];
   return itens
