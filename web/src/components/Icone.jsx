@@ -60,6 +60,12 @@ const DESENHOS = {
       <path d="M9 4v16M13.5 9.5 16 12l-2.5 2.5" />
     </>
   ),
+  alerta: (
+    <>
+      <path d="M12 3.5 2.5 20h19z" />
+      <path d="M12 10v4.5M12 17.5v.01" />
+    </>
+  ),
 };
 
 export function Icone({ nome, tamanho = 20 }) {

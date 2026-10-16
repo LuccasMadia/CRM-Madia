@@ -44,12 +44,12 @@ export function Inicio() {
     <section>
       <header className="pagina__topo"><h1>Início</h1></header>
       <div className="cartoes">
-        <Numero rotulo="A receber este mês">{formatarDinheiro(cartoes.a_receber_mes_centavos)}</Numero>
-        <Numero rotulo="Parcelas atrasadas">
+        <Numero rotulo="A receber este mês" icone="financeiro">{formatarDinheiro(cartoes.a_receber_mes_centavos)}</Numero>
+        <Numero rotulo="Parcelas atrasadas" icone="alerta">
           {cartoes.atrasadas.quantidade} · {formatarDinheiro(cartoes.atrasadas.total_centavos)}
         </Numero>
-        <Numero rotulo="Projetos em andamento">{cartoes.em_andamento}</Numero>
-        <Numero rotulo="Propostas abertas">
+        <Numero rotulo="Projetos em andamento" icone="projetos">{cartoes.em_andamento}</Numero>
+        <Numero rotulo="Propostas abertas" icone="funil">
           {cartoes.propostas.quantidade} · {formatarDinheiro(cartoes.propostas.total_centavos)}
         </Numero>
       </div>
