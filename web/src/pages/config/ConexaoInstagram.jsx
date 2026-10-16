@@ -10,6 +10,7 @@ export function ConexaoInstagram() {
   const carregado = useCarregar(() => api('/instagram/estado'), []);
   const [estado, setEstado] = useState(null);
   const [token, setToken] = useState('');
+  const [trocando, setTrocando] = useState(false);
   const { erros, erro, enviando, executar } = useEnvio();
   const atual = estado ?? carregado.dados;
 
@@ -18,6 +19,7 @@ export function ConexaoInstagram() {
     executar(async () => {
       setEstado(await api('/instagram/conexao', { method: 'PUT', body: { token } }));
       setToken('');
+      setTrocando(false);
     });
   }
 
@@ -38,10 +40,14 @@ export function ConexaoInstagram() {
             Conectado como @{atual.usuario} · o acesso renova sozinho
             {atual.expira_em ? ` (vence em ${formatarData(atual.expira_em.slice(0, 10))})` : ''}
           </p>
+          {!trocando && !atual.ultimo_erro && (
+            <button type="button" className="btn" onClick={() => setTrocando(true)}>Colar novo token</button>
+          )}
           <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
         </div>
       )}
-      {atual && !atual.conectado && (
+      {atual?.conectado && atual.ultimo_erro && <p className="aviso aviso--erro" role="alert">{atual.ultimo_erro}</p>}
+      {atual && (!atual.conectado || atual.ultimo_erro || trocando) && (
         <form className="form" onSubmit={conectar} noValidate>
           <Campo
             rotulo="Token de acesso"

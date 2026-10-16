@@ -40,3 +40,26 @@ describe('ConexaoInstagram', () => {
     expect(chamadas.some((c) => c.metodo === 'DELETE' && c.caminho === '/instagram/conexao')).toBe(true);
   });
 });
+
+describe('ConexaoInstagram — token expirado', () => {
+  it('mostra o erro e deixa colar um token novo sem desconectar', async () => {
+    const { chamadas } = mockApi({
+      'GET /instagram/estado': { ...CONECTADO, ultimo_erro: 'O acesso ao Instagram expirou. Reconecte em Configurações.' },
+      'PUT /instagram/conexao': CONECTADO,
+    });
+    render(<ConexaoInstagram />);
+    const user = userEvent.setup();
+    expect(await screen.findByText(/O acesso ao Instagram expirou/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Token de acesso'), 'novo');
+    await user.click(screen.getByRole('button', { name: 'Conectar' }));
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ token: 'novo' });
+    expect(chamadas.some((c) => c.metodo === 'DELETE')).toBe(false);
+  });
+
+  it('conectado sem erro oferece trocar o token', async () => {
+    mockApi({ 'GET /instagram/estado': CONECTADO });
+    render(<ConexaoInstagram />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Colar novo token' }));
+    expect(screen.getByLabelText('Token de acesso')).toBeInTheDocument();
+  });
+});

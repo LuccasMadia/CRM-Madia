@@ -68,7 +68,7 @@ export function Conteudo() {
   const midias = grid.dados?.midias ?? [];
   const prontos = grid.dados?.prontos ?? [];
   const midiaSelecionada = midias.find((m) => m.id === selecionada) ?? null;
-  const erroSync = estado.dados?.ultimo_erro ? { message: estado.dados.ultimo_erro } : null;
+
 
   const itensCalendario = [
     ...[...prontos, ...(rascunhos.dados ?? [])].filter((c) => c.data_planejada)
@@ -94,7 +94,12 @@ export function Conteudo() {
           <button type="button" className="btn btn--primario" onClick={() => setEditando({})}>+ Planejar</button>
         </div>
       </header>
-      <Aviso erro={estado.erro ?? grid.erro ?? acao.erro ?? erroSync} />
+      <Aviso erro={estado.erro ?? grid.erro ?? acao.erro} />
+      {estado.dados?.ultimo_erro && (
+        <p className="aviso aviso--erro" role="alert">
+          {estado.dados.ultimo_erro} <Link to="/config">Abrir Configurações</Link>
+        </p>
+      )}
       {estado.dados && !conectado && (
         <p className="aviso">
           <Link to="/config">Conecte seu Instagram</Link> em Configurações para ver o grid real e os números.

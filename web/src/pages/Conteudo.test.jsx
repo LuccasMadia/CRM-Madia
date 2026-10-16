@@ -192,3 +192,11 @@ describe('Conteudo — vínculo ao trocar de post', () => {
     expect(chamadas.find((c) => c.caminho === '/instagram/midias/m2/vinculo').corpo).toEqual({ conteudo_id: 7 });
   });
 });
+
+describe('Conteudo — reconectar', () => {
+  it('erro de sync traz link para Configurações', async () => {
+    mockApi(rotas({ 'GET /instagram/estado': { ...ESTADO, ultimo_erro: 'O acesso ao Instagram expirou. Reconecte em Configurações.' } }));
+    abrir();
+    expect(await screen.findByRole('link', { name: 'Abrir Configurações' })).toHaveAttribute('href', '/config');
+  });
+});
