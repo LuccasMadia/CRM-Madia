@@ -5,18 +5,22 @@ import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { formatarData, hojeISO, nomeMes } from '../lib/datas.js';
-import { ROTULO_ESTADO_PARCELA } from '../lib/rotulos.js';
+import { ROTULO_ESTADO_PARCELA, ROTULO_SERVICO, ABA_DO_SERVICO } from '../lib/rotulos.js';
 
 export function Financeiro() {
   const [estado, setEstado] = useState('');
   const [mes, setMes] = useState('');
+  const [servico, setServico] = useState('');
   const ano = hojeISO().slice(0, 4);
-  const consulta = new URLSearchParams(Object.entries({ estado, mes }).filter(([, v]) => v)).toString();
+  const consulta = new URLSearchParams(Object.entries({ estado, mes, servico }).filter(([, v]) => v)).toString();
 
   const { dados: parcelas, erro } = useCarregar(() => api(`/parcelas${consulta ? `?${consulta}` : ''}`), [consulta]);
   const { dados: mensal } = useCarregar(() => api(`/financeiro/mensal?ano=${ano}`), [ano]);
   const maior = Math.max(1, ...(mensal ?? []).map((m) => m.recebido_centavos));
   const total = (parcelas ?? []).reduce((s, p) => s + p.valor_centavos, 0);
+  const linkDoProjeto = (p) => (p.servico === 'site_sistema'
+    ? `/projetos/${p.projeto_id}`
+    : `/clientes/${p.cliente_id}?aba=${ABA_DO_SERVICO[p.servico]}`);
 
   return (
     <section>
@@ -34,6 +38,13 @@ export function Financeiro() {
             <span>Mês de vencimento</span>
             <input type="month" aria-label="Mês de vencimento" value={mes} onChange={(e) => setMes(e.target.value)} />
           </label>
+          <label className="campo">
+            <span>Serviço</span>
+            <select aria-label="Serviço" value={servico} onChange={(e) => setServico(e.target.value)}>
+              <option value="">Todos</option>
+              {Object.entries(ROTULO_SERVICO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+            </select>
+          </label>
         </div>
       </header>
       <Aviso erro={erro} />
@@ -42,13 +53,14 @@ export function Financeiro() {
         {parcelas && (parcelas.length ? (
           <table className="tabela">
             <thead>
-              <tr><th>Vencimento</th><th>Projeto</th><th>Cliente</th><th>Descrição</th><th>Estado</th><th className="num">Valor</th></tr>
+              <tr><th>Vencimento</th><th>Serviço</th><th>Projeto</th><th>Cliente</th><th>Descrição</th><th>Estado</th><th className="num">Valor</th></tr>
             </thead>
             <tbody>
               {parcelas.map((p) => (
                 <tr key={p.id}>
                   <td>{formatarData(p.vencimento)}</td>
-                  <td><Link to={`/projetos/${p.projeto_id}`}>{p.projeto_titulo}</Link></td>
+                  <td>{ROTULO_SERVICO[p.servico]}</td>
+                  <td><Link to={linkDoProjeto(p)}>{p.projeto_titulo}</Link></td>
                   <td>{p.cliente_nome}</td>
                   <td>{p.descricao ?? '—'}</td>
                   <td><span className={`etiqueta etiqueta--${p.estado}`}>{ROTULO_ESTADO_PARCELA[p.estado]}</span></td>
@@ -57,7 +69,7 @@ export function Financeiro() {
               ))}
             </tbody>
             <tfoot>
-              <tr><th colSpan={5}>Total</th><th className="num">{formatarDinheiro(total)}</th></tr>
+              <tr><th colSpan={6}>Total</th><th className="num">{formatarDinheiro(total)}</th></tr>
             </tfoot>
           </table>
         ) : <p className="vazio">Nenhuma parcela com esses filtros.</p>)}

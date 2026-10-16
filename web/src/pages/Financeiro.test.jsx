@@ -10,7 +10,7 @@ const ano = hojeISO().slice(0, 4);
 const meses = Array.from({ length: 12 }, (_, i) => ({ mes: `${ano}-${String(i + 1).padStart(2, '0')}`, recebido_centavos: i === 8 ? 450000 : 0 }));
 const parcela = {
   id: 1, projeto_id: 5, projeto_titulo: 'Site Ana', cliente_nome: 'Ana', descricao: 'Entrada',
-  valor_centavos: 150000, vencimento: '2026-09-10', estado: 'atrasada',
+  valor_centavos: 150000, vencimento: '2026-09-10', estado: 'atrasada', servico: 'site_sistema', cliente_id: 1,
 };
 
 describe('Financeiro', () => {
@@ -26,5 +26,20 @@ describe('Financeiro', () => {
     await userEvent.setup().selectOptions(screen.getByLabelText('Estado'), 'atrasada');
     await screen.findByRole('link', { name: 'Site Ana' });
     expect(chamadas.map((c) => c.caminho)).toContain('/parcelas?estado=atrasada');
+  });
+
+  it('mostra o serviço, filtra por ele e leva GMN para o perfil do cliente', async () => {
+    const parcelaGmn = { ...parcela, id: 2, projeto_id: 6, projeto_titulo: 'Google Meu Negócio', servico: 'google_meu_negocio' };
+    const { chamadas } = mockApi({
+      'GET /parcelas': [parcela, parcelaGmn],
+      'GET /parcelas?servico=google_meu_negocio': [parcelaGmn],
+      [`GET /financeiro/mensal?ano=${ano}`]: meses,
+    });
+    renderizar(<Financeiro />);
+    expect(await screen.findByRole('link', { name: 'Google Meu Negócio' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
+    expect(screen.getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/5');
+    expect(screen.getByRole('cell', { name: 'GMN' })).toBeInTheDocument();
+    await userEvent.setup().selectOptions(screen.getByLabelText('Serviço'), 'google_meu_negocio');
+    expect(chamadas.some((c) => c.caminho === '/parcelas?servico=google_meu_negocio')).toBe(true);
   });
 });
