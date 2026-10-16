@@ -14,10 +14,11 @@ describe('AbaDivulgacao', () => {
   it('mostra conteúdos e dados públicos do portfólio juntos', async () => {
     mockApi({
       'GET /conteudos?projeto_id=5': [],
+      'GET /instagram/midias?projeto_id=5': [],
       'GET /projetos/5/portfolio': pf,
     });
     render(<AbaDivulgacao projeto={projeto} />);
-    expect(await screen.findByText('Conteúdos deste projeto')).toBeInTheDocument();
+    expect(await screen.findByText('Publicados no Instagram')).toBeInTheDocument();
     expect(await screen.findByText('Dados públicos')).toBeInTheDocument();
   });
 });

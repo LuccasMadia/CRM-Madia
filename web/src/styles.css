@@ -104,7 +104,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .etiqueta { font-size: 0.75rem; font-weight: 500; padding: 3px 10px; border-radius: 999px; border: 0; background: var(--superficie-2); color: var(--texto-suave); white-space: nowrap; }
 .etiqueta--entregue, .etiqueta--paga, .etiqueta--publicado { color: var(--ok); background: rgb(74 222 128 / 0.12); }
 .etiqueta--atrasada, .etiqueta--perdido { color: var(--perigo); background: rgb(248 113 113 / 0.12); }
-.etiqueta--andamento, .etiqueta--agendado { color: var(--primaria); background: var(--primaria-suave); }
+.etiqueta--andamento, .etiqueta--agendado, .etiqueta--pronto { color: var(--primaria); background: var(--primaria-suave); }
 .etiqueta--proposta { color: var(--atencao); background: rgb(251 191 36 / 0.12); }
 .item-atrasado { color: var(--perigo); font-weight: 600; }
 .tabela__linha--inativa { opacity: 0.55; }
@@ -192,4 +192,43 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
   .conteudo { padding: 16px; }
   .conteudo-layout { grid-template-columns: 1fr; }
   .pagina__topo h1 { font-size: 1.6rem; }
+}
+
+/* Conteúdo: grid do Instagram */
+.resumo-crescimento { display: flex; align-items: center; gap: 24px; margin-bottom: 16px; }
+.resumo-crescimento__total { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.resumo-crescimento__linha { flex: 1; height: 48px; min-width: 0; }
+.conteudo-ig { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.conteudo-ig__principal { display: grid; gap: 16px; min-width: 0; }
+.grid-ig { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; max-width: 720px; }
+.grid-ig__item { position: relative; aspect-ratio: 4 / 5; background: var(--superficie-2); border-radius: 4px; overflow: hidden; }
+.grid-ig__item--pronto { border: 2px dashed var(--primaria); background: var(--primaria-suave); }
+.grid-ig__item--selecionado { outline: 3px solid var(--atencao); outline-offset: -3px; }
+.grid-ig__abrir { all: unset; cursor: pointer; display: block; width: 100%; height: 100%; position: relative; }
+.grid-ig__abrir:focus-visible { outline: 2px solid var(--primaria); outline-offset: -2px; }
+.grid-ig__abrir img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.grid-ig__titulo { display: flex; align-items: center; justify-content: center; height: 100%; padding: 8px; text-align: center; font-size: 0.85rem; color: var(--primaria); }
+.grid-ig__rotulo { position: absolute; left: 4px; bottom: 4px; font-size: 0.7rem; background: rgb(0 0 0 / 0.6); color: var(--texto); padding: 2px 6px; border-radius: 6px; }
+.grid-ig__icone { position: absolute; top: 6px; right: 8px; font-size: 0.8rem; color: #fff; text-shadow: 0 1px 3px rgb(0 0 0 / 0.8); }
+.grid-ig__setas { position: absolute; top: 2px; right: 2px; display: flex; }
+.grid-ig__setas .btn { padding: 2px 6px; background: rgb(0 0 0 / 0.55); }
+.painel-midia { position: sticky; top: 16px; display: grid; gap: 10px; }
+.painel-midia__capa { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--raio-controle); }
+.painel-midia__legenda summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.painel-midia__legenda p { white-space: pre-wrap; font-size: 0.85rem; color: var(--texto-suave); }
+.painel-midia__numeros { margin: 0; display: grid; gap: 4px; }
+.painel-midia__numeros div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--borda); padding: 4px 0; }
+.painel-midia__numeros dt { color: var(--texto-suave); }
+.painel-midia__numeros dd { margin: 0; font-weight: 600; }
+.painel-midia__vinculo { display: grid; gap: 6px; margin: 0; }
+.lista-rascunhos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lista-rascunhos li { display: flex; gap: 12px; align-items: baseline; }
+.lista-publicados { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lista-publicados li { display: flex; gap: 12px; align-items: center; }
+.lista-publicados img, .lista-publicados__sem-capa { width: 64px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 6px; background: var(--superficie-2); }
+.lista-publicados p { margin: 0; }
+.form-conteudo__arte { max-width: 160px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--raio-controle); }
+@media (max-width: 900px) {
+  .conteudo-ig { grid-template-columns: 1fr; }
+  .painel-midia { position: static; }
 }

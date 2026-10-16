@@ -1,99 +1,136 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
-import { Kanban } from '../components/Kanban.jsx';
 import { Calendario } from '../components/Calendario.jsx';
 import { FormConteudo } from '../components/FormConteudo.jsx';
-import { formatarData } from '../lib/datas.js';
-import { ROTULO_CANAL, ROTULO_STATUS_CONTEUDO, ROTULO_TIPO, STATUS_CONTEUDO } from '../lib/rotulos.js';
+import { salvarConteudo } from '../lib/conteudos.js';
+import { ResumoCrescimento } from './conteudo/ResumoCrescimento.jsx';
+import { GridInstagram } from './conteudo/GridInstagram.jsx';
+import { PainelMidia } from './conteudo/PainelMidia.jsx';
+import { ListaRascunhos } from './conteudo/ListaRascunhos.jsx';
 
-const COLUNAS = STATUS_CONTEUDO.map((id) => ({ id, titulo: ROTULO_STATUS_CONTEUDO[id] }));
+const dataHora = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
 export function Conteudo() {
-  const [canal, setCanal] = useState('');
-  const [visao, setVisao] = useState('kanban');
+  const [visao, setVisao] = useState('grid');
+  const [selecionada, setSelecionada] = useState(null);
   const [editando, setEditando] = useState(null); // null = fechado; {} = novo; objeto = edição
-  const { dados: conteudos, erro, recarregar } = useCarregar(
-    () => api(`/conteudos${canal ? `?canal=${canal}` : ''}`),
-    [canal],
-  );
-  const mudanca = useEnvio();
+  const estado = useCarregar(() => api('/instagram/estado'), []);
+  const grid = useCarregar(() => api('/instagram/grid'), []);
+  const seguidores = useCarregar(() => api('/instagram/seguidores'), []);
+  const rascunhos = useCarregar(() => api('/conteudos?estado=rascunho'), []);
+  const acao = useEnvio();
 
-  function mover(conteudo, status) {
-    mudanca.executar(async () => {
-      await api(`/conteudos/${conteudo.id}`, { method: 'PUT', body: { status } });
-      recarregar();
+  const recarregarPlanejados = () => {
+    grid.recarregar();
+    rascunhos.recarregar();
+  };
+
+  function atualizarAgora() {
+    acao.executar(async () => {
+      try {
+        await api('/instagram/sincronizar', { method: 'POST' });
+      } finally {
+        estado.recarregar();
+        grid.recarregar();
+        seguidores.recarregar();
+      }
     });
   }
 
-  async function salvar(dados) {
-    if (editando.id) await api(`/conteudos/${editando.id}`, { method: 'PUT', body: dados });
-    else await api('/conteudos', { method: 'POST', body: dados });
+  function mover(indice, delta) {
+    const ids = grid.dados.prontos.map((p) => p.id);
+    [ids[indice], ids[indice + delta]] = [ids[indice + delta], ids[indice]];
+    acao.executar(async () => {
+      await api('/conteudos/ordem', { method: 'PUT', body: { ids } });
+      grid.recarregar();
+    });
+  }
+
+  async function salvar(dados, arte) {
+    await salvarConteudo(editando.id, dados, arte);
     setEditando(null);
-    recarregar();
+    recarregarPlanejados();
   }
 
   async function excluir() {
     await api(`/conteudos/${editando.id}`, { method: 'DELETE' });
     setEditando(null);
-    recarregar();
+    recarregarPlanejados();
   }
 
-  const abrirItem = (c) => (
-    <button type="button" className="calendario__item" onClick={() => setEditando(c)}>{c.titulo}</button>
-  );
+  const conectado = estado.dados?.conectado;
+  const midias = grid.dados?.midias ?? [];
+  const prontos = grid.dados?.prontos ?? [];
+  const midiaSelecionada = midias.find((m) => m.id === selecionada) ?? null;
+  const erroSync = estado.dados?.ultimo_erro ? { message: estado.dados.ultimo_erro } : null;
+
+  const itensCalendario = [
+    ...[...prontos, ...(rascunhos.dados ?? [])].filter((c) => c.data_planejada)
+      .map((c) => ({ id: `c${c.id}`, titulo: c.titulo, dia: c.data_planejada, abrir: () => setEditando(c) })),
+    ...midias.map((m) => ({
+      id: m.id, titulo: m.legenda?.trim() || m.tipo, dia: m.publicado_em.slice(0, 10),
+      abrir: () => { setSelecionada(m.id); setVisao('grid'); },
+    })),
+  ];
 
   return (
     <section>
       <header className="pagina__topo">
         <h1>Conteúdo</h1>
         <div className="form--linha">
-          <label className="campo">
-            <span>Canal</span>
-            <select aria-label="Canal" value={canal} onChange={(e) => setCanal(e.target.value)}>
-              <option value="">Todos</option>
-              {Object.entries(ROTULO_CANAL).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
-            </select>
-          </label>
-          <button type="button" className="btn" aria-pressed={visao === 'kanban'} onClick={() => setVisao('kanban')}>Kanban</button>
+          <button type="button" className="btn" aria-pressed={visao === 'grid'} onClick={() => setVisao('grid')}>Grid</button>
           <button type="button" className="btn" aria-pressed={visao === 'calendario'} onClick={() => setVisao('calendario')}>Calendário</button>
-          <button type="button" className="btn btn--primario" onClick={() => setEditando({})}>+ Conteúdo</button>
+          {conectado && (
+            <button type="button" className="btn" disabled={acao.enviando} onClick={atualizarAgora}>
+              {acao.enviando ? 'Atualizando…' : 'Atualizar agora'}
+            </button>
+          )}
+          <button type="button" className="btn btn--primario" onClick={() => setEditando({})}>+ Planejar</button>
         </div>
       </header>
-      <Aviso erro={erro ?? mudanca.erro} />
+      <Aviso erro={estado.erro ?? grid.erro ?? acao.erro ?? erroSync} />
+      {estado.dados && !conectado && (
+        <p className="aviso">
+          <Link to="/config">Conecte seu Instagram</Link> em Configurações para ver o grid real e os números.
+        </p>
+      )}
 
-      {conteudos && visao === 'kanban' && (
-        <Kanban
-          colunas={COLUNAS}
-          itens={conteudos}
-          colunaDe={(c) => c.status}
-          tituloDe={(c) => c.titulo}
-          onMover={mover}
-          renderItem={(c) => (
-            <>
-              <button type="button" className="kanban__titulo" onClick={() => setEditando(c)}>{c.titulo}</button>
-              <p className="kanban__meta">{ROTULO_CANAL[c.canal]} · {ROTULO_TIPO[c.tipo]}</p>
-              <p className="kanban__meta">{formatarData(c.data_planejada)}{c.projeto_titulo ? ` · ${c.projeto_titulo}` : ''}</p>
-            </>
-          )}
+      {conectado && <ResumoCrescimento serie={seguidores.dados} />}
+
+      {grid.dados && visao === 'grid' && (
+        <div className="conteudo-ig">
+          <div className="conteudo-ig__principal">
+            <GridInstagram
+              prontos={prontos}
+              midias={midias}
+              selecionada={selecionada}
+              onSelecionar={setSelecionada}
+              onEditar={setEditando}
+              onMover={mover}
+            />
+            {rascunhos.dados && <ListaRascunhos rascunhos={rascunhos.dados} onEditar={setEditando} />}
+          </div>
+          {conectado && <PainelMidia midia={midiaSelecionada} onMudou={recarregarPlanejados} />}
+        </div>
+      )}
+
+      {grid.dados && visao === 'calendario' && (
+        <Calendario
+          itens={itensCalendario}
+          dataDe={(i) => i.dia}
+          renderItem={(i) => <button type="button" className="calendario__item" onClick={i.abrir}>{i.titulo}</button>}
         />
       )}
 
-      {conteudos && visao === 'calendario' && (
-        <div className="conteudo-layout">
-          <Calendario itens={conteudos.filter((c) => c.data_planejada)} dataDe={(c) => c.data_planejada} renderItem={abrirItem} />
-          <aside className="cartao" aria-label="Sem data">
-            <h2>Sem data</h2>
-            {conteudos.filter((c) => !c.data_planejada).map((c) => <div key={c.id}>{abrirItem(c)}</div>)}
-          </aside>
-        </div>
-      )}
+      {estado.dados?.ultima_sync && <p className="kanban__meta">Última atualização: {dataHora(estado.dados.ultima_sync)}</p>}
 
       {editando && (
-        <Modal titulo={editando.id ? 'Editar conteúdo' : 'Novo conteúdo'} onFechar={() => setEditando(null)}>
+        <Modal titulo={editando.id ? 'Editar planejado' : 'Novo planejado'} onFechar={() => setEditando(null)}>
           <FormConteudo inicial={editando} onSalvar={salvar} onExcluir={editando.id ? excluir : undefined} />
         </Modal>
       )}
