@@ -26,7 +26,6 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
   const [valor, setValor] = useState(linha ? centavosParaTexto(linha.valor_total_centavos) : '');
   const [manual, setManual] = useState(Boolean(linha));
   const [vencimento, setVencimento] = useState(parcela?.vencimento ?? '');
-  const [qrcodes, setQrcodes] = useState((projeto?.qrcodes ?? []).map((q) => q.id));
   const [notas, setNotas] = useState(projeto?.notas ?? '');
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const quantidade = Number(quantidadeTexto);
@@ -46,10 +45,6 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
     if (sugerido && !manual) setValor(centavosParaTexto(sugerido.total_centavos));
   }, [sugerido, manual]);
 
-  function alternarQr(qrId, marcado) {
-    setQrcodes((atuais) => (marcado ? [...atuais, qrId] : atuais.filter((q) => q !== qrId)));
-  }
-
   function enviar(e) {
     e.preventDefault();
     const corpo = projeto ? {} : { servico: 'placas_nfc', titulo: 'Placas NFC', cliente_id: cliente.id };
@@ -61,7 +56,7 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
       }
       corpo.servicos = [{ tipo: 'placas_nfc', modelo_id: Number(modeloId) || null, quantidade: quantidade || 1, valor_total_centavos: valorCentavos ?? 0 }];
     }
-    Object.assign(corpo, { vencimento, qrcodes, notas });
+    Object.assign(corpo, { vencimento, notas });
     executar(() => onSalvar(corpo));
   }
 
@@ -89,14 +84,6 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
       {etiqueta && <p className="campos-servicos__etiqueta">{etiqueta}</p>}
       {entregue && <p className="vazio">Venda já entregue: modelo, quantidade e valor não mudam mais.</p>}
       <Campo rotulo="Vencimento" nome="vencimento" erros={erros} type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} />
-      <fieldset className="campo">
-        <legend>QR codes</legend>
-        {cliente.qrcodes.length ? cliente.qrcodes.map((q) => (
-          <label key={q.id} style={{ display: 'block' }}>
-            <input type="checkbox" checked={qrcodes.includes(q.id)} onChange={(e) => alternarQr(q.id, e.target.checked)} />{` #${q.id} ${q.nome}`}
-          </label>
-        )) : <p className="vazio">Este cliente ainda não tem QR codes.</p>}
-      </fieldset>
       <Campo rotulo="Observações" nome="notas" erros={erros}>
         <textarea rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} />
       </Campo>

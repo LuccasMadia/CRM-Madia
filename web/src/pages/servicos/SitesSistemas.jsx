@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { api } from '../api/client.js';
-import { useCarregar } from '../hooks/useCarregar.js';
-import { Aviso } from '../components/Aviso.jsx';
-import { formatarDinheiro } from '../lib/dinheiro.js';
-import { ETAPAS, ROTULO_ETAPA } from '../lib/rotulos.js';
+import { api } from '../../api/client.js';
+import { useCarregar } from '../../hooks/useCarregar.js';
+import { Aviso } from '../../components/Aviso.jsx';
+import { formatarDinheiro } from '../../lib/dinheiro.js';
+import { ETAPAS, ROTULO_ETAPA } from '../../lib/rotulos.js';
 
-export function Projetos() {
+export function SitesSistemas() {
   const [etapa, setEtapa] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [instagram, setInstagram] = useState('');
@@ -23,9 +23,8 @@ export function Projetos() {
     .sort((a, b) => b.atualizado_em.localeCompare(a.atualizado_em));
 
   return (
-    <section>
+    <div>
       <header className="pagina__topo">
-        <h1>Projetos</h1>
         <div className="form--linha">
           <label className="campo">
             <span>Etapa</span>
@@ -71,6 +70,6 @@ export function Projetos() {
           </tbody>
         </table>
       ) : <p className="vazio">Nenhum projeto encontrado.</p>)}
-    </section>
+    </div>
   );
 }

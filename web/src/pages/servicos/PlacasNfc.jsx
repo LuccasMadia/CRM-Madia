@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { AbaResumo } from './placas/AbaResumo.jsx';
-import { AbaMateriais } from './placas/AbaMateriais.jsx';
-import { AbaLotes } from './placas/AbaLotes.jsx';
-import { AbaModelos } from './placas/AbaModelos.jsx';
-import { AbaVendas } from './placas/AbaVendas.jsx';
-import { AbaAvarias } from './placas/AbaAvarias.jsx';
+import { AbaResumo } from '../placas/AbaResumo.jsx';
+import { AbaMateriais } from '../placas/AbaMateriais.jsx';
+import { AbaLotes } from '../placas/AbaLotes.jsx';
+import { AbaModelos } from '../placas/AbaModelos.jsx';
+import { AbaVendas } from '../placas/AbaVendas.jsx';
+import { AbaAvarias } from '../placas/AbaAvarias.jsx';
 
 const ABAS = [
   ['resumo', 'Resumo'],
@@ -15,13 +15,10 @@ const ABAS = [
   ['avarias', 'Avarias'],
 ];
 
-export function Placas() {
+export function PlacasNfc() {
   const [aba, setAba] = useState('resumo');
   return (
-    <section>
-      <header className="pagina__topo">
-        <h1>Placas de avaliação</h1>
-      </header>
+    <div>
       <div role="tablist" className="abas">
         {ABAS.map(([chave, rotulo]) => (
           <button key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave} onClick={() => setAba(chave)}>
@@ -37,6 +34,6 @@ export function Placas() {
         {aba === 'vendas' && <AbaVendas />}
         {aba === 'avarias' && <AbaAvarias />}
       </div>
-    </section>
+    </div>
   );
 }

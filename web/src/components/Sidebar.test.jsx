@@ -19,7 +19,14 @@ describe('Sidebar', () => {
     expect(nav).not.toHaveClass('sidebar--recolhida');
     expect(screen.getByRole('link', { name: 'Funil' })).toBeInTheDocument();
     expect(screen.getByText('Configurações')).toBeVisible();
-    expect(nav.querySelectorAll('a svg')).toHaveLength(9);
+    expect(nav.querySelectorAll('a svg')).toHaveLength(7);
+  });
+
+  it('serviços ficam num item só, sem Projetos, Placas e QR Codes', () => {
+    renderizarSidebar();
+    const rotulos = screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'));
+    expect(rotulos).toEqual(['Início', 'Funil', 'Clientes', 'Serviços', 'Conteúdo', 'Financeiro', 'Configurações']);
+    expect(screen.getByRole('link', { name: 'Serviços' })).toHaveAttribute('href', '/servicos');
   });
 
   it('recolher deixa só os ícones, com o nome como dica', async () => {

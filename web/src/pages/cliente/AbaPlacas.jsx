@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
@@ -53,9 +52,6 @@ function CartaoVenda({ cliente, projeto, onMudou }) {
               <button type="button" className="btn btn--fantasma btn--pequeno" onClick={marcarEntregue}>Marcar entregue</button>
             </>}
       </p>
-      {projeto.qrcodes.length > 0 && (
-        <p>QR: {projeto.qrcodes.map((q) => <span key={q.id} title={q.nome}>{`#${q.id}`} </span>)}</p>
-      )}
       {projeto.notas && <p className="vazio">{projeto.notas}</p>}
       <p>
         <button type="button" className="btn" onClick={() => setEditando(true)}>Editar</button>{' '}
@@ -113,17 +109,6 @@ export function AbaPlacas({ cliente, projetos, onMudou }) {
           </table>
         </section>
       )}
-
-      <section className="cartao">
-        <h3>QR Codes do cliente</h3>
-        {cliente.qrcodes.length ? (
-          <ul className="lista">
-            {cliente.qrcodes.map((q) => (
-              <li key={q.id}><span className="vazio">{`#${q.id}`}</span><Link to={`/qrcodes/${q.id}`}>{q.nome}</Link></li>
-            ))}
-          </ul>
-        ) : <p className="vazio">Nenhum QR ainda.</p>}
-      </section>
 
       {criando && (
         <Modal titulo="Nova venda de placas" onFechar={() => setCriando(false)}>

@@ -8,13 +8,13 @@ import { rotasPerfil } from '../../test/perfilCliente.js';
 
 const venda = {
   id: 8, titulo: 'Placas NFC', etapa: 'andamento', servico: 'placas_nfc', valor_total_centavos: 25000, notas: null, atualizado_em: 'T',
-  mensalidade_ativa: 0, qrcodes: [{ id: 5, nome: 'QR balcão' }],
+  mensalidade_ativa: 0,
   servicos: [{ tipo: 'placas_nfc', modelo_id: 2, modelo_nome: 'Placa 10x15', quantidade: 3, valor_total_centavos: 25000, venda_id: null }],
 };
 const abrir = () => renderizar(<ClienteDetalhe />, { rota: '/clientes/1?aba=placas', padrao: '/clientes/:id' });
 
 describe('Aba Placas NFC', () => {
-  it('mostra resumo, cartão da venda, histórico avulso e QR codes com #id', async () => {
+  it('mostra resumo, cartão da venda, histórico avulso, sem QR codes', async () => {
     mockApi(rotasPerfil({
       'GET /projetos?cliente_id=1': [venda],
       'GET /projetos/8/parcelas': { parcelas: [{ id: 40, valor_centavos: 25000, vencimento: '2026-10-05', pago_em: null, mensalidade: 0 }], resumo: {} },
@@ -24,11 +24,10 @@ describe('Aba Placas NFC', () => {
     expect(await screen.findByText('Já comprou 7 placas')).toBeInTheDocument();
     const cartao = screen.getByText('Placa 10x15 × 3').closest('li');
     expect(within(cartao).getByText('Pendente')).toBeInTheDocument();
-    expect(within(cartao).getByText('#5')).toBeInTheDocument();
     expect(within(cartao).getByText(/a receber \(vence 05\/10\/2026\)/)).toBeInTheDocument();
     expect(screen.getByText(/Placa 10x10 × 2/)).toBeInTheDocument();
     expect(screen.getByText('01/08/2026')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'QR balcão' })).toHaveAttribute('href', '/qrcodes/5');
+    expect(screen.queryByText(/QR/)).toBeNull();
   });
 
   it('marcar entregue envia a etapa', async () => {

@@ -5,10 +5,8 @@ import { Icone } from './Icone.jsx';
 const NAVEGACAO = [
   { para: '/', rotulo: 'Início', icone: 'inicio' },
   { para: '/funil', rotulo: 'Funil', icone: 'funil' },
-  { para: '/projetos', rotulo: 'Projetos', icone: 'projetos' },
   { para: '/clientes', rotulo: 'Clientes', icone: 'clientes' },
-  { para: '/qrcodes', rotulo: 'QR Codes', icone: 'qrcode' },
-  { para: '/placas', rotulo: 'Placas', icone: 'placas' },
+  { para: '/servicos', rotulo: 'Serviços', icone: 'servicos' },
   { para: '/conteudo', rotulo: 'Conteúdo', icone: 'conteudo' },
   { para: '/financeiro', rotulo: 'Financeiro', icone: 'financeiro' },
   { para: '/configuracoes', rotulo: 'Configurações', icone: 'configuracoes' },

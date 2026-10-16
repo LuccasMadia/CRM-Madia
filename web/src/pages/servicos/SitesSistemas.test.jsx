@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Projetos } from './Projetos.jsx';
-import { mockApi } from '../test/mockApi.js';
-import { renderizar } from '../test/renderizar.jsx';
+import { SitesSistemas } from './SitesSistemas.jsx';
+import { mockApi } from '../../test/mockApi.js';
+import { renderizar } from '../../test/renderizar.jsx';
 
 const antigo = {
   id: 1, cliente_id: 10, titulo: 'Site Ana', cliente_nome: 'Ana', etapa: 'andamento',
@@ -18,9 +18,9 @@ const perdido = {
   valor_total_centavos: 0, atualizado_em: '2026-09-10T10:00:00.000Z',
 };
 
-const abrir = () => renderizar(<Projetos />, { rota: '/projetos', padrao: '/projetos' });
+const abrir = () => renderizar(<SitesSistemas />, { rota: '/servicos', padrao: '/servicos' });
 
-describe('Projetos', () => {
+describe('SitesSistemas', () => {
   it('lista projetos ativos mais recentes primeiro e oculta perdidos', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [antigo, recente, perdido], 'GET /clientes': [] });
     abrir();

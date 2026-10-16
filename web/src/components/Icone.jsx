@@ -16,18 +16,10 @@ const DESENHOS = {
       <path d="M18 14.3c2.1.8 3.5 2.9 3.5 5.7" />
     </>
   ),
-  qrcode: (
+  servicos: (
     <>
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
-    </>
-  ),
-  placas: (
-    <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M9 9.5a4 4 0 0 1 0 5M12 8a6.5 6.5 0 0 1 0 8M15 6.5a9 9 0 0 1 0 11" />
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" />
     </>
   ),
   conteudo: (

@@ -5,12 +5,12 @@ import { FormVendaPlacas } from './FormVendaPlacas.jsx';
 import { mockApi } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 
-const cliente = { id: 1, qrcodes: [{ id: 3, nome: 'Balcão' }, { id: 5, nome: 'Mesa' }] };
+const cliente = { id: 1 };
 const modelos = [{ id: 2, nome: 'Placa 10x15', ativo: 1, preco_venda_centavos: 10000 }];
 const preco = (total, extra = {}) => ({ total_centavos: total, ja_comprou: 0, recompra: false, preco_por_placa_centavos: [], ...extra });
 
 describe('FormVendaPlacas', () => {
-  it('sugere o preço de pack, permite escolher QRs e envia a venda', async () => {
+  it('sugere o preço de pack e envia a venda, sem QR codes', async () => {
     mockApi({
       'GET /placas/modelos': modelos,
       'GET /placas/modelos/2/preco?quantidade=1&cliente_id=1': preco(10000),
@@ -27,12 +27,12 @@ describe('FormVendaPlacas', () => {
     expect(await screen.findByDisplayValue('250,00')).toBeInTheDocument();
     expect(screen.getByText('Preço de pack')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Vencimento'), '2026-10-05');
-    await user.click(screen.getByLabelText('#5 Mesa'));
+    expect(screen.queryByText('QR codes')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(enviados.at(-1)).toEqual({
       servico: 'placas_nfc', titulo: 'Placas NFC', cliente_id: 1,
       servicos: [{ tipo: 'placas_nfc', modelo_id: 2, quantidade: 3, valor_total_centavos: 25000 }],
-      vencimento: '2026-10-05', qrcodes: [5], notas: '',
+      vencimento: '2026-10-05', notas: '',
     });
   });
 
@@ -71,7 +71,7 @@ describe('FormVendaPlacas', () => {
   it('venda entregue trava modelo, quantidade e valor e não reenvia a linha', async () => {
     mockApi({ 'GET /placas/modelos': modelos });
     const projeto = {
-      id: 8, notas: null, qrcodes: [{ id: 3, nome: 'Balcão' }],
+      id: 8, notas: null,
       servicos: [{ tipo: 'placas_nfc', modelo_id: 2, quantidade: 3, valor_total_centavos: 25000, venda_id: 11 }],
     };
     const enviados = [];
@@ -80,8 +80,7 @@ describe('FormVendaPlacas', () => {
     expect(await screen.findByLabelText('Modelo da placa')).toBeDisabled();
     expect(screen.getByLabelText('Quantidade')).toBeDisabled();
     expect(screen.getByLabelText('Valor total')).toBeDisabled();
-    expect(screen.getByLabelText('#3 Balcão')).toBeChecked();
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(enviados.at(-1)).toEqual({ vencimento: '', qrcodes: [3], notas: '' });
+    expect(enviados.at(-1)).toEqual({ vencimento: '', notas: '' });
   });
 });

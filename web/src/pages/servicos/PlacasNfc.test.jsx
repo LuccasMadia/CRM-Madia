@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Placas } from './Placas.jsx';
-import { mockApi } from '../test/mockApi.js';
-import { renderizar } from '../test/renderizar.jsx';
+import { PlacasNfc } from './PlacasNfc.jsx';
+import { mockApi } from '../../test/mockApi.js';
+import { renderizar } from '../../test/renderizar.jsx';
 
 describe('Placas', () => {
   it('mostra o resumo de lucro previsto, lucro real, estoque e prejuízo com avarias', async () => {
@@ -22,9 +22,8 @@ describe('Placas', () => {
         },
       },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
-    expect(await screen.findByRole('heading', { name: 'Placas de avaliação' })).toBeInTheDocument();
-    expect(screen.getByText(/R\$\s*76,24/)).toBeInTheDocument();
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
+    expect(await screen.findByText(/R\$\s*76,24/)).toBeInTheDocument();
     expect(screen.getByText(/R\$\s*75,00/)).toBeInTheDocument();
     expect(screen.getByText('-1')).toBeInTheDocument();
     expect(screen.getByText('Prejuízo com avarias')).toBeInTheDocument();
@@ -37,7 +36,7 @@ describe('Placas', () => {
       'GET /placas/materiais': [],
       'POST /placas/materiais': { id: 1, nome: 'Placa 10x10 PVC', estoque_atual: 0, custo_unitario_atual: null },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Materiais' }));
     await user.click(await screen.findByRole('button', { name: '+ Material' }));
@@ -58,7 +57,7 @@ describe('Placas', () => {
         valor_kit_centavos: 2490, valor_frete_centavos: 0, data_compra: '2026-10-03',
       },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
     await user.click(await screen.findByRole('button', { name: '+ Lote' }));
@@ -80,7 +79,7 @@ describe('Placas', () => {
       'GET /placas/materiais': [ativo, inativo],
       'GET /placas/lotes': [],
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
     await user.click(await screen.findByRole('button', { name: '+ Lote' }));
@@ -97,7 +96,7 @@ describe('Placas', () => {
       'GET /placas/materiais': [ativo, inativo],
       'POST /placas/materiais/2/ativar': { ...inativo, ativo: 1 },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Materiais' }));
     expect(await screen.findByText('Inativos')).toBeInTheDocument();
@@ -120,7 +119,7 @@ describe('Placas', () => {
       'GET /placas/modelos': [ativo, inativo],
       'POST /placas/modelos/2/ativar': { ...inativo, ativo: 1 },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Modelos' }));
     expect(await screen.findByText('Inativos')).toBeInTheDocument();
@@ -145,7 +144,7 @@ describe('Placas', () => {
       'GET /placas/materiais': [pvc, nfc],
       'GET /placas/lotes': [loteA, loteB],
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
     expect(await screen.findByText('Compra Outubro')).toBeInTheDocument();
@@ -168,7 +167,7 @@ describe('Placas', () => {
       'GET /placas/materiais': [pvc],
       'GET /placas/lotes': [loteSolto],
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
     expect(await screen.findByText('Placa 10x10 PVC')).toBeVisible();
@@ -186,7 +185,7 @@ describe('Placas', () => {
       'GET /placas/materiais': [pvc],
       'GET /placas/lotes': [loteA],
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
     await user.click(await screen.findByRole('button', { name: '+ Lote' }));
@@ -213,7 +212,7 @@ describe('Placas', () => {
         avisos_estoque: [],
       },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Avarias' }));
     await user.click(await screen.findByRole('button', { name: '+ Avaria' }));
@@ -240,7 +239,7 @@ describe('Placas', () => {
         custo_previsto_centavos: 249, lucro_previsto_centavos: 7751,
       },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Modelos' }));
     await user.click(await screen.findByRole('button', { name: '+ Modelo' }));
@@ -272,7 +271,7 @@ describe('Placas', () => {
         avisos_estoque: [{ material_id: 1, nome: 'Placa 10x10 PVC', estoque_atual: -1 }],
       },
     });
-    renderizar(<Placas />, { rota: '/placas', padrao: '/placas' });
+    renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
     await user.click(await screen.findByRole('tab', { name: 'Vendas' }));
     await user.click(await screen.findByRole('button', { name: '+ Venda' }));
