@@ -1,7 +1,7 @@
 # Perfil do cliente por serviço + Funil só sites e sistemas
 
 Data: 2026-10-15
-Status: aprovado em conversa, aguardando revisão da spec
+Status: aprovado
 
 ## Contexto
 
@@ -51,7 +51,7 @@ Abordagem A: **todo serviço é um registro em `projetos`, com um tipo**. GMN e 
 
 Criação e edição pelo perfil enviam:
 
-- **cobrança única**: `valor_centavos` e `vencimento` → o servidor cria uma parcela (se ainda não houver nenhuma). Editar o valor de uma cobrança única ainda não paga atualiza essa parcela; se já estiver paga, o valor fica travado no formulário.
+- **cobrança única**: `valor_total_centavos` do projeto e `vencimento` → o servidor cria uma parcela "Pagamento" (se ainda não houver nenhuma). Se o projeto tiver mais de uma parcela avulsa (parcelado à mão no Financeiro), a sincronização não mexe nelas. Valor 0 numa cobrança ainda não paga remove a parcela. Editar o valor de uma cobrança única ainda não paga atualiza essa parcela; se já estiver paga, o valor fica travado no formulário.
 - **mensalidade** (só GMN): usa `mensalidade_ativa`, `mensalidade_valor_centavos` e `mensalidade_dia_vencimento`, já existentes.
 
 O valor de placas vem da linha de placas (sugestão de pack/recompra, editável). A parcela recebe o valor total da linha.
@@ -61,6 +61,7 @@ O valor de placas vem da linha de placas (sugestão de pack/recompra, editável)
 ### Entrega e exclusão
 
 - Marcar entregue numa venda de placas usa o fluxo atual: cria a `placas_venda` e baixa o estoque. Voltar para pendente não desfaz a venda (comportamento atual); entregar de novo não duplica, porque a linha já tem `venda_id`.
+- Depois de entregue, a venda de placas não aceita troca de modelo, quantidade ou valor (`servicos` no PUT dá 400 `{campo: 'servicos', mensagem: 'Venda já entregue: modelo, quantidade e valor não podem mudar'}`); QRs, observações e cobrança continuam editáveis.
 - Excluir GMN ou venda de placas apaga parcelas, linha de serviço e ligações de QR (cascade). Uma venda de placas já entregue continua em Placas › Vendas; para devolver o estoque, exclui-se a venda lá.
 
 ### Vendas avulsas
@@ -70,8 +71,8 @@ O valor de placas vem da linha de placas (sugestão de pack/recompra, editável)
 ## 2. API
 
 - `GET /projetos?servico=site_sistema|google_meu_negocio|placas_nfc` filtra por tipo; sem o parâmetro, devolve todos (compatível).
-- `POST /projetos` aceita `servico`, `link_perfil`, `qrcodes: [ids]`, `valor_centavos` + `vencimento` (cobrança única); `PUT /projetos/:id` aceita os mesmos, exceto `servico`.
-- A resposta de um projeto inclui `servico`, `link_perfil`, `qrcodes: [{id, nome}]` e `parcelas_resumo: {total_centavos, pago: bool, proximo_vencimento}`.
+- `POST /projetos` aceita `servico`, `link_perfil`, `qrcodes: [ids]`, `valor_total_centavos` + `vencimento` (cobrança única); `PUT /projetos/:id` aceita os mesmos, exceto `servico`.
+- A resposta de um projeto inclui `servico`, `link_perfil` e `qrcodes: [{id, nome}]`. Cada cartão do perfil busca as parcelas pela rota existente `GET /projetos/:id/parcelas` (que também gera a mensalidade do mês), em vez de um resumo novo.
 - `GET /clientes/:id/placas` devolve `{ vendas_avulsas: [...], ja_comprou: n }` para o resumo e o histórico.
 - `GET /parcelas` inclui `servico` do projeto e aceita `?servico=`.
 - `GET /painel` passa a contar propostas, prazos e andamento só de `site_sistema`, e ganha `para_entregar: { gmn: n, placas: n, itens: [{projeto_id, cliente_id, cliente_nome, servico}] }`.
@@ -94,7 +95,7 @@ O valor de placas vem da linha de placas (sugestão de pack/recompra, editável)
 Botão **+ Google Meu Negócio** abre o formulário: cobrança (única ou mensalidade), valor, vencimento ou dia, link, observações.
 
 **Placas NFC**:
-- resumo: "Já comprou N placas" e, quando houver modelo com pack, "a próxima <modelo> sai R$ X";
+- resumo: "Já comprou N placas" (o preço da próxima aparece no formulário de venda, com a sugestão de pack/recompra);
 - um cartão por venda: modelo × quantidade, valor, **Pago/A receber** ("Marcar pago"), **Entregue/Pendente** ("Marcar entregue"), QRs como `#1 #3`; ações **Editar** e **Excluir**;
 - **+ Venda de placas**: modelo, quantidade, valor (com a sugestão de pack/recompra atual), vencimento, QR codes (seleção múltipla entre os QRs do cliente, rotulados `#id nome`);
 - histórico de vendas avulsas (modelo, quantidade, valor, data);
@@ -131,5 +132,5 @@ Sem mudança de função: estoque, lotes, modelos, packs, avarias e vendas (incl
 
 ## Testes
 
-- **Servidor**: migration (coluna padrão `site_sistema`, tabela de QRs); filtro `?servico=`; regras por tipo (etapas, linhas permitidas, `servico` imutável); cobrança única cria/atualiza parcela; QR de outro cliente rejeitado; `parcelas_resumo`; `/clientes/:id/placas`; `/parcelas?servico=`; `/painel` com `para_entregar`.
+- **Servidor**: migration (coluna padrão `site_sistema`, tabela de QRs); filtro `?servico=`; regras por tipo (etapas, linhas permitidas, `servico` imutável); cobrança única cria/atualiza parcela; QR de outro cliente rejeitado; venda já entregue não aceita troca de modelo, quantidade ou valor; `/clientes/:id/placas`; `/parcelas?servico=`; `/painel` com `para_entregar`.
 - **Web**: abas do perfil e `?aba=`; cartões de GMN e placas com as ações de marcar; formulários de GMN e placas (incluindo seleção de QRs); Funil e Projetos sem outros serviços; formulário de oportunidade sem placas/GMN; coluna e filtro no Financeiro; card "Para entregar"; número `#id` nos QR Codes.
