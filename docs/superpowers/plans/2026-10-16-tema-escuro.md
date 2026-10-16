@@ -129,7 +129,7 @@ Expected: todos os testes passam (nada de comportamento mudou).
 - [ ] **Step 6: Conferir o build**
 
 Run: `npx vite build`
-Expected: build conclui sem erro; `web/dist` gerado (não commitar `dist` — confira com `git status` que ele está ignorado; se não estiver, apague a pasta depois).
+Expected: build conclui sem erro (`dist/` já está no `.gitignore`).
 
 - [ ] **Step 7: Commit**
 
@@ -330,6 +330,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 Criar `web/src/components/Numero.test.jsx`:
 
 ```jsx
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Numero } from './Numero.jsx';
 
@@ -355,8 +356,6 @@ describe('Numero', () => {
   });
 });
 ```
-
-(Se o projeto não usa `describe`/`it` globais, conferir `vitest.config.js`: os outros testes, ex. `web/src/components/Sidebar.test.jsx`, mostram o padrão de import — seguir o mesmo.)
 
 - [ ] **Step 2: Rodar e ver falhar**
 
