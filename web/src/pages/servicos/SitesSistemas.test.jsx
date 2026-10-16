@@ -11,7 +11,7 @@ const antigo = {
 };
 const recente = {
   id: 2, cliente_id: 11, titulo: 'Loja Bruno', cliente_nome: 'Bruno', etapa: 'contato',
-  valor_total_centavos: 500000, atualizado_em: '2026-09-20T10:00:00.000Z', postou_instagram: 1,
+  valor_total_centavos: 500000, atualizado_em: '2026-09-20T10:00:00.000Z', postou_instagram: 1, no_portfolio: 1,
 };
 const perdido = {
   id: 3, cliente_id: 12, titulo: 'App Carla', cliente_nome: 'Carla', etapa: 'perdido',
@@ -27,8 +27,12 @@ describe('SitesSistemas', () => {
     const linhas = await screen.findAllByRole('row');
     expect(within(linhas[1]).getByRole('link', { name: 'Loja Bruno' })).toHaveAttribute('href', '/projetos/2');
     expect(within(linhas[2]).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
-    expect(within(linhas[1]).getByRole('checkbox', { name: 'Postou no Instagram' })).toBeChecked();
-    expect(within(linhas[2]).getByRole('checkbox', { name: 'Postou no Instagram' })).not.toBeChecked();
+    expect(within(linhas[1]).getByRole('img', { name: 'Postou no Instagram' })).toBeInTheDocument();
+    expect(within(linhas[1]).getByRole('img', { name: 'No portfólio' })).toBeInTheDocument();
+    expect(within(linhas[2]).queryByRole('img', { name: 'Postou no Instagram' })).toBeNull();
+    expect(within(linhas[2]).queryByRole('img', { name: 'No portfólio' })).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(within(linhas[2]).getByText('Em andamento')).toHaveClass('etapa', 'etapa--andamento');
     expect(screen.queryByText('App Carla')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/10');
     expect(screen.getByText(/5\.000,00/)).toBeInTheDocument();
@@ -42,7 +46,9 @@ describe('SitesSistemas', () => {
     });
     abrir();
     await screen.findByText('Site Ana');
-    await userEvent.setup().selectOptions(screen.getByLabelText('Etapa'), 'perdido');
+    expect(screen.getByRole('button', { name: 'Ativos' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Perdidos' }));
+    expect(screen.getByRole('button', { name: 'Perdidos' })).toHaveAttribute('aria-pressed', 'true');
     await screen.findByText('App Carla');
     expect(chamadas.map((c) => c.caminho)).toContain('/projetos?servico=site_sistema&etapa=perdido');
   });
@@ -79,5 +85,29 @@ describe('SitesSistemas', () => {
     await screen.findByText('Loja Bruno');
     expect(screen.queryByText('Site Ana')).not.toBeInTheDocument();
     expect(chamadas.map((c) => c.caminho)).toContain('/projetos?servico=site_sistema&postou_instagram=1');
+  });
+
+  it('filtros de etapa em pílulas, na ordem do funil', async () => {
+    mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /clientes': [] });
+    abrir();
+    const grupo = await screen.findByRole('group', { name: 'Etapa' });
+    expect(within(grupo).getAllByRole('button').map((b) => b.textContent))
+      .toEqual(['Ativos', 'Contato', 'Proposta', 'Em andamento', 'Entregue', 'Perdidos']);
+  });
+
+  it('valor zerado aparece como travessão', async () => {
+    mockApi({ 'GET /projetos?servico=site_sistema': [{ ...antigo, valor_total_centavos: 0 }], 'GET /clientes': [] });
+    abrir();
+    const linhas = await screen.findAllByRole('row');
+    expect(within(linhas[1]).getByText('—')).toBeInTheDocument();
+    expect(within(linhas[1]).queryByText(/R$/)).toBeNull();
+  });
+
+  it('clicar em qualquer parte da linha abre o projeto', async () => {
+    mockApi({ 'GET /projetos?servico=site_sistema': [antigo], 'GET /clientes': [] });
+    abrir();
+    const linhas = await screen.findAllByRole('row');
+    await userEvent.setup().click(within(linhas[1]).getByText('Em andamento'));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
   });
 });

@@ -108,6 +108,28 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .etiqueta--proposta { color: var(--atencao); background: rgb(251 191 36 / 0.12); }
 .item-atrasado { color: var(--perigo); font-weight: 600; }
 .tabela__linha--inativa { opacity: 0.55; }
+
+.filtros { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.filtros__selects { display: flex; gap: 8px; flex-wrap: wrap; }
+.pilulas { display: flex; gap: 6px; flex-wrap: wrap; }
+.pilula { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borda); background: transparent; color: var(--texto-suave); cursor: pointer; }
+.pilula:hover { color: var(--texto); border-color: var(--t5); }
+.pilula[aria-pressed='true'] { color: var(--primaria); border-color: var(--primaria); background: var(--primaria-suave); }
+.select-compacto { font-size: 0.85rem; padding: 6px 10px; min-height: 0; width: auto; }
+
+.tabela--limpa td { padding: 14px 12px; }
+.tabela__linha--clicavel { cursor: pointer; }
+.tabela__titulo { display: block; color: var(--texto); font-weight: 500; text-decoration: none; }
+.tabela__sub { display: block; margin-top: 2px; font-size: 0.85rem; color: var(--texto-suave); text-decoration: none; }
+.tabela__titulo:hover, .tabela__sub:hover { color: var(--primaria); }
+.tabela__valor { color: var(--texto-suave); }
+.etapa { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--texto-suave); white-space: nowrap; }
+.etapa::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--texto-suave); }
+.etapa--proposta::before { background: var(--atencao); }
+.etapa--andamento::before { background: var(--primaria); }
+.etapa--entregue::before { background: var(--ok); }
+.etapa--perdido::before { background: var(--perigo); }
+.selo-divulgacao { display: inline-flex; color: var(--texto-suave); margin-right: 8px; vertical-align: middle; }
 .tabela__divisoria td { padding: 4px 12px; font-size: 0.75rem; color: var(--texto-suave); border-bottom: 1px solid var(--borda); }
 
 .abas { display: flex; gap: 4px; border-bottom: 1px solid var(--borda); margin-bottom: 20px; flex-wrap: wrap; }

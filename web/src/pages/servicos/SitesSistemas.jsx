@@ -1,12 +1,28 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Icone } from '../../components/Icone.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
-import { ETAPAS, ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { ROTULO_ETAPA } from '../../lib/rotulos.js';
+
+// Rótulos curtos só para as pílulas do filtro.
+const FILTROS_ETAPA = [
+  ['', 'Ativos'],
+  ['contato', 'Contato'],
+  ['proposta', 'Proposta'],
+  ['andamento', 'Em andamento'],
+  ['entregue', 'Entregue'],
+  ['perdido', 'Perdidos'],
+];
+
+function Selo({ icone, rotulo }) {
+  return <span className="selo-divulgacao" role="img" aria-label={rotulo} title={rotulo}><Icone nome={icone} tamanho={16} /></span>;
+}
 
 export function SitesSistemas() {
+  const navegar = useNavigate();
   const [etapa, setEtapa] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [instagram, setInstagram] = useState('');
@@ -22,49 +38,53 @@ export function SitesSistemas() {
     .slice()
     .sort((a, b) => b.atualizado_em.localeCompare(a.atualizado_em));
 
+  // A linha toda abre o projeto; cliques em links (título, cliente) seguem o próprio link.
+  function abrirLinha(e, id) {
+    if (e.target.closest('a')) return;
+    navegar(`/projetos/${id}`);
+  }
+
   return (
     <div>
-      <header className="pagina__topo">
-        <div className="form--linha">
-          <label className="campo">
-            <span>Etapa</span>
-            <select aria-label="Etapa" value={etapa} onChange={(e) => setEtapa(e.target.value)}>
-              <option value="">Ativos</option>
-              {ETAPAS.map((e) => <option key={e} value={e}>{ROTULO_ETAPA[e]}</option>)}
-            </select>
-          </label>
-          <label className="campo">
-            <span>Cliente</span>
-            <select aria-label="Cliente" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-              <option value="">Todos os clientes</option>
-              {(clientes ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-          </label>
-          <label className="campo">
-            <span>Instagram</span>
-            <select aria-label="Instagram" value={instagram} onChange={(e) => setInstagram(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="1">Postaram</option>
-              <option value="0">Não postaram</option>
-            </select>
-          </label>
+      <div className="filtros">
+        <div className="pilulas" role="group" aria-label="Etapa">
+          {FILTROS_ETAPA.map(([valor, rotulo]) => (
+            <button key={rotulo} type="button" className="pilula" aria-pressed={etapa === valor} onClick={() => setEtapa(valor)}>
+              {rotulo}
+            </button>
+          ))}
         </div>
-      </header>
+        <div className="filtros__selects">
+          <select className="select-compacto" aria-label="Cliente" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
+            <option value="">Todos os clientes</option>
+            {(clientes ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+          <select className="select-compacto" aria-label="Instagram" value={instagram} onChange={(e) => setInstagram(e.target.value)}>
+            <option value="">Instagram: todos</option>
+            <option value="1">Postaram</option>
+            <option value="0">Não postaram</option>
+          </select>
+        </div>
+      </div>
       <Aviso erro={erro} />
       {projetos && (lista.length ? (
-        <table className="tabela">
+        <table className="tabela tabela--limpa">
           <thead>
-            <tr><th>Título</th><th>Cliente</th><th>Etapa</th><th>Instagram</th><th>Portfólio</th><th className="num">Valor total</th></tr>
+            <tr><th>Projeto</th><th>Etapa</th><th>Divulgação</th><th className="num">Valor</th></tr>
           </thead>
           <tbody>
             {lista.map((p) => (
-              <tr key={p.id}>
-                <td><Link to={`/projetos/${p.id}`}>{p.titulo}</Link></td>
-                <td><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></td>
-                <td><span className={`etiqueta etiqueta--${p.etapa}`}>{ROTULO_ETAPA[p.etapa]}</span></td>
-                <td><input type="checkbox" checked={Boolean(p.postou_instagram)} disabled aria-label="Postou no Instagram" /></td>
-                <td><input type="checkbox" checked={Boolean(p.no_portfolio)} disabled aria-label="Adicionado ao portfólio" /></td>
-                <td className="num">{formatarDinheiro(p.valor_total_centavos)}</td>
+              <tr key={p.id} className="tabela__linha--clicavel" onClick={(e) => abrirLinha(e, p.id)}>
+                <td>
+                  <Link className="tabela__titulo" to={`/projetos/${p.id}`}>{p.titulo}</Link>
+                  <Link className="tabela__sub" to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link>
+                </td>
+                <td><span className={`etapa etapa--${p.etapa}`}>{ROTULO_ETAPA[p.etapa]}</span></td>
+                <td>
+                  {Boolean(p.postou_instagram) && <Selo icone="instagram" rotulo="Postou no Instagram" />}
+                  {Boolean(p.no_portfolio) && <Selo icone="portfolio" rotulo="No portfólio" />}
+                </td>
+                <td className="num tabela__valor">{p.valor_total_centavos ? formatarDinheiro(p.valor_total_centavos) : '—'}</td>
               </tr>
             ))}
           </tbody>

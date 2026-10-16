@@ -40,6 +40,19 @@ const DESENHOS = {
       <path d="M9 9.5a4 4 0 0 1 0 5M12 8a6.5 6.5 0 0 1 0 8M15 6.5a9 9 0 0 1 0 11" />
     </>
   ),
+  instagram: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M17 7v.01" />
+    </>
+  ),
+  portfolio: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M9 9v11" />
+    </>
+  ),
   conteudo: (
     <>
       <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
