@@ -6,9 +6,9 @@ import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasV
 import { obterConfig } from '../repos/config.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
-import { ErroValidacao, naoEncontrado } from '../http/erros.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { ETAPAS, aplicarRegrasProjeto } from '../domain/regras.js';
-import { TIPOS_SERVICO, calcularValorTotal, valorLinhaServico } from '../domain/servicos.js';
+import { SERVICOS, TIPOS_SERVICO, calcularValorTotal, valorLinhaServico } from '../domain/servicos.js';
 import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { REGRAS_CLIENTE } from './clientes.js';
 
@@ -136,11 +136,14 @@ export function rotasProjetos({ db, hoje }) {
   }
 
   r.get('/', (req, res) => {
+    const { servico } = req.query;
+    if (servico && !SERVICOS.includes(servico)) throw new ErroHttp(400, 'Serviço inválido');
     res.json(projetos.listarComCliente({
       etapa: req.query.etapa,
       cliente_id: req.query.cliente_id,
       postou_instagram: req.query.postou_instagram,
       ficticio: req.query.ficticio,
+      servico,
     }).map(comServicos));
   });
 

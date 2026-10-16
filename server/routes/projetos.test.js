@@ -355,3 +355,27 @@ describe('/api/projetos com serviços', () => {
     expect(vendas[0]).toMatchObject({ quantidade: 3, preco_vendido_centavos: 6667 });
   });
 });
+
+describe('/api/projetos — tipo de serviço', () => {
+  it('projeto sem servico fica site_sistema', async () => {
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201);
+    expect(res.body).toMatchObject({ servico: 'site_sistema', link_perfil: null });
+  });
+
+  it('a migration cria a tabela de ligações projeto/QR', () => {
+    const colunas = ctx.db.prepare('PRAGMA table_info(projetos_qrcodes)').all().map((c) => c.name);
+    expect(colunas).toEqual(['projeto_id', 'qrcode_id']);
+  });
+
+  it('filtra por ?servico= e rejeita valor desconhecido', async () => {
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201);
+    ctx.db.prepare(`INSERT INTO projetos (cliente_id, titulo, etapa, servico, criado_em, atualizado_em)
+      VALUES (?, 'GMN', 'andamento', 'google_meu_negocio', 'x', 'x')`).run(cliente.id);
+    const sites = (await ctx.http.get('/api/projetos?servico=site_sistema').expect(200)).body;
+    expect(sites.map((p) => p.titulo)).toEqual(['Site']);
+    const gmn = (await ctx.http.get('/api/projetos?servico=google_meu_negocio').expect(200)).body;
+    expect(gmn.map((p) => p.titulo)).toEqual(['GMN']);
+    expect((await ctx.http.get('/api/projetos').expect(200)).body).toHaveLength(2);
+    await ctx.http.get('/api/projetos?servico=nada').expect(400);
+  });
+});

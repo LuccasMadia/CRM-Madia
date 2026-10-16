@@ -1,4 +1,6 @@
 export const TIPOS_SERVICO = ['placas_nfc', 'sistemas', 'saas', 'google_meu_negocio'];
+export const SERVICOS = ['site_sistema', 'google_meu_negocio', 'placas_nfc'];
+export const LINHAS_SITE = ['sistemas', 'saas'];
 
 export function valorLinhaServico(servico) {
   return servico.valor_total_centavos ?? servico.valor_unitario_centavos * (servico.quantidade ?? 1);
