@@ -8,6 +8,7 @@ import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { AbaSites } from './cliente/AbaSites.jsx';
+import { AbaGmn } from './cliente/AbaGmn.jsx';
 
 const ABAS = [
   ['sites', 'Sites e Sistemas', 'site_sistema'],
@@ -79,7 +80,7 @@ export function ClienteDetalhe() {
       </div>
       <div role="tabpanel">
         {aba === 'sites' && <AbaSites cliente={cliente} projetos={doServico('site_sistema')} />}
-        {aba === 'gmn' && <p className="vazio">Em breve.</p>}
+        {aba === 'gmn' && <AbaGmn cliente={cliente} projetos={doServico('google_meu_negocio')} onMudou={mudou} />}
         {aba === 'placas' && <p className="vazio">Em breve.</p>}
       </div>
       {editando && (
