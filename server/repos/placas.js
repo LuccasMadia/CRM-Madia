@@ -1,4 +1,4 @@
-import { criarRepo } from './crud.js';
+import { criarRepo, linha } from './crud.js';
 import { precoPlacas } from '../domain/placas.js';
 
 export const CAMPOS_MATERIAL = ['nome', 'ativo'];
@@ -73,6 +73,14 @@ export function repoPlacasVendas(db) {
         WHERE cliente_id = ?
           AND id NOT IN (SELECT venda_id FROM projetos_servicos WHERE projeto_id = ? AND venda_id IS NOT NULL)
       `).get(clienteId, excluirProjetoId ?? -1).n;
+    },
+    listarAvulsasDoCliente(clienteId) {
+      return db.prepare(`
+        SELECT v.*, m.nome AS modelo_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
+        WHERE v.cliente_id = ?
+          AND v.id NOT IN (SELECT venda_id FROM projetos_servicos WHERE venda_id IS NOT NULL)
+        ORDER BY v.data_venda DESC, v.id DESC
+      `).all(clienteId).map(linha);
     },
   };
 }

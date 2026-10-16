@@ -82,3 +82,26 @@ describe('/api/clientes', () => {
     await ctx.http.get('/api/clientes/abc').expect(404);
   });
 });
+
+describe('GET /api/clientes/:id/placas', () => {
+  it('lista vendas avulsas do cliente e soma o que ele já comprou', async () => {
+    const ctx = criarContexto();
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Placa 10x10', preco_venda_centavos: 8000 })).body;
+    const inserirVenda = (quantidade, data) => Number(ctx.db.prepare(`INSERT INTO placas_vendas (modelo_id, quantidade, preco_vendido_centavos, custo_unitario_centavos, cliente_id, data_venda, criado_em, atualizado_em)
+      VALUES (?, ?, 8000, 100, ?, ?, 'x', 'x')`).run(modelo.id, quantidade, ana.id, data).lastInsertRowid);
+    inserirVenda(2, '2026-08-01');
+    const vendaDoPerfil = inserirVenda(3, '2026-09-01');
+    const { lastInsertRowid: projetoId } = ctx.db.prepare(`INSERT INTO projetos (cliente_id, titulo, etapa, servico, criado_em, atualizado_em)
+      VALUES (?, 'Placas NFC', 'entregue', 'placas_nfc', 'x', 'x')`).run(ana.id);
+    ctx.db.prepare(`INSERT INTO projetos_servicos (projeto_id, tipo, modelo_id, quantidade, valor_unitario_centavos, valor_total_centavos, venda_id, criado_em, atualizado_em)
+      VALUES (?, 'placas_nfc', ?, 3, 8000, 24000, ?, 'x', 'x')`).run(projetoId, modelo.id, vendaDoPerfil);
+
+    const res = await ctx.http.get(`/api/clientes/${ana.id}/placas`).expect(200);
+    expect(res.body.ja_comprou).toBe(5);
+    expect(res.body.vendas_avulsas).toEqual([
+      expect.objectContaining({ quantidade: 2, data_venda: '2026-08-01', modelo_nome: 'Placa 10x10' }),
+    ]);
+    await ctx.http.get('/api/clientes/999/placas').expect(404);
+  });
+});

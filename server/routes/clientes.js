@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { repoQrcodes } from '../repos/qrcodes.js';
+import { repoPlacasVendas } from '../repos/placas.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
 
@@ -19,6 +20,7 @@ export function rotasClientes({ db }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
   const qrcodes = repoQrcodes(db);
+  const vendasPlacas = repoPlacasVendas(db);
   const r = Router();
 
   r.get('/', (req, res) => res.json(clientes.buscar(req.query.busca ?? '')));
@@ -36,6 +38,15 @@ export function rotasClientes({ db }) {
       projetos: projetos.listarComCliente({ cliente_id: cliente.id }),
       qrcodes: qrcodes.listar({ cliente_id: cliente.id }),
       total_faturado_centavos: clientes.totalFaturado(cliente.id),
+    });
+  });
+
+  r.get('/:id/placas', (req, res) => {
+    const cliente = clientes.obter(lerId(req.params.id));
+    if (!cliente) throw naoEncontrado('Cliente');
+    res.json({
+      vendas_avulsas: vendasPlacas.listarAvulsasDoCliente(cliente.id),
+      ja_comprou: vendasPlacas.quantidadeDoCliente(cliente.id),
     });
   });
 
