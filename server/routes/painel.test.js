@@ -97,3 +97,68 @@ describe('GET /api/painel', () => {
     expect(res.body.proximos.find((i) => i.tipo === 'parcela')).toMatchObject({ servico: 'google_meu_negocio', cliente_id: ana.id });
   });
 });
+
+describe('GET /api/painel/graficos', () => {
+  function novoProjeto(ctx, { clienteId, titulo, etapa, servico = 'site_sistema', ficticio = 0 }) {
+    return ctx.db.prepare(
+      `INSERT INTO projetos (cliente_id, titulo, etapa, servico, ficticio, criado_em, atualizado_em)
+       VALUES (?, ?, ?, ?, ?, '2026-01-01', '2026-01-01')`,
+    ).run(clienteId, titulo, etapa, servico, ficticio).lastInsertRowid;
+  }
+  function parcelaPaga(ctx, projetoId, valor, pagoEm) {
+    ctx.db.prepare(
+      `INSERT INTO parcelas (projeto_id, valor_centavos, vencimento, pago_em, criado_em, atualizado_em)
+       VALUES (?, ?, ?, ?, '2026-01-01', '2026-01-01')`,
+    ).run(projetoId, valor, pagoEm, pagoEm);
+  }
+
+  it('monta os 4 gráficos sem fictícios', async () => {
+    const ctx = criarContexto({ hoje: '2026-10-16' });
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana', origem: 'Instagram' })).body;
+    await ctx.http.post('/api/clientes').send({ nome: 'Bruno', origem: ' instagram ' });
+    await ctx.http.post('/api/clientes').send({ nome: 'Davi', origem: 'Instagram' });
+    await ctx.http.post('/api/clientes').send({ nome: 'Caio' });
+
+    const entregue = novoProjeto(ctx, { clienteId: ana.id, titulo: 'Site', etapa: 'entregue' });
+    novoProjeto(ctx, { clienteId: ana.id, titulo: 'Proposta', etapa: 'proposta' });
+    novoProjeto(ctx, { clienteId: ana.id, titulo: 'Perdido', etapa: 'perdido' });
+    const ficticio = novoProjeto(ctx, { clienteId: ana.id, titulo: 'Case', etapa: 'entregue', ficticio: 1 });
+    const gmn = novoProjeto(ctx, { clienteId: ana.id, titulo: 'GMN', etapa: 'entregue', servico: 'google_meu_negocio' });
+
+    parcelaPaga(ctx, entregue, 100000, '2026-10-05');
+    parcelaPaga(ctx, entregue, 50000, '2026-04-10');
+    parcelaPaga(ctx, ficticio, 999900, '2026-10-01');
+    parcelaPaga(ctx, gmn, 20000, '2026-09-12');
+
+    const res = await ctx.http.get('/api/painel/graficos').expect(200);
+    expect(res.body.funil).toEqual({
+      etapas: [
+        { etapa: 'contato', quantidade: 3, percentual: 100 },
+        { etapa: 'proposta', quantidade: 2, percentual: 67 },
+        { etapa: 'andamento', quantidade: 1, percentual: 33 },
+        { etapa: 'entregue', quantidade: 1, percentual: 33 },
+      ],
+      perdidos: 1,
+    });
+    expect(res.body.recebido_por_mes.map((m) => m.total_centavos)).toEqual([0, 0, 0, 0, 20000, 100000]);
+    expect(res.body.recebido_por_mes[5].mes).toBe('2026-10');
+    expect(res.body.origens).toEqual({
+      total: 4,
+      fatias: [{ nome: 'Instagram', quantidade: 3 }, { nome: 'Não informado', quantidade: 1 }],
+    });
+    expect(res.body.por_servico).toEqual([
+      { servico: 'site_sistema', total_centavos: 150000 },
+      { servico: 'google_meu_negocio', total_centavos: 20000 },
+      { servico: 'placas_nfc', total_centavos: 0 },
+    ]);
+  });
+
+  it('com banco vazio devolve tudo zerado', async () => {
+    const ctx = criarContexto({ hoje: '2026-10-16' });
+    const res = await ctx.http.get('/api/painel/graficos').expect(200);
+    expect(res.body.funil.etapas.every((e) => e.quantidade === 0)).toBe(true);
+    expect(res.body.recebido_por_mes).toHaveLength(6);
+    expect(res.body.origens).toEqual({ total: 0, fatias: [] });
+    expect(res.body.por_servico.every((s) => s.total_centavos === 0)).toBe(true);
+  });
+});

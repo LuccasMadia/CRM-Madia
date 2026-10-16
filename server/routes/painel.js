@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { linha } from '../repos/crud.js';
 import { aReceberNoMes, estadoParcela } from '../domain/financeiro.js';
 import { montarProximos, agruparTarefasPorProjeto, montarTarefasDivulgacao } from '../domain/painel.js';
+import { montarFunil, recebidoPorMes, agruparOrigens, faturamentoPorServico } from '../domain/graficos.js';
 
 export function rotasPainel({ db, hoje }) {
   const r = Router();
@@ -72,6 +73,20 @@ export function rotasPainel({ db, hoje }) {
         },
         dia,
       ),
+    });
+  });
+
+  r.get('/painel/graficos', (req, res) => {
+    const dia = hoje();
+    const pagas = todas(
+      `SELECT pa.valor_centavos, pa.pago_em, p.servico FROM parcelas pa
+       JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NOT NULL AND p.ficticio = 0`,
+    );
+    res.json({
+      funil: montarFunil(todas('SELECT etapa, servico FROM projetos WHERE ficticio = 0')),
+      recebido_por_mes: recebidoPorMes(pagas, dia),
+      origens: agruparOrigens(todas('SELECT origem FROM clientes')),
+      por_servico: faturamentoPorServico(pagas, dia),
     });
   });
 
