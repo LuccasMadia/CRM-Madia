@@ -105,3 +105,14 @@ describe('migrarLegado', () => {
     expect(db.prepare('SELECT COUNT(*) AS n FROM conteudos_legado').get().n).toBe(0);
   });
 });
+
+describe('vincular — planejado já ligado', () => {
+  it('recusa ligar planejado que já está ligado a outro post', () => {
+    const c = planejado();
+    midia({ id: 'a' });
+    midia({ id: 'b' });
+    vincular(db, c, 'a');
+    expect(() => vincular(db, c, 'b')).toThrow();
+    expect(conteudo(c).midia_id).toBe('a');
+  });
+});

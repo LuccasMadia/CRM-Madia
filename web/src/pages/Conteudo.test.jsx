@@ -172,3 +172,23 @@ describe('Conteudo — datas', () => {
     expect(within(painel).getByText(`Reels · ${formatarData(diaLocal)}`)).toBeInTheDocument();
   });
 });
+
+describe('Conteudo — vínculo ao trocar de post', () => {
+  it('a escolha do planejado não passa de um post para outro', async () => {
+    const outra = { ...MIDIAS[0], id: 'm2', legenda: 'Outro post' };
+    const { chamadas } = mockApi(rotas({
+      'GET /instagram/grid': { prontos: PRONTOS, midias: [MIDIAS[0], outra] },
+      'GET /instagram/midias/m1/candidatos': [PRONTOS[0], PRONTOS[1]],
+      'GET /instagram/midias/m2/candidatos': [PRONTOS[0], PRONTOS[1]],
+      'POST /instagram/midias/m2/vinculo': {},
+    }));
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Ver post Reels Popy' }));
+    await user.selectOptions(await screen.findByLabelText('Era um destes planejados?'), '8');
+    await user.click(screen.getByRole('button', { name: 'Ver post Outro post' }));
+    await screen.findByLabelText('Era um destes planejados?');
+    await user.click(screen.getByRole('button', { name: 'Ligar' }));
+    expect(chamadas.find((c) => c.caminho === '/instagram/midias/m2/vinculo').corpo).toEqual({ conteudo_id: 7 });
+  });
+});

@@ -10,8 +10,11 @@ const livresAntesDe = (db, publicadoEm) =>
 export function vincular(db, conteudoId, midiaId) {
   const ocupado = db.prepare('SELECT id FROM conteudos WHERE midia_id = ? AND id <> ?').get(midiaId, conteudoId);
   if (ocupado) throw new ErroValidacao([{ campo: 'conteudo_id', mensagem: 'Este post já está ligado a outro planejado' }]);
-  const conteudo = db.prepare('SELECT projeto_id FROM conteudos WHERE id = ?').get(conteudoId);
+  const conteudo = db.prepare('SELECT projeto_id, midia_id FROM conteudos WHERE id = ?').get(conteudoId);
   if (!conteudo) throw new ErroValidacao([{ campo: 'conteudo_id', mensagem: 'Planejado não encontrado' }]);
+  if (conteudo.midia_id && conteudo.midia_id !== midiaId) {
+    throw new ErroValidacao([{ campo: 'conteudo_id', mensagem: 'Este planejado já está ligado a outro post' }]);
+  }
   emTransacao(db, () => {
     db.prepare('UPDATE conteudos SET midia_id = ? WHERE id = ?').run(midiaId, conteudoId);
     if (conteudo.projeto_id != null) {

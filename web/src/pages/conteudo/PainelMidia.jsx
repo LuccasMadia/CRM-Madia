@@ -95,7 +95,7 @@ export function PainelMidia({ midia, onMudou }) {
           {(projetos ?? []).map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
         </select>
       </div>
-      <Vinculo midia={midia} onMudou={onMudou} executar={executar} />
+      <Vinculo key={midia.id} midia={midia} onMudou={onMudou} executar={executar} />
       <Aviso erro={erro} />
     </aside>
   );
