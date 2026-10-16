@@ -51,6 +51,8 @@ export function criarClienteInstagram({ token, fetch = globalThis.fetch, agora =
     return todas;
   }
 
+  const midia = (id) => obter(`/${id}`, { fields: 'id,media_type,media_url,thumbnail_url' });
+
   async function insights(midiaId) {
     const vazio = Object.fromEntries(Object.values(METRICAS).map((nome) => [nome, null]));
     try {
@@ -93,5 +95,5 @@ export function criarClienteInstagram({ token, fetch = globalThis.fetch, agora =
     return { token: r.access_token, expiraEm: new Date(agora().getTime() + r.expires_in * 1000).toISOString() };
   }
 
-  return { perfil, midias, insights, historicoSeguidores, renovarToken };
+  return { perfil, midias, midia, insights, historicoSeguidores, renovarToken };
 }

@@ -30,10 +30,14 @@ async function executar({ db, dataDir, fetch, agora }) {
 
   const expiraEm = obterConfig(db, 'instagram_token_expira_em');
   if (expiraEm && Date.parse(expiraEm) - agora().getTime() < RENOVAR_ANTES_MS) {
-    const renovado = await criarClienteInstagram({ token, fetch, agora }).renovarToken();
-    token = renovado.token;
-    definirConfig(db, 'instagram_token', token);
-    definirConfig(db, 'instagram_token_expira_em', renovado.expiraEm);
+    try {
+      const renovado = await criarClienteInstagram({ token, fetch, agora }).renovarToken();
+      token = renovado.token;
+      definirConfig(db, 'instagram_token', token);
+      definirConfig(db, 'instagram_token_expira_em', renovado.expiraEm);
+    } catch {
+      // Segue com o token atual; a renovação é tentada de novo na próxima sync.
+    }
   }
   const ig = criarClienteInstagram({ token, fetch, agora });
 
@@ -41,7 +45,9 @@ async function executar({ db, dataDir, fetch, agora }) {
   definirConfig(db, 'instagram_usuario', perfil.username);
   db.prepare('INSERT OR REPLACE INTO instagram_seguidores (dia, seguidores) VALUES (?, ?)').run(hojeLocal(agora()), perfil.followers_count);
 
-  const primeira = db.prepare('SELECT COUNT(*) AS n FROM instagram_midias').get().n === 0;
+  // Só conta como já sincronizado quando uma sync completa desta conta terminou;
+  // assim uma primeira sync interrompida ou uma troca de conta busca tudo de novo.
+  const primeira = obterConfig(db, 'instagram_sync_completa') !== perfil.id;
   if (primeira) {
     const historico = db.prepare('INSERT OR IGNORE INTO instagram_seguidores (dia, seguidores) VALUES (?, ?)');
     for (const { dia, seguidores } of await ig.historicoSeguidores(perfil.followers_count)) historico.run(dia, seguidores);
@@ -57,8 +63,8 @@ async function executar({ db, dataDir, fetch, agora }) {
       @alcance, @visualizacoes, @salvamentos, @compartilhamentos, 0, @atualizado_em)
     ON CONFLICT(id) DO UPDATE SET tipo = excluded.tipo, legenda = excluded.legenda, permalink = excluded.permalink,
       publicado_em = excluded.publicado_em, curtidas = excluded.curtidas, comentarios = excluded.comentarios,
-      alcance = excluded.alcance, visualizacoes = excluded.visualizacoes, salvamentos = excluded.salvamentos,
-      compartilhamentos = excluded.compartilhamentos, removido = 0, atualizado_em = excluded.atualizado_em`);
+      alcance = COALESCE(excluded.alcance, instagram_midias.alcance), visualizacoes = COALESCE(excluded.visualizacoes, instagram_midias.visualizacoes), salvamentos = COALESCE(excluded.salvamentos, instagram_midias.salvamentos),
+      compartilhamentos = COALESCE(excluded.compartilhamentos, instagram_midias.compartilhamentos), removido = 0, atualizado_em = excluded.atualizado_em`);
 
   const novas = [];
   for (const m of recebidas) {
@@ -78,8 +84,11 @@ async function executar({ db, dataDir, fetch, agora }) {
     if (!existentes.has(m.id)) novas.push(registro);
   }
 
+  // Lista vazia com a conta tendo posts costuma ser falha passageira da API:
+  // não marca nada como removido para não desfazer vínculos.
+  const respostaSuspeita = recebidas.length === 0 && perfil.media_count > 0;
   const vistas = new Set(recebidas.map((m) => m.id));
-  const naJanela = db
+  const naJanela = respostaSuspeita ? [] : db
     .prepare('SELECT id FROM instagram_midias WHERE removido = 0 AND publicado_em >= ?')
     .all(desde ?? '')
     .filter((m) => !vistas.has(m.id));
@@ -88,9 +97,21 @@ async function executar({ db, dataDir, fetch, agora }) {
     desvincular(db, id);
   }
 
+  await baixarCapasPendentes(db, dataDir, fetch, ig, vistas);
   for (const midia of novas) vincularAutomatico(db, midia);
   migrarLegado(db);
+  definirConfig(db, 'instagram_sync_completa', perfil.id);
   return { novas: novas.length, atualizadas: recebidas.length - novas.length };
+}
+
+// Capas que falharam em syncs anteriores, inclusive de posts fora da janela.
+async function baixarCapasPendentes(db, dataDir, fetch, ig, jaTentadas) {
+  const pendentes = db.prepare('SELECT id FROM instagram_midias WHERE capa IS NULL AND removido = 0').all();
+  for (const { id } of pendentes) {
+    if (jaTentadas.has(id)) continue;
+    const m = await ig.midia(id).catch(() => null);
+    if (m) await baixarCapaSeFaltar(db, dataDir, fetch, m);
+  }
 }
 
 // As URLs de mídia da Meta expiram; a capa é guardada localmente uma vez.

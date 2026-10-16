@@ -84,7 +84,8 @@ describe('sincronizar', () => {
   it('syncs seguintes só olham os últimos 60 dias e não removem as antigas', async () => {
     await rodar(rotasPadrao()).promessa;
     const depois = new Date('2026-12-05T15:00:00.000Z');
-    const { falso, promessa } = rodar(rotasPadrao({ '/me/media': { data: [] } }), depois);
+    const recente = { id: 'm3', caption: 'Nova', media_type: 'IMAGE', media_product_type: 'FEED', timestamp: '2026-12-01T10:00:00+0000' };
+    const { falso, promessa } = rodar(rotasPadrao({ '/me/media': { data: [recente] } }), depois);
     await promessa;
     expect(midia('m2').removido).toBe(0);
     expect(midia('m1').removido).toBe(1);
@@ -142,5 +143,60 @@ describe('sincronizar', () => {
     })).promessa;
     const serie = db.prepare('SELECT dia, seguidores FROM instagram_seguidores ORDER BY dia').all().map((r) => ({ ...r }));
     expect(serie).toEqual([{ dia: '2026-10-14', seguidores: 1284 }, { dia: '2026-10-16', seguidores: 1284 }]);
+  });
+});
+
+describe('sincronizar — robustez', () => {
+  it('falha de insights numa sync seguinte mantém os números anteriores', async () => {
+    await rodar(rotasPadrao()).promessa;
+    await rodar(rotasPadrao({ '/m1/insights': { status: 400, corpo: { error: { code: 4, message: 'rate limit' } } } })).promessa;
+    expect(midia('m1')).toMatchObject({ alcance: 1870, salvamentos: 21 });
+  });
+
+  it('primeira sync interrompida: a próxima busca tudo de novo', async () => {
+    db.prepare("INSERT INTO instagram_midias (id, tipo, publicado_em, atualizado_em) VALUES ('m1', 'reels', '2026-10-10T15:00:00.000Z', 'x')").run();
+    const depois = new Date('2027-03-01T15:00:00.000Z');
+    const { falso, promessa } = rodar(rotasPadrao(), depois);
+    await promessa;
+    expect(midia('m2').id).toBe('m2');
+    expect(falso.chamadas.some((u) => u.pathname === '/me/insights')).toBe(true);
+  });
+
+  it('conta diferente: busca tudo e tira do grid os posts da conta anterior', async () => {
+    await rodar(rotasPadrao()).promessa;
+    const outra = rotasPadrao({
+      '/me': { user_id: '999', username: 'outra', followers_count: 10, media_count: 1 },
+      '/me/media': { data: [{ id: 'x1', caption: 'Outra', media_type: 'IMAGE', media_product_type: 'FEED', timestamp: '2025-01-01T10:00:00+0000' }] },
+      '/x1/insights': { data: [] },
+    });
+    await rodar(outra).promessa;
+    expect(midia('x1').removido).toBe(0);
+    expect(midia('m1').removido).toBe(1);
+    expect(midia('m2').removido).toBe(1);
+  });
+
+  it('capa antiga que faltou é buscada de novo fora da janela de 60 dias', async () => {
+    await rodar(rotasPadrao({ 'https://cdn.test/m2.jpg': { status: 404, corpo: {} } })).promessa;
+    const depois = new Date('2027-03-01T15:00:00.000Z');
+    await rodar(rotasPadrao({
+      '/me/media': { data: [] },
+      '/m2': { id: 'm2', media_type: 'IMAGE', media_url: 'https://cdn.test/m2.jpg' },
+    }), depois).promessa;
+    expect(midia('m2').capa).toBe('instagram/m2.jpg');
+  });
+
+  it('resposta vazia com a conta tendo posts não remove nada nem desfaz vínculos', async () => {
+    await rodar(rotasPadrao()).promessa;
+    db.exec("INSERT INTO conteudos (tipo, titulo, estado, midia_id, criado_em, atualizado_em) VALUES ('post', 'P', 'pronto', 'm1', 'x', 'x')");
+    await rodar(rotasPadrao({ '/me/media': { data: [] } })).promessa;
+    expect(midia('m1').removido).toBe(0);
+    expect(db.prepare("SELECT midia_id FROM conteudos WHERE titulo = 'P'").get().midia_id).toBe('m1');
+  });
+
+  it('falha ao renovar o token não impede a sync com o token atual', async () => {
+    definirConfig(db, 'instagram_token_expira_em', '2026-10-26T00:00:00.000Z');
+    const { promessa } = rodar(rotasPadrao({ '/refresh_access_token': { status: 500, corpo: { error: { code: 2, message: 'fora' } } } }));
+    expect(await promessa).toEqual({ novas: 2, atualizadas: 0 });
+    expect(obterConfig(db, 'instagram_token')).toBe('tok');
   });
 });
