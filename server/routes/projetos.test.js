@@ -397,3 +397,46 @@ describe('/api/projetos — tipo de serviço', () => {
     expect(placas.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Venda de placas precisa de exatamente uma linha de placas' }]);
   });
 });
+
+describe('/api/projetos — QR codes da venda de placas', () => {
+  let modelo;
+  const criarQr = async (clienteId, nome) => (await ctx.http.post('/api/qrcodes').send({ cliente_id: clienteId, nome, categoria: 'cardapio' }).expect(201)).body;
+  const venda = (extra = {}) => ({
+    cliente_id: cliente.id, titulo: 'Placas NFC', servico: 'placas_nfc',
+    servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1, valor_total_centavos: 8000 }], ...extra,
+  });
+
+  beforeEach(async () => {
+    modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Placa', preco_venda_centavos: 8000 })).body;
+  });
+
+  it('liga QRs do cliente e devolve {id, nome}', async () => {
+    const qr1 = await criarQr(cliente.id, 'Balcão');
+    const qr2 = await criarQr(cliente.id, 'Mesa');
+    const res = await ctx.http.post('/api/projetos').send(venda({ qrcodes: [qr2.id, qr1.id] })).expect(201);
+    expect(res.body.qrcodes).toEqual([{ id: qr1.id, nome: 'Balcão' }, { id: qr2.id, nome: 'Mesa' }]);
+  });
+
+  it('rejeita QR de outro cliente', async () => {
+    const outro = (await ctx.http.post('/api/clientes').send({ nome: 'Bia' })).body;
+    const qr = await criarQr(outro.id, 'Dela');
+    const res = await ctx.http.post('/api/projetos').send(venda({ qrcodes: [qr.id] })).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'qrcodes', mensagem: 'QR não pertence a este cliente' }]);
+  });
+
+  it('só placas aceitam qrcodes', async () => {
+    const qr = await criarQr(cliente.id, 'Balcão');
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', qrcodes: [qr.id] }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'qrcodes', mensagem: 'Só vendas de placas têm QR codes' }]);
+  });
+
+  it('PUT substitui as ligações; excluir o QR remove a ligação', async () => {
+    const qr1 = await criarQr(cliente.id, 'Balcão');
+    const qr2 = await criarQr(cliente.id, 'Mesa');
+    const criado = (await ctx.http.post('/api/projetos').send(venda({ qrcodes: [qr1.id] }))).body;
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ qrcodes: [qr2.id] }).expect(200);
+    expect(res.body.qrcodes).toEqual([{ id: qr2.id, nome: 'Mesa' }]);
+    await ctx.http.delete(`/api/qrcodes/${qr2.id}`).expect(204);
+    expect((await ctx.http.get(`/api/projetos/${criado.id}`)).body.qrcodes).toEqual([]);
+  });
+});
