@@ -44,9 +44,12 @@ export function AbaGeral({ projeto, onSalvo }) {
   const alterar = (parcial) => setValores((v) => comDiaSugerido({ ...v, ...parcial }));
   const texto = (nome) => ({ value: valores[nome], onChange: (e) => alterar({ [nome]: e.target.value }) });
 
+  // Só sites e sistemas têm categorias (GMN/placas ainda abrem esta página pelas tarefas do Início).
+  const temCategorias = projeto.servico === 'site_sistema';
+
   function salvar(e) {
     e.preventDefault();
-    if (!valores.categorias.length) {
+    if (temCategorias && !valores.categorias.length) {
       setErros([{ campo: 'categorias', mensagem: 'Escolha pelo menos uma categoria' }]);
       return;
     }
@@ -60,12 +63,13 @@ export function AbaGeral({ projeto, onSalvo }) {
       setErros([{ campo: 'mensalidade_valor_centavos', mensagem: 'Valor inválido' }]);
       return;
     }
-    const { valor: _v, mensalidade_valor: _mv, dia_manual: _dm, ...resto } = valores;
+    const { valor: _v, mensalidade_valor: _mv, dia_manual: _dm, categorias: categoriasEscolhidas, ...resto } = valores;
     executar(async () => {
       await api(`/projetos/${projeto.id}`, {
         method: 'PUT',
         body: {
           ...resto,
+          ...(temCategorias ? { categorias: categoriasEscolhidas } : {}),
           cliente_id: Number(resto.cliente_id),
           nicho_id: resto.nicho_id ? Number(resto.nicho_id) : null,
           valor_total_centavos: valorCentavos ?? 0,
@@ -102,12 +106,14 @@ export function AbaGeral({ projeto, onSalvo }) {
             </Campo>
             <SeletorNicho valor={valores.nicho_id} onChange={(nicho_id) => alterar({ nicho_id })} />
           </div>
-          <SeletorCategorias
-            categorias={categorias ?? projeto.categorias ?? []}
-            selecionadas={valores.categorias}
-            onChange={(ids) => alterar({ categorias: ids })}
-            erro={erros.find((e) => e.campo === 'categorias')?.mensagem}
-          />
+          {temCategorias && (
+            <SeletorCategorias
+              categorias={categorias ?? projeto.categorias ?? []}
+              selecionadas={valores.categorias}
+              onChange={(ids) => alterar({ categorias: ids })}
+              erro={erros.find((e) => e.campo === 'categorias')?.mensagem}
+            />
+          )}
           <Campo rotulo="Descrição (interna)" nome="descricao" erros={erros}><textarea rows={3} {...texto('descricao')} /></Campo>
           <Campo rotulo="Notas" nome="notas" erros={erros}><textarea rows={4} {...texto('notas')} /></Campo>
         </section>

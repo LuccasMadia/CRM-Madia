@@ -101,6 +101,21 @@ describe('Projeto', () => {
     expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(false);
   });
 
+  it('projeto de GMN salva sem categorias (não tem o seletor)', async () => {
+    const gmn = { ...projetoExemplo, titulo: 'GMN Ana', servico: 'google_meu_negocio', categorias: [] };
+    const { chamadas } = mockApi(rotasBase({ 'GET /projetos/5': gmn, 'PUT /projetos/5': { ...gmn, atualizado_em: 'T2' } }));
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'GMN Ana' });
+    expect(screen.queryByRole('group', { name: 'Categorias' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Salvar projeto' }));
+    await screen.findByRole('heading', { name: 'GMN Ana' });
+    expect(screen.queryByText('Escolha pelo menos uma categoria')).toBeNull();
+    const put = chamadas.find((c) => c.metodo === 'PUT');
+    expect(put).toBeDefined();
+    expect(put.corpo).not.toHaveProperty('categorias');
+  });
+
   it('a frase da 1ª mensalidade segue o modo escolhido', async () => {
     mockApi(rotasBase());
     renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });

@@ -532,6 +532,16 @@ describe('/api/projetos — categorias, nicho e início da mensalidade', () => {
     expect(res.body).toMatchObject({ mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-09-23' });
   });
 
+  it('GMN salva pela Visão geral (corpo sem categorias)', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' })).body;
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({
+      titulo: 'GMN Ana', cliente_id: cliente.id, nicho_id: null, descricao: '', notas: '', data_inicio: '', prazo_entrega: '', data_entrega: '',
+      valor_total_centavos: 0, mensalidade_ativa: false, mensalidade_valor_centavos: 0, mensalidade_dia_vencimento: null,
+      mensalidade_inicio_modo: 'entrega', mensalidade_inicio_data: null, postou_instagram: false, ficticio: false,
+    }).expect(200);
+    expect(res.body).toMatchObject({ titulo: 'GMN Ana', categorias: [] });
+  });
+
   it('ir para andamento preenche a data de início', async () => {
     const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
     expect((await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'andamento' })).body.data_inicio).toBe('2026-09-23');
