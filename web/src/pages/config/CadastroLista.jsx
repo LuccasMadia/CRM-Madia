@@ -10,7 +10,16 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
   const [editando, setEditando] = useState(null);
   const [nomeEditado, setNomeEditado] = useState('');
   const envio = useEnvio();
+  // Renomear tem envio próprio: o erro aparece no item em edição, não no campo de adicionar.
+  const renomeio = useEnvio();
   const erroNome = envio.erros.find((e) => e.campo === 'nome')?.mensagem;
+  const erroNomeEditado = renomeio.erros.find((e) => e.campo === 'nome')?.mensagem;
+
+  function abrirRenomeio(item) {
+    renomeio.limpar();
+    setEditando(item.id);
+    setNomeEditado(item.nome);
+  }
 
   function adicionar(e) {
     e.preventDefault();
@@ -23,7 +32,7 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
 
   function salvarNome(e) {
     e.preventDefault();
-    envio.executar(async () => {
+    renomeio.executar(async () => {
       await api(`${caminho}/${editando}`, { method: 'PUT', body: { nome: nomeEditado } });
       setEditando(null);
       recarregar();
@@ -57,8 +66,13 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
           <li key={item.id}>
             {editando === item.id ? (
               <form onSubmit={salvarNome} className="form--linha">
-                <input aria-label={`Novo nome de ${item.nome}`} value={nomeEditado} onChange={(e) => setNomeEditado(e.target.value)} />
-                <button className="btn btn--primario btn--pequeno">Salvar</button>
+                <div className="campo">
+                  <input aria-label={`Novo nome de ${item.nome}`} value={nomeEditado} aria-invalid={Boolean(erroNomeEditado)}
+                    onChange={(e) => setNomeEditado(e.target.value)} />
+                  {erroNomeEditado && <p className="campo__erro" role="alert">{erroNomeEditado}</p>}
+                  {!erroNomeEditado && <Aviso erro={renomeio.erro} />}
+                </div>
+                <button className="btn btn--primario btn--pequeno" disabled={renomeio.enviando}>Salvar</button>
                 <button type="button" className="btn btn--pequeno" onClick={() => setEditando(null)}>Cancelar</button>
               </form>
             ) : (
@@ -70,7 +84,7 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
                 {ordenavel && i < itens.length - 1 && (
                   <button type="button" className="btn btn--pequeno" aria-label={`Descer ${item.nome}`} onClick={() => trocar(i, i + 1)}>↓</button>
                 )}
-                <button type="button" className="btn btn--pequeno" aria-label={`Renomear ${item.nome}`} onClick={() => { setEditando(item.id); setNomeEditado(item.nome); }}>Renomear</button>
+                <button type="button" className="btn btn--pequeno" aria-label={`Renomear ${item.nome}`} onClick={() => abrirRenomeio(item)}>Renomear</button>
                 <button type="button" className="btn btn--pequeno btn--perigo" aria-label={`Excluir ${item.nome}`} onClick={() => excluir(item)}>Excluir</button>
               </>
             )}

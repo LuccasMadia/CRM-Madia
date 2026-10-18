@@ -38,6 +38,24 @@ describe('CadastroLista', () => {
     await waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')?.corpo).toEqual({ nome: 'SaaS B2B' }));
   });
 
+  it('nome repetido ao renomear aparece no item, mantendo o texto digitado', async () => {
+    mockApi({ 'GET /categorias': categorias, 'PUT /categorias/2': resposta(400, { erros: [{ campo: 'nome', mensagem: 'Já existe' }] }) });
+    render(<CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Renomear SaaS' }));
+    const campo = screen.getByLabelText('Novo nome de SaaS');
+    await user.clear(campo);
+    await user.type(campo, 'site');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    const alerta = await screen.findByText('Já existe');
+    expect(campo.closest('li')).toContainElement(alerta);
+    expect(campo).toHaveValue('site');
+    expect(screen.getByLabelText('Nova categoria')).not.toHaveAttribute('aria-invalid', 'true');
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Renomear SaaS' }));
+    expect(screen.queryByText('Já existe')).toBeNull();
+  });
+
   it('exclui com confirmação e mostra o 409 quando está em uso', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockApi({ 'GET /categorias': categorias, 'DELETE /categorias/1': resposta(409, { erro: 'Em uso por 3 projeto(s)' }) });
