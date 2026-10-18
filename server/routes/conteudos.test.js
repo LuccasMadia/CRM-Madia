@@ -91,12 +91,12 @@ describe('migração 016', () => {
     db.exec("INSERT INTO clientes (nome, criado_em, atualizado_em) VALUES ('Ana', 'x', 'x')");
     db.exec("INSERT INTO projetos (cliente_id, titulo, criado_em, atualizado_em) VALUES (1, 'Site', 'x', 'x')");
     const inserir = db.prepare(
-      "INSERT INTO conteudos (projeto_id, canal, tipo, titulo, status, data_publicada, criado_em, atualizado_em) VALUES (?, 'instagram', ?, ?, ?, ?, 'x', 'x')",
+      "INSERT INTO conteudos (projeto_id, canal, tipo, titulo, status, data_publicada, legenda, criado_em, atualizado_em) VALUES (?, 'instagram', ?, ?, ?, ?, ?, 'x', 'x')",
     );
-    inserir.run(null, 'post', 'Ideia', 'ideia', null);
-    inserir.run(null, 'story', 'Produzindo', 'produzindo', null);
-    inserir.run(null, 'reels', 'Agendado', 'agendado', null);
-    inserir.run(1, 'reels', 'Publicado', 'publicado', '2026-09-26');
+    inserir.run(null, 'post', 'Ideia', 'ideia', null, null);
+    inserir.run(null, 'story', 'Produzindo', 'produzindo', null, null);
+    inserir.run(null, 'reels', 'Agendado', 'agendado', null, null);
+    inserir.run(1, 'reels', 'Publicado', 'publicado', '2026-09-26', 'Tour pelo site');
     migrate(db);
     const conteudos = db.prepare('SELECT titulo, estado, tipo FROM conteudos ORDER BY id').all().map((r) => ({ ...r }));
     expect(conteudos).toEqual([
@@ -104,7 +104,7 @@ describe('migração 016', () => {
       { titulo: 'Produzindo', estado: 'rascunho', tipo: 'post' },
       { titulo: 'Agendado', estado: 'pronto', tipo: 'reels' },
     ]);
-    const legado = db.prepare('SELECT projeto_id, tipo, data_publicada FROM conteudos_legado').all().map((r) => ({ ...r }));
-    expect(legado).toEqual([{ projeto_id: 1, tipo: 'reels', data_publicada: '2026-09-26' }]);
+    const legado = db.prepare('SELECT projeto_id, tipo, data_publicada, legenda FROM conteudos_legado').all().map((r) => ({ ...r }));
+    expect(legado).toEqual([{ projeto_id: 1, tipo: 'reels', data_publicada: '2026-09-26', legenda: 'Tour pelo site' }]);
   });
 });

@@ -23,15 +23,17 @@ CREATE TABLE instagram_seguidores (
 );
 
 -- Conteúdos marcados como publicados antes da sincronização: a primeira sync
--- tenta passar o projeto para o post real do mesmo dia e tipo, depois apaga.
+-- tenta passar o projeto para o post real do mesmo dia e tipo (ou, se a data
+-- não bater, da mesma legenda), depois apaga.
 CREATE TABLE conteudos_legado (
   id INTEGER PRIMARY KEY,
   projeto_id INTEGER,
   tipo TEXT NOT NULL,
-  data_publicada TEXT
+  data_publicada TEXT,
+  legenda TEXT
 );
-INSERT INTO conteudos_legado (id, projeto_id, tipo, data_publicada)
-  SELECT id, projeto_id, CASE WHEN tipo IN ('post', 'carrossel', 'reels') THEN tipo ELSE 'post' END, data_publicada
+INSERT INTO conteudos_legado (id, projeto_id, tipo, data_publicada, legenda)
+  SELECT id, projeto_id, CASE WHEN tipo IN ('post', 'carrossel', 'reels') THEN tipo ELSE 'post' END, data_publicada, legenda
   FROM conteudos WHERE status = 'publicado';
 
 CREATE TABLE conteudos_novo (

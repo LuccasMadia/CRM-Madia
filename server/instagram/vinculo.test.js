@@ -104,6 +104,23 @@ describe('migrarLegado', () => {
     expect(projetoDaMidia('p1')).toBeNull();
     expect(db.prepare('SELECT COUNT(*) AS n FROM conteudos_legado').get().n).toBe(0);
   });
+
+  it('marcado como publicado em outro dia: acha o post pela legenda', () => {
+    db.exec(`INSERT INTO conteudos_legado (projeto_id, tipo, data_publicada, legenda)
+      VALUES (9, 'reels', '2026-10-16', 'Tour rápido pelo cardápio digital da Sorveteria Pingou 🎬')`);
+    midia({ id: 'r1', tipo: 'reels', publicado: '2026-10-12T15:00:00.000Z', legenda: 'Tour rápido pelo cardápio digital da Sorveteria Pingou 🍦 #portfolio' });
+    midia({ id: 'r2', tipo: 'reels', publicado: '2026-10-13T15:00:00.000Z', legenda: 'Outro reels' });
+    migrarLegado(db);
+    expect(projetoDaMidia('r1')).toBe(9);
+    expect(projetoDaMidia('r2')).toBeNull();
+  });
+
+  it('legenda de outro tipo não conta', () => {
+    db.exec("INSERT INTO conteudos_legado (projeto_id, tipo, data_publicada, legenda) VALUES (9, 'reels', '2026-10-16', 'Tour pelo site')");
+    midia({ id: 'p1', tipo: 'post', publicado: '2026-10-12T15:00:00.000Z', legenda: 'Tour pelo site' });
+    migrarLegado(db);
+    expect(projetoDaMidia('p1')).toBeNull();
+  });
 });
 
 describe('vincular — planejado já ligado', () => {
