@@ -100,6 +100,8 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .tabela .num { text-align: right; font-variant-numeric: tabular-nums; }
 .lista { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .lista li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lista-cadastro li { display: flex; align-items: center; gap: 8px; }
+.lista-cadastro__nome { flex: 1; }
 
 .etiqueta { font-size: 0.75rem; font-weight: 500; padding: 3px 10px; border-radius: 999px; border: 0; background: var(--superficie-2); color: var(--texto-suave); white-space: nowrap; }
 .etiqueta--entregue, .etiqueta--paga, .etiqueta--publicado { color: var(--ok); background: rgb(74 222 128 / 0.12); }
