@@ -116,6 +116,40 @@ describe('Projeto', () => {
     expect(screen.getByLabelText('Dia de vencimento')).toHaveValue(15);
   });
 
+  it('site entregue: marcar "Cobra mensalidade" já preenche o dia com o dia da entrega', async () => {
+    mockApi(rotasBase({ 'GET /projetos/5': { ...projetoExemplo, etapa: 'entregue', data_entrega: '2026-09-15' } }));
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('Cobra mensalidade'));
+    expect(screen.getByText('1ª mensalidade em 15/09/2026')).toBeInTheDocument();
+    expect(screen.getByLabelText('Dia de vencimento')).toHaveValue(15);
+  });
+
+  it('o dia acompanha a data de entrega e o início quando o modo depende deles', async () => {
+    mockApi(rotasBase());
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('Cobra mensalidade'));
+    await user.type(screen.getByLabelText('Data de entrega'), '2026-10-20');
+    expect(screen.getByLabelText('Dia de vencimento')).toHaveValue(20);
+    await user.click(screen.getByLabelText('Ao entrar em desenvolvimento'));
+    const inicio = screen.getByLabelText('Início');
+    await user.clear(inicio);
+    await user.type(inicio, '2026-09-07');
+    expect(screen.getByText('1ª mensalidade em 07/09/2026')).toBeInTheDocument();
+    expect(screen.getByLabelText('Dia de vencimento')).toHaveValue(7);
+  });
+
+  it('dia digitado não é trocado ao mudar a data de entrega', async () => {
+    mockApi(rotasBase());
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('Cobra mensalidade'));
+    await user.type(screen.getByLabelText('Dia de vencimento'), '3');
+    await user.type(screen.getByLabelText('Data de entrega'), '2026-10-20');
+    expect(screen.getByLabelText('Dia de vencimento')).toHaveValue(3);
+  });
+
   it('dia de vencimento já escolhido não é trocado pela data de início', async () => {
     mockApi(rotasBase({ 'GET /projetos/5': { ...projetoExemplo, mensalidade_ativa: 1, mensalidade_valor_centavos: 100, mensalidade_dia_vencimento: 5 } }));
     renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });

@@ -19,15 +19,17 @@ export function frasePrimeiraMensalidade(valores) {
   return inicio ? `1ª mensalidade em ${formatarData(inicio)}` : SEM_INICIO[valores.mensalidade_inicio_modo];
 }
 
-// `valores` usa os nomes do servidor (data_inicio, data_entrega, mensalidade_*); `alterar(parcial)` mescla no formulário.
-export function CobrancaMensal({ valores, alterar, erros }) {
-  function definirInicio(parcial) {
-    const inicio = inicioMensalidade({ ...valores, ...parcial });
-    // O dia acompanha a data de início enquanto o Lucca não digitar outro (dia_manual).
-    const dia = inicio && !valores.dia_manual ? { mensalidade_dia_vencimento: String(Number(inicio.slice(8, 10))) } : {};
-    alterar({ ...parcial, ...dia });
-  }
+// O dia de vencimento acompanha a data de início da cobrança enquanto o Lucca não digitar outro (dia_manual).
+// Aplique a cada mudança do formulário: assim vale para o checkbox, o modo e as datas de Prazos.
+export function comDiaSugerido(valores) {
+  if (!valores.mensalidade_ativa || valores.dia_manual) return valores;
+  const inicio = inicioMensalidade(valores);
+  return inicio ? { ...valores, mensalidade_dia_vencimento: String(Number(inicio.slice(8, 10))) } : valores;
+}
 
+// `valores` usa os nomes do servidor (data_inicio, data_entrega, mensalidade_*); `alterar(parcial)` mescla no
+// formulário e deve passar o resultado por `comDiaSugerido`.
+export function CobrancaMensal({ valores, alterar, erros }) {
   return (
     <>
       <label className="campo--check">
@@ -47,14 +49,14 @@ export function CobrancaMensal({ valores, alterar, erros }) {
             {MODOS.map(([modo, rotulo]) => (
               <label key={modo} className="campo--check">
                 <input type="radio" name="mensalidade_inicio_modo" value={modo} checked={valores.mensalidade_inicio_modo === modo}
-                  onChange={() => definirInicio({ mensalidade_inicio_modo: modo })} />
+                  onChange={() => alterar({ mensalidade_inicio_modo: modo })} />
                 {rotulo}
               </label>
             ))}
           </fieldset>
           {valores.mensalidade_inicio_modo === 'data' && (
             <Campo rotulo="Data de início da cobrança" nome="mensalidade_inicio_data" erros={erros} type="date"
-              value={valores.mensalidade_inicio_data} onChange={(e) => definirInicio({ mensalidade_inicio_data: e.target.value })} />
+              value={valores.mensalidade_inicio_data} onChange={(e) => alterar({ mensalidade_inicio_data: e.target.value })} />
           )}
           <p className="vazio">{frasePrimeiraMensalidade(valores)}</p>
         </div>

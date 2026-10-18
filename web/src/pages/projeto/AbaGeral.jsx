@@ -9,7 +9,7 @@ import { SeletorCategorias } from '../../components/SeletorCategorias.jsx';
 import { SeletorNicho } from '../../components/SeletorNicho.jsx';
 import { centavosParaTexto, paraCentavos } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
-import { CobrancaMensal } from './CobrancaMensal.jsx';
+import { CobrancaMensal, comDiaSugerido } from './CobrancaMensal.jsx';
 import { PreviaSite } from './PreviaSite.jsx';
 
 function valoresIniciais(projeto) {
@@ -41,7 +41,7 @@ export function AbaGeral({ projeto, onSalvo }) {
   const { dados: categorias } = useCarregar(() => api('/categorias'), []);
   const [valores, setValores] = useState(() => valoresIniciais(projeto));
   const { erros, erro, enviando, executar, setErros } = useEnvio();
-  const alterar = (parcial) => setValores((v) => ({ ...v, ...parcial }));
+  const alterar = (parcial) => setValores((v) => comDiaSugerido({ ...v, ...parcial }));
   const texto = (nome) => ({ value: valores[nome], onChange: (e) => alterar({ [nome]: e.target.value }) });
 
   function salvar(e) {
