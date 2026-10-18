@@ -13,6 +13,7 @@ import { rotasPortfolio } from './routes/portfolio.js';
 import { rotasPublicacao } from './routes/publicacao.js';
 import { rotasBackup } from './routes/backup.js';
 import { rotasPlacas } from './routes/placas.js';
+import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal() }) {
   const app = express();
@@ -22,6 +23,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal() }) {
 
   app.use('/api/clientes', rotasClientes(ctx));
   app.use('/api/projetos', rotasProjetos(ctx));
+  app.use('/api/categorias', rotasCategorias(ctx));
+  app.use('/api/nichos', rotasNichos(ctx));
   app.use('/api', rotasParcelas(ctx));
   app.use('/api', rotasTarefas(ctx));
   app.use('/api', rotasConteudos(ctx));
