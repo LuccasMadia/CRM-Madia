@@ -65,6 +65,28 @@ describe('sincronizar', () => {
     expect(midia('m2').capa).toBe('instagram/m2.jpg');
   });
 
+  it('carrossel que começa com vídeo usa a miniatura do vídeo como capa', async () => {
+    const carrossel = {
+      id: 'm3', caption: 'Carrossel', media_type: 'CAROUSEL_ALBUM', media_url: 'https://cdn.test/m3.mp4',
+      children: { data: [{ media_type: 'VIDEO', media_url: 'https://cdn.test/m3.mp4', thumbnail_url: 'https://cdn.test/m3.jpg' }] },
+      permalink: 'https://www.instagram.com/p/m3/', timestamp: '2026-10-12T15:00:00+0000',
+    };
+    const { falso, promessa } = rodar(rotasPadrao({
+      '/me/media': { data: [carrossel] },
+      '/m3/insights': { data: [] },
+      'https://cdn.test/m3.jpg': { status: 200, corpo: PNG },
+    }));
+    await promessa;
+    expect(midia('m3').capa).toBe('instagram/m3.jpg');
+    expect(falso.chamadas.some((u) => u.href === 'https://cdn.test/m3.mp4')).toBe(false);
+    expect(falso.chamadas.find((u) => u.pathname === '/me/media').searchParams.get('fields')).toContain('children{');
+  });
+
+  it('não guarda vídeo como capa', async () => {
+    await rodar(rotasPadrao({ 'https://cdn.test/m2.jpg': { status: 200, corpo: PNG, tipo: 'video/mp4' } })).promessa;
+    expect(midia('m2').capa).toBeNull();
+  });
+
   it('insights com erro deixam números nulos sem parar a sync', async () => {
     await rodar(rotasPadrao({ '/m1/insights': { status: 400, corpo: { error: { code: 100 } } } })).promessa;
     expect(midia('m1').alcance).toBeNull();

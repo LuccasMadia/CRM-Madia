@@ -1,7 +1,9 @@
 // Instagram API com login do Instagram. Sem versão na URL: a Meta usa a mais
 // antiga ainda suportada, o que evita o CRM quebrar quando uma versão expira.
 const BASE = 'https://graph.instagram.com';
-const CAMPOS_MIDIA = 'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count';
+// children: a capa de um carrossel vem do 1º item, que pode ser um vídeo.
+const CAMPOS_CAPA = 'media_type,media_url,thumbnail_url,children{media_type,media_url,thumbnail_url}';
+const CAMPOS_MIDIA = `id,caption,media_product_type,permalink,timestamp,like_count,comments_count,${CAMPOS_CAPA}`;
 const METRICAS = { reach: 'alcance', views: 'visualizacoes', saved: 'salvamentos', shares: 'compartilhamentos' };
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -51,7 +53,7 @@ export function criarClienteInstagram({ token, fetch = globalThis.fetch, agora =
     return todas;
   }
 
-  const midia = (id) => obter(`/${id}`, { fields: 'id,media_type,media_url,thumbnail_url' });
+  const midia = (id) => obter(`/${id}`, { fields: `id,${CAMPOS_CAPA}` });
 
   async function insights(midiaId) {
     const vazio = Object.fromEntries(Object.values(METRICAS).map((nome) => [nome, null]));

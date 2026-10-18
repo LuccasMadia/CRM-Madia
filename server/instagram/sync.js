@@ -124,11 +124,12 @@ async function baixarCapasPendentes(db, dataDir, fetch, ig, jaTentadas) {
 // As URLs de mídia da Meta expiram; a capa é guardada localmente uma vez.
 async function baixarCapaSeFaltar(db, dataDir, fetch, m) {
   if (db.prepare('SELECT capa FROM instagram_midias WHERE id = ?').get(m.id).capa) return;
-  const url = m.media_type === 'VIDEO' ? m.thumbnail_url : m.media_url;
+  const fonte = m.media_type === 'CAROUSEL_ALBUM' ? (m.children?.data?.[0] ?? m) : m;
+  const url = fonte.media_type === 'VIDEO' ? fonte.thumbnail_url : fonte.media_url;
   if (!url) return;
   try {
     const resposta = await fetch(url);
-    if (!resposta.ok) return;
+    if (!resposta.ok || resposta.headers.get('content-type')?.startsWith('video/')) return;
     const pasta = path.join(dataDir, 'uploads', 'instagram');
     mkdirSync(pasta, { recursive: true });
     writeFileSync(path.join(pasta, `${m.id}.jpg`), Buffer.from(await resposta.arrayBuffer()));
