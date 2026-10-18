@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { calcularValorTotal, valorLinhaServico, TIPOS_SERVICO, errosDoServico } from './servicos.js';
 
 describe('TIPOS_SERVICO', () => {
-  it('tem os 4 tipos fixos, nessa ordem', () => {
-    expect(TIPOS_SERVICO).toEqual(['placas_nfc', 'sistemas', 'saas', 'google_meu_negocio']);
+  it('tem os 2 tipos fixos, nessa ordem', () => {
+    expect(TIPOS_SERVICO).toEqual(['placas_nfc', 'google_meu_negocio']);
   });
 });
 
@@ -49,10 +49,10 @@ describe('valorLinhaServico com valor_total_centavos', () => {
 describe('errosDoServico', () => {
   const base = { etapa: undefined, ficticio: 0, tiposLinhas: null, criando: true };
 
-  it('site aceita qualquer etapa e só linhas sistemas/saas', () => {
-    expect(errosDoServico({ ...base, servico: 'site_sistema', etapa: 'proposta', tiposLinhas: ['sistemas', 'saas'] })).toEqual([]);
+  it('site aceita qualquer etapa e nenhuma linha de serviço', () => {
+    expect(errosDoServico({ ...base, servico: 'site_sistema', etapa: 'proposta', tiposLinhas: [] })).toEqual([]);
     expect(errosDoServico({ ...base, servico: 'site_sistema', tiposLinhas: ['placas_nfc'] }))
-      .toEqual([{ campo: 'servicos', mensagem: 'Sites e sistemas só aceitam Sistemas e SaaS' }]);
+      .toEqual([{ campo: 'servicos', mensagem: 'Sites e sistemas não têm linhas de serviço' }]);
   });
 
   it('GMN nasce em andamento, pode ir para entregue e não tem linhas nem fictício', () => {
@@ -63,14 +63,14 @@ describe('errosDoServico', () => {
       .toEqual([{ campo: 'etapa', mensagem: 'Etapa inválida para este serviço' }]);
     expect(errosDoServico({ ...base, servico: 'google_meu_negocio', ficticio: 1 }))
       .toEqual([{ campo: 'ficticio', mensagem: 'Só sites e sistemas podem ser fictícios' }]);
-    expect(errosDoServico({ ...base, servico: 'google_meu_negocio', tiposLinhas: ['saas'] }))
+    expect(errosDoServico({ ...base, servico: 'google_meu_negocio', tiposLinhas: ['google_meu_negocio'] }))
       .toEqual([{ campo: 'servicos', mensagem: 'Google Meu Negócio não tem linhas de serviço' }]);
   });
 
   it('placas exige exatamente uma linha placas_nfc na criação', () => {
     const erro = [{ campo: 'servicos', mensagem: 'Venda de placas precisa de exatamente uma linha de placas' }];
     expect(errosDoServico({ ...base, servico: 'placas_nfc' })).toEqual(erro);
-    expect(errosDoServico({ ...base, servico: 'placas_nfc', tiposLinhas: ['placas_nfc', 'saas'] })).toEqual(erro);
+    expect(errosDoServico({ ...base, servico: 'placas_nfc', tiposLinhas: ['placas_nfc', 'google_meu_negocio'] })).toEqual(erro);
     expect(errosDoServico({ ...base, servico: 'placas_nfc', tiposLinhas: ['placas_nfc'] })).toEqual([]);
     expect(errosDoServico({ ...base, servico: 'placas_nfc', criando: false })).toEqual([]);
   });

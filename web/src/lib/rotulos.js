@@ -15,12 +15,9 @@ export const ROTULO_ESTADO_PARCELA = { paga: 'Paga', atrasada: 'Atrasada', pende
 
 export const ROTULO_TIPO_SERVICO = {
   placas_nfc: 'Placas NFC',
-  sistemas: 'Sistemas',
-  saas: 'SaaS',
   google_meu_negocio: 'Google Meu Negócio',
 };
 export const TIPOS_SERVICO = Object.keys(ROTULO_TIPO_SERVICO);
 export const ROTULO_SERVICO = { site_sistema: 'Site/Sistema', google_meu_negocio: 'GMN', placas_nfc: 'Placas' };
 export const SERVICOS = Object.keys(ROTULO_SERVICO);
-export const TIPOS_SERVICO_SITE = ['sistemas', 'saas'];
 export const ABA_DO_SERVICO = { site_sistema: 'sites', google_meu_negocio: 'gmn', placas_nfc: 'placas' };

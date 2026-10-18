@@ -10,6 +10,7 @@ function preencherData(atual, mudancas, { campo, valor, campoData }, hoje) {
 }
 
 export function aplicarRegrasProjeto(atual, mudancas, hoje) {
-  return preencherData(atual, mudancas, { campo: 'etapa', valor: 'entregue', campoData: 'data_entrega' }, hoje);
+  const comInicio = preencherData(atual, mudancas, { campo: 'etapa', valor: 'andamento', campoData: 'data_inicio' }, hoje);
+  return preencherData(atual, comInicio, { campo: 'etapa', valor: 'entregue', campoData: 'data_entrega' }, hoje);
 }
 

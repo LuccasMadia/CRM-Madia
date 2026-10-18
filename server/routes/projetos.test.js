@@ -135,32 +135,6 @@ describe('/api/projetos com serviços', () => {
     ]);
   });
 
-  it('cria com 2 serviços (sistemas + saas) somando os dois, com valor customizado por linha', async () => {
-    const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Site + placa',
-      servicos: [{ tipo: 'sistemas', valor_unitario_centavos: 8000 }, { tipo: 'saas', valor_unitario_centavos: 15000 }],
-    }).expect(201);
-    expect(res.body.valor_total_centavos).toBe(23000);
-    expect(res.body.servicos.map((s) => s.tipo).sort()).toEqual(['saas', 'sistemas']);
-  });
-
-  it('serviço sem valor_unitario_centavos usa o preço padrão configurado', async () => {
-    await ctx.http.put('/api/config').send({ preco_servico_sistemas_centavos: 50000 }).expect(200);
-    const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Sistema sob medida', servicos: [{ tipo: 'sistemas' }],
-    }).expect(201);
-    expect(res.body.valor_total_centavos).toBe(50000);
-    expect(res.body.servicos[0]).toMatchObject({ tipo: 'sistemas', modelo_id: null, quantidade: 1, valor_unitario_centavos: 50000 });
-  });
-
-  it('desconto reduz o total, nunca ficando negativo', async () => {
-    const res = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Com desconto',
-      servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }], desconto_centavos: 30000,
-    }).expect(201);
-    expect(res.body.valor_total_centavos).toBe(0);
-  });
-
   it('sem servicos no corpo, mantém o comportamento atual de valor manual', async () => {
     const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Simples', valor_total_centavos: 12000 }).expect(201);
     expect(res.body.valor_total_centavos).toBe(12000);
@@ -183,33 +157,10 @@ describe('/api/projetos com serviços', () => {
 
   it('funciona também no fluxo de criar com novo_cliente', async () => {
     const res = await ctx.http.post('/api/projetos').send({
-      titulo: 'Loja nova', novo_cliente: { nome: 'Diego' }, servicos: [{ tipo: 'saas', valor_unitario_centavos: 20000 }],
+      titulo: 'Loja nova', novo_cliente: { nome: 'Diego' }, valor_total_centavos: 20000,
     }).expect(201);
     expect(res.body.valor_total_centavos).toBe(20000);
     expect(res.body.cliente_nome).toBe('Diego');
-  });
-
-  it('atualizar trocando os serviços recalcula o total', async () => {
-    const res1 = await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }],
-    }).expect(201);
-    const res2 = await ctx.http.put(`/api/projetos/${res1.body.id}`).send({
-      servicos: [{ tipo: 'sistemas', valor_unitario_centavos: 7000 }], desconto_centavos: 1000,
-    }).expect(200);
-    expect(res2.body.valor_total_centavos).toBe(6000);
-    expect(res2.body.servicos).toEqual([
-      expect.objectContaining({ tipo: 'sistemas', valor_unitario_centavos: 7000 }),
-    ]);
-  });
-
-  it('atualizar sem servicos no corpo não toca em projetos_servicos', async () => {
-    const criado = (await ctx.http.post('/api/projetos').send({
-      cliente_id: cliente.id, titulo: 'Projeto', servicos: [{ tipo: 'saas', valor_unitario_centavos: 10000 }],
-    })).body;
-    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({ titulo: 'Projeto renomeado' }).expect(200);
-    expect(res.body.titulo).toBe('Projeto renomeado');
-    expect(res.body.valor_total_centavos).toBe(10000);
-    expect(res.body.servicos).toHaveLength(1);
   });
 
   async function prepararReceita(modeloId) {
@@ -422,7 +373,7 @@ describe('/api/projetos — tipo de serviço', () => {
     const site = await ctx.http.post('/api/projetos').send({
       cliente_id: cliente.id, titulo: 'Site', servicos: [{ tipo: 'placas_nfc', modelo_id: modelo.id, quantidade: 1 }],
     }).expect(400);
-    expect(site.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Sites e sistemas só aceitam Sistemas e SaaS' }]);
+    expect(site.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Sites e sistemas não têm linhas de serviço' }]);
     const placas = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Placas', servico: 'placas_nfc' }).expect(400);
     expect(placas.body.erros).toEqual([{ campo: 'servicos', mensagem: 'Venda de placas precisa de exatamente uma linha de placas' }]);
   });
@@ -514,5 +465,85 @@ describe('/api/projetos — cobrança de GMN e placas', () => {
   it('site não ganha parcela automática', async () => {
     const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site', valor_total_centavos: 50000, vencimento: '2026-10-05' }).expect(201)).body;
     expect(await parcelasDe(criado.id)).toEqual([]);
+  });
+});
+
+describe('/api/projetos — categorias, nicho e início da mensalidade', () => {
+  it('site sem categorias recebe "Site"; com categorias guarda na ordem do cadastro', async () => {
+    const semCampo = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' }).expect(201)).body;
+    expect(semCampo.categorias).toEqual([{ id: 1, nome: 'Site' }]);
+    const com = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B', categorias: [4, 3, 4] }).expect(201)).body;
+    expect(com.categorias).toEqual([{ id: 3, nome: 'Sistema' }, { id: 4, nome: 'SaaS' }]);
+    const lista = (await ctx.http.get('/api/projetos?servico=site_sistema')).body;
+    expect(lista.find((p) => p.id === com.id).categorias.map((c) => c.nome)).toEqual(['Sistema', 'SaaS']);
+  });
+
+  it('lista vazia, id inexistente ou formato errado é 400', async () => {
+    const vazio = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', categorias: [] }).expect(400);
+    expect(vazio.body.erros).toEqual([{ campo: 'categorias', mensagem: 'Escolha pelo menos uma categoria' }]);
+    const inexistente = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', categorias: [99] }).expect(400);
+    expect(inexistente.body.erros).toEqual([{ campo: 'categorias', mensagem: 'Categoria não encontrada' }]);
+    const texto = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', categorias: ['Site'] }).expect(400);
+    expect(texto.body.erros).toEqual([{ campo: 'categorias', mensagem: 'Deve ser uma lista de categorias' }]);
+  });
+
+  it('PUT troca as categorias; PUT sem o campo mantém; PUT com [] é 400', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
+    expect((await ctx.http.put(`/api/projetos/${criado.id}`).send({ categorias: [2] }).expect(200)).body.categorias).toEqual([{ id: 2, nome: 'Landing page' }]);
+    expect((await ctx.http.put(`/api/projetos/${criado.id}`).send({ titulo: 'Novo' }).expect(200)).body.categorias).toEqual([{ id: 2, nome: 'Landing page' }]);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ categorias: [] }).expect(400);
+  });
+
+  it('GMN não tem categorias', async () => {
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', categorias: [1] }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'categorias', mensagem: 'Só sites e sistemas têm categorias' }]);
+    const sem = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' }).expect(201)).body;
+    expect(sem.categorias).toEqual([]);
+  });
+
+  it('site não aceita mais linhas de serviço', async () => {
+    const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', servicos: [{ tipo: 'sistemas' }] }).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'servicos[0].tipo', mensagem: 'Tipo de serviço inválido' }]);
+  });
+
+  it('nicho: grava, devolve o nome, limpa com null e recusa inexistente', async () => {
+    const nicho = (await ctx.http.post('/api/nichos').send({ nome: 'Barbearia' })).body;
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', nicho_id: nicho.id }).expect(201)).body;
+    expect(criado).toMatchObject({ nicho_id: nicho.id, nicho_nome: 'Barbearia' });
+    expect((await ctx.http.put(`/api/projetos/${criado.id}`).send({ nicho_id: null }).expect(200)).body).toMatchObject({ nicho_id: null, nicho_nome: null });
+    const ruim = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', nicho_id: 999 }).expect(400);
+    expect(ruim.body.erros).toEqual([{ campo: 'nicho_id', mensagem: 'Nicho não encontrado' }]);
+  });
+
+  it('modo "data" exige a data; os outros não', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
+    const mensal = { mensalidade_ativa: true, mensalidade_valor_centavos: 5000, mensalidade_dia_vencimento: 10 };
+    const semData = await ctx.http.put(`/api/projetos/${criado.id}`).send({ ...mensal, mensalidade_inicio_modo: 'data' }).expect(400);
+    expect(semData.body.erros).toEqual([{ campo: 'mensalidade_inicio_data', mensagem: 'Obrigatório quando a cobrança começa numa data' }]);
+    const ok = await ctx.http.put(`/api/projetos/${criado.id}`).send({ ...mensal, mensalidade_inicio_modo: 'desenvolvimento' }).expect(200);
+    expect(ok.body).toMatchObject({ mensalidade_inicio_modo: 'desenvolvimento', mensalidade_inicio_data: null });
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ mensalidade_inicio_modo: 'outro' }).expect(400);
+  });
+
+  it('GMN que liga a mensalidade passa a cobrar a partir de hoje', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' })).body;
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`)
+      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: 3000, mensalidade_dia_vencimento: 10 }).expect(200);
+    expect(res.body).toMatchObject({ mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-09-23' });
+  });
+
+  it('GMN salva pela Visão geral (corpo sem categorias)', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' })).body;
+    const res = await ctx.http.put(`/api/projetos/${criado.id}`).send({
+      titulo: 'GMN Ana', cliente_id: cliente.id, nicho_id: null, descricao: '', notas: '', data_inicio: '', prazo_entrega: '', data_entrega: '',
+      valor_total_centavos: 0, mensalidade_ativa: false, mensalidade_valor_centavos: 0, mensalidade_dia_vencimento: null,
+      mensalidade_inicio_modo: 'entrega', mensalidade_inicio_data: null, postou_instagram: false, ficticio: false,
+    }).expect(200);
+    expect(res.body).toMatchObject({ titulo: 'GMN Ana', categorias: [] });
+  });
+
+  it('ir para andamento preenche a data de início', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
+    expect((await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'andamento' })).body.data_inicio).toBe('2026-09-23');
   });
 });

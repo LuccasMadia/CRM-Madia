@@ -16,6 +16,7 @@ import { rotasPlacas } from './routes/placas.js';
 import { rotasInstagram } from './routes/instagram.js';
 import { sincronizar } from './instagram/sync.js';
 import { criarExecutorUnico } from './instagram/executor.js';
+import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch }) {
   const app = express();
@@ -27,6 +28,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
 
   app.use('/api/clientes', rotasClientes(ctx));
   app.use('/api/projetos', rotasProjetos(ctx));
+  app.use('/api/categorias', rotasCategorias(ctx));
+  app.use('/api/nichos', rotasNichos(ctx));
   app.use('/api', rotasParcelas(ctx));
   app.use('/api', rotasTarefas(ctx));
   app.use('/api', rotasConteudos(ctx));

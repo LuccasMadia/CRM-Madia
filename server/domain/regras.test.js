@@ -20,7 +20,18 @@ describe('aplicarRegrasProjeto', () => {
     });
   });
   it('não mexe em outras etapas', () => {
-    expect(aplicarRegrasProjeto(null, { etapa: 'andamento' }, '2026-09-23')).toEqual({ etapa: 'andamento' });
+    expect(aplicarRegrasProjeto(null, { etapa: 'proposta' }, '2026-09-23')).toEqual({ etapa: 'proposta' });
   });
 });
 
+describe('aplicarRegrasProjeto — início automático', () => {
+  it('ir para andamento preenche data_inicio vazia', () => {
+    expect(aplicarRegrasProjeto({ data_inicio: null }, { etapa: 'andamento' }, '2026-10-16')).toEqual({ etapa: 'andamento', data_inicio: '2026-10-16' });
+  });
+
+  it('não sobrescreve data_inicio existente nem a enviada', () => {
+    expect(aplicarRegrasProjeto({ data_inicio: '2026-09-01' }, { etapa: 'andamento' }, '2026-10-16')).toEqual({ etapa: 'andamento' });
+    expect(aplicarRegrasProjeto(null, { etapa: 'andamento', data_inicio: '2026-01-02' }, '2026-10-16'))
+      .toEqual({ etapa: 'andamento', data_inicio: '2026-01-02' });
+  });
+});

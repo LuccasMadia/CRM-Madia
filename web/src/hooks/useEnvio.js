@@ -20,5 +20,10 @@ export function useEnvio() {
     }
   }
 
-  return { erros, erro, enviando, executar, setErros };
+  function limpar() {
+    setErros([]);
+    setErro(null);
+  }
+
+  return { erros, erro, enviando, executar, setErros, limpar };
 }

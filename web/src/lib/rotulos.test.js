@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA,
-  TIPOS_SERVICO, ROTULO_TIPO_SERVICO, ROTULO_SERVICO, SERVICOS, TIPOS_SERVICO_SITE, ABA_DO_SERVICO,
+  TIPOS_SERVICO, ROTULO_TIPO_SERVICO, ROTULO_SERVICO, SERVICOS, ABA_DO_SERVICO,
 } from './rotulos.js';
 
 describe('ETAPAS_FICTICIO', () => {
@@ -18,8 +18,8 @@ describe('ETAPAS_FICTICIO', () => {
 });
 
 describe('rótulos de serviço', () => {
-  it('tem os 4 tipos fixos, cada um com rótulo', () => {
-    expect(TIPOS_SERVICO).toEqual(['placas_nfc', 'sistemas', 'saas', 'google_meu_negocio']);
+  it('tem os 2 tipos fixos, cada um com rótulo', () => {
+    expect(TIPOS_SERVICO).toEqual(['placas_nfc', 'google_meu_negocio']);
     for (const tipo of TIPOS_SERVICO) expect(ROTULO_TIPO_SERVICO[tipo]).toBeTruthy();
   });
 });
@@ -31,6 +31,5 @@ describe('rótulos de serviço', () => {
       expect(ROTULO_SERVICO[s]).toBeTruthy();
       expect(ABA_DO_SERVICO[s]).toBeTruthy();
     }
-    expect(TIPOS_SERVICO_SITE).toEqual(['sistemas', 'saas']);
   });
 });

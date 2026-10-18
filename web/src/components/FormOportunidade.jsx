@@ -5,18 +5,20 @@ import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
-import { CamposServicos } from './CamposServicos.jsx';
+import { SeletorCategorias } from './SeletorCategorias.jsx';
+import { SeletorNicho } from './SeletorNicho.jsx';
 import { paraCentavos } from '../lib/dinheiro.js';
 import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
 export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicial = null }) {
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
+  const { dados: categorias, erro: erroCategorias } = useCarregar(() => api('/categorias'), []);
   const { valores, campo, setValores } = useFormulario({
     titulo: '', cliente_id: clienteInicial ? String(clienteInicial) : '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
     etapa: ficticioFixo ? 'andamento' : 'contato', ficticio: ficticioFixo,
   });
-  const [servicos, setServicos] = useState([]);
-  const [descontoCentavos, setDescontoCentavos] = useState(0);
+  const [categoriasMarcadas, setCategoriasMarcadas] = useState([]);
+  const [nichoId, setNichoId] = useState('');
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const clienteNovo = valores.cliente_id === 'novo';
   const etapasDisponiveis = valores.ficticio ? ETAPAS_FICTICIO : ETAPAS;
@@ -31,18 +33,19 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
 
   function enviar(e) {
     e.preventDefault();
-    const corpo = { titulo: valores.titulo, etapa: valores.etapa, prazo_entrega: valores.prazo_entrega, ficticio: valores.ficticio };
-    if (servicos.length) {
-      corpo.servicos = servicos;
-      corpo.desconto_centavos = descontoCentavos;
-    } else {
-      const valor = paraCentavos(valores.valor);
-      if (Number.isNaN(valor)) {
-        setErros([{ campo: 'valor_total_centavos', mensagem: 'Valor inválido' }]);
-        return;
-      }
-      corpo.valor_total_centavos = valor ?? 0;
+    if (!categoriasMarcadas.length) {
+      setErros([{ campo: 'categorias', mensagem: 'Escolha pelo menos uma categoria' }]);
+      return;
     }
+    const valor = paraCentavos(valores.valor);
+    if (Number.isNaN(valor)) {
+      setErros([{ campo: 'valor_total_centavos', mensagem: 'Valor inválido' }]);
+      return;
+    }
+    const corpo = {
+      titulo: valores.titulo, etapa: valores.etapa, prazo_entrega: valores.prazo_entrega, ficticio: valores.ficticio,
+      categorias: categoriasMarcadas, nicho_id: nichoId ? Number(nichoId) : null, valor_total_centavos: valor ?? 0,
+    };
     if (clienteNovo) corpo.novo_cliente = { nome: valores.novo_cliente_nome };
     else corpo.cliente_id = valores.cliente_id ? Number(valores.cliente_id) : null;
     executar(() => onSalvar(corpo));
@@ -66,17 +69,15 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
           {etapasDisponiveis.map((e) => <option key={e} value={e}>{ROTULO_ETAPA[e]}</option>)}
         </select>
       </Campo>
-      <CamposServicos
-        servicos={servicos}
-        desconto={descontoCentavos}
-        onChange={({ servicos: proximos, desconto_centavos: proximoDesconto }) => {
-          setServicos(proximos);
-          setDescontoCentavos(proximoDesconto);
-        }}
+      <SeletorCategorias
+        categorias={categorias ?? []}
+        selecionadas={categoriasMarcadas}
+        onChange={setCategoriasMarcadas}
+        erro={erros.find((e) => e.campo === 'categorias')?.mensagem}
       />
-      {servicos.length === 0 && (
-        <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" placeholder="0,00" {...campo('valor')} />
-      )}
+      <Aviso erro={erroCategorias} />
+      <SeletorNicho valor={nichoId} onChange={setNichoId} />
+      <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" placeholder="0,00" {...campo('valor')} />
       <Campo rotulo="Prazo de entrega" nome="prazo_entrega" erros={erros} type="date" {...campo('prazo_entrega')} />
       <div className="campo">
         <label>

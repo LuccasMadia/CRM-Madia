@@ -1,6 +1,5 @@
-export const TIPOS_SERVICO = ['placas_nfc', 'sistemas', 'saas', 'google_meu_negocio'];
+export const TIPOS_SERVICO = ['placas_nfc', 'google_meu_negocio'];
 export const SERVICOS = ['site_sistema', 'google_meu_negocio', 'placas_nfc'];
-export const LINHAS_SITE = ['sistemas', 'saas'];
 
 export function valorLinhaServico(servico) {
   return servico.valor_total_centavos ?? servico.valor_unitario_centavos * (servico.quantidade ?? 1);
@@ -23,8 +22,8 @@ export function errosDoServico({ servico, etapa, ficticio, tiposLinhas, criando 
   const linhasObrigatorias = criando && servico === 'placas_nfc';
   if (tiposLinhas || linhasObrigatorias) {
     const tipos = tiposLinhas ?? [];
-    if (servico === 'site_sistema' && tipos.some((t) => !LINHAS_SITE.includes(t))) {
-      erros.push({ campo: 'servicos', mensagem: 'Sites e sistemas só aceitam Sistemas e SaaS' });
+    if (servico === 'site_sistema' && tipos.length) {
+      erros.push({ campo: 'servicos', mensagem: 'Sites e sistemas não têm linhas de serviço' });
     }
     if (servico === 'google_meu_negocio' && tipos.length) {
       erros.push({ campo: 'servicos', mensagem: 'Google Meu Negócio não tem linhas de serviço' });

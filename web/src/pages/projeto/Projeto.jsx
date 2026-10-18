@@ -33,7 +33,7 @@ export function Projeto() {
           <h1>{projeto.titulo}</h1>
         </div>
         <div>
-          <span className={`etiqueta etiqueta--${projeto.etapa}`}>{ROTULO_ETAPA[projeto.etapa]}</span>{' '}
+          <span className={`etapa etapa--${projeto.etapa}`}>{ROTULO_ETAPA[projeto.etapa]}</span>{' '}
           <strong>{formatarDinheiro(projeto.valor_total_centavos)}</strong>
         </div>
       </header>

@@ -11,11 +11,7 @@ import { commitarPortfolio } from '../portfolio/git.js';
 import { importarPortfolio } from '../portfolio/import.js';
 
 const CHAVE_REPO = 'portfolio_repo_path';
-const CHAVES_PRECO_SERVICO = [
-  'preco_servico_sistemas_centavos',
-  'preco_servico_saas_centavos',
-  'preco_servico_google_meu_negocio_centavos',
-];
+const CHAVES_PRECO_SERVICO = ['preco_servico_google_meu_negocio_centavos'];
 
 export function rotasPublicacao({ db, dataDir, hoje }) {
   const uploadsDir = path.join(dataDir, 'uploads');
