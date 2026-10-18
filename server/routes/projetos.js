@@ -158,11 +158,21 @@ export function rotasProjetos({ db, hoje }) {
     }
   }
 
-  // GMN/placas: ligar a mensalidade sem data começa a cobrar hoje (como antes).
-  function inicioDeOutrosServicos(servico, atual, dados) {
-    if (servico === 'site_sistema') return dados;
+  // Site que já cobrou mensalidade e volta a cobrar sem escolher outro início (o modo e a data são os guardados).
+  function retomandoSemNovoInicio(atual, dados) {
+    if (!atual || !parcelas.listar({ projeto_id: atual.id, mensalidade: 1 }).length) return false;
+    const modo = dados.mensalidade_inicio_modo ?? atual.mensalidade_inicio_modo;
+    const data = ('mensalidade_inicio_data' in dados ? dados.mensalidade_inicio_data : atual.mensalidade_inicio_data) ?? null;
+    return modo === atual.mensalidade_inicio_modo && data === (atual.mensalidade_inicio_data ?? null);
+  }
+
+  // Ligar a mensalidade começa a cobrar hoje: GMN/placas sem data (como antes) e site retomado após uma pausa
+  // (assim os meses pausados não viram mensalidades atrasadas).
+  function inicioAoLigar(servico, atual, dados) {
     const ligando = dados.mensalidade_ativa && !atual?.mensalidade_ativa;
-    if (!ligando || dados.mensalidade_inicio_data) return dados;
+    if (!ligando) return dados;
+    const comecaHoje = servico === 'site_sistema' ? retomandoSemNovoInicio(atual, dados) : !dados.mensalidade_inicio_data;
+    if (!comecaHoje) return dados;
     return { ...dados, mensalidade_inicio_modo: 'data', mensalidade_inicio_data: hoje() };
   }
 
@@ -260,7 +270,7 @@ export function rotasProjetos({ db, hoje }) {
         const descontoCentavos = dados.desconto_centavos ?? 0;
         dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(servicosValidados, descontoCentavos) };
       }
-      dados = inicioDeOutrosServicos(servico, null, dados);
+      dados = inicioAoLigar(servico, null, dados);
       exigirNicho(dados.nicho_id);
       exigirDadosMensalidade(null, dados);
       if (servico !== 'site_sistema' && !dados.mensalidade_ativa && dados.valor_total_centavos > 0 && !vencimento) {
@@ -327,7 +337,7 @@ export function rotasProjetos({ db, hoje }) {
     const linhasNovas = atual.servico === 'placas_nfc' ? linhasParaTrocar(id, servicosValidados) : servicosValidados;
     const categoriasValidadas = validarCategorias(corpo.categorias, atual.servico, { criando: false });
     exigirNicho(dadosBase.nicho_id);
-    const dadosMensalidade = inicioDeOutrosServicos(atual.servico, atual, dadosBase);
+    const dadosMensalidade = inicioAoLigar(atual.servico, atual, dadosBase);
     exigirDadosMensalidade(atual, dadosMensalidade);
     if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
 
