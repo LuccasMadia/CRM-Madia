@@ -218,3 +218,20 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
   .conteudo-layout { grid-template-columns: 1fr; }
   .pagina__topo h1 { font-size: 1.6rem; }
 }
+.visao-geral { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+.visao-geral__principal, .visao-geral__lado { display: grid; gap: 0; min-width: 0; }
+.visao-geral__rodape { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.visao-geral__rodape .btn--link-perigo { margin-left: auto; }
+.visao-geral__etapa { display: flex; justify-content: space-between; align-items: center; margin-top: 0; }
+.visao-geral__etapa a { font-size: 0.85rem; color: var(--texto-suave); }
+.cartao__titulo { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-suave); font-weight: 600; margin: 0 0 12px; }
+.grade-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grade-campos--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cobranca-mensal { display: grid; gap: 12px; margin-top: 12px; }
+.btn--link-perigo { background: none; border: none; color: var(--perigo); cursor: pointer; font: inherit; font-size: 0.9rem; padding: 0; }
+.btn--link-perigo:hover { text-decoration: underline; }
+@media (max-width: 900px) {
+  .visao-geral { grid-template-columns: 1fr; }
+  .visao-geral__lado { order: -1; }
+  .grade-campos, .grade-campos--3 { grid-template-columns: 1fr; }
+}
