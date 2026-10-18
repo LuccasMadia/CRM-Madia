@@ -12,37 +12,44 @@ const JANELA_MS = 60 * DIA_MS;
 const MENSAGEM_TOKEN = 'O acesso ao Instagram expirou. Reconecte em Configurações.';
 
 export async function sincronizar({ db, dataDir, fetch = globalThis.fetch, agora = () => new Date() }) {
+  // Se o Lucca desconectar ou trocar o token no meio, esta sync não mexe mais
+  // na conexão: não grava token renovado, usuário, data da sync nem erro.
+  const sessao = { token: obterConfig(db, 'instagram_token') };
+  const vigente = () => sessao.token !== null && obterConfig(db, 'instagram_token') === sessao.token;
   try {
-    const resultado = await executar({ db, dataDir, fetch, agora });
-    definirConfig(db, 'instagram_ultima_sync', agora().toISOString());
-    db.prepare("DELETE FROM config WHERE chave = 'instagram_ultimo_erro'").run();
+    const resultado = await executar({ db, dataDir, fetch, agora, sessao, vigente });
+    if (vigente()) {
+      definirConfig(db, 'instagram_ultima_sync', agora().toISOString());
+      db.prepare("DELETE FROM config WHERE chave = 'instagram_ultimo_erro'").run();
+    }
     return resultado;
   } catch (erro) {
     const mensagem = erro.tokenInvalido ? MENSAGEM_TOKEN : erro.message;
-    definirConfig(db, 'instagram_ultimo_erro', mensagem);
+    if (vigente()) definirConfig(db, 'instagram_ultimo_erro', mensagem);
     throw erro.tokenInvalido ? new ErroInstagram(mensagem, { status: erro.status, tokenInvalido: true }) : erro;
   }
 }
 
-async function executar({ db, dataDir, fetch, agora }) {
-  let token = obterConfig(db, 'instagram_token');
-  if (!token) throw new ErroInstagram('Instagram não conectado');
+async function executar({ db, dataDir, fetch, agora, sessao, vigente }) {
+  if (!sessao.token) throw new ErroInstagram('Instagram não conectado');
 
   const expiraEm = obterConfig(db, 'instagram_token_expira_em');
   if (expiraEm && Date.parse(expiraEm) - agora().getTime() < RENOVAR_ANTES_MS) {
     try {
-      const renovado = await criarClienteInstagram({ token, fetch, agora }).renovarToken();
-      token = renovado.token;
-      definirConfig(db, 'instagram_token', token);
-      definirConfig(db, 'instagram_token_expira_em', renovado.expiraEm);
+      const renovado = await criarClienteInstagram({ token: sessao.token, fetch, agora }).renovarToken();
+      if (vigente()) {
+        sessao.token = renovado.token;
+        definirConfig(db, 'instagram_token', renovado.token);
+        definirConfig(db, 'instagram_token_expira_em', renovado.expiraEm);
+      }
     } catch {
       // Segue com o token atual; a renovação é tentada de novo na próxima sync.
     }
   }
-  const ig = criarClienteInstagram({ token, fetch, agora });
+  const ig = criarClienteInstagram({ token: sessao.token, fetch, agora });
 
   const perfil = await ig.perfil();
-  definirConfig(db, 'instagram_usuario', perfil.username);
+  if (vigente()) definirConfig(db, 'instagram_usuario', perfil.username);
   db.prepare('INSERT OR REPLACE INTO instagram_seguidores (dia, seguidores) VALUES (?, ?)').run(hojeLocal(agora()), perfil.followers_count);
 
   // Só conta como já sincronizado quando uma sync completa desta conta terminou;
@@ -100,7 +107,7 @@ async function executar({ db, dataDir, fetch, agora }) {
   await baixarCapasPendentes(db, dataDir, fetch, ig, vistas);
   for (const midia of novas) vincularAutomatico(db, midia);
   migrarLegado(db);
-  definirConfig(db, 'instagram_sync_completa', perfil.id);
+  if (vigente()) definirConfig(db, 'instagram_sync_completa', perfil.id);
   return { novas: novas.length, atualizadas: recebidas.length - novas.length };
 }
 

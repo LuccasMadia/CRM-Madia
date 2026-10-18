@@ -7,7 +7,7 @@ export function fetchFalso(rotas) {
     chamadas.push(url);
     const chave = url.hostname === 'graph.instagram.com' ? url.pathname : url.href;
     let r = rotas[chave];
-    if (typeof r === 'function') r = r(url);
+    if (typeof r === 'function') r = await r(url);
     if (r === undefined) r = { status: 404, corpo: { error: { message: `sem rota ${chave}` } } };
     const { status, corpo } = r && 'status' in r && 'corpo' in r ? r : { status: 200, corpo: r };
     if (corpo instanceof Uint8Array) return new Response(corpo, { status });
