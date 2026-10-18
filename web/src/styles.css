@@ -66,6 +66,7 @@ code { font-size: 0.9em; }
 .form--linha { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; max-width: none; }
 .campo { display: grid; gap: 4px; }
 .campo label { font-size: 0.85rem; color: var(--texto-suave); }
+.campo__rotulo { font-size: 0.85rem; color: var(--texto-suave); }
 .campo--check { display: flex; gap: 8px; align-items: center; }
 input, select, textarea { font: inherit; color: inherit; background: var(--superficie-2); border: 1px solid var(--borda); border-radius: var(--raio-controle); padding: 9px 12px; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--primaria); outline-offset: -1px; border-color: transparent; }

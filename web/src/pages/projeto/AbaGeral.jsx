@@ -1,12 +1,10 @@
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
-import { CamposServicos } from '../../components/CamposServicos.jsx';
 import { centavosParaTexto, paraCentavos } from '../../lib/dinheiro.js';
 import { ETAPAS, ROTULO_ETAPA } from '../../lib/rotulos.js';
 
@@ -29,13 +27,6 @@ export function AbaGeral({ projeto, onSalvo }) {
     postou_instagram: Boolean(projeto.postou_instagram),
     ficticio: Boolean(projeto.ficticio),
   });
-  const [servicos, setServicos] = useState(
-    (projeto.servicos ?? []).map((s) => ({
-      tipo: s.tipo, modelo_id: s.modelo_id, quantidade: s.quantidade, valor_unitario_centavos: s.valor_unitario_centavos,
-      ...(s.tipo === 'placas_nfc' ? { valor_total_centavos: s.valor_total_centavos } : {}),
-    })),
-  );
-  const [descontoCentavos, setDescontoCentavos] = useState(projeto.desconto_centavos ?? 0);
   const { erros, erro, enviando, executar, setErros } = useEnvio();
 
   function salvar(e) {
@@ -45,17 +36,10 @@ export function AbaGeral({ projeto, onSalvo }) {
       setErros([{ campo: 'mensalidade_valor_centavos', mensagem: 'Valor inválido' }]);
       return;
     }
-    const corpoValor = {};
-    if (servicos.length) {
-      corpoValor.servicos = servicos;
-      corpoValor.desconto_centavos = descontoCentavos;
-    } else {
-      const valorCentavos = paraCentavos(valores.valor);
-      if (Number.isNaN(valorCentavos)) {
-        setErros([{ campo: 'valor_total_centavos', mensagem: 'Valor inválido' }]);
-        return;
-      }
-      corpoValor.valor_total_centavos = valorCentavos ?? 0;
+    const valorCentavos = paraCentavos(valores.valor);
+    if (Number.isNaN(valorCentavos)) {
+      setErros([{ campo: 'valor_total_centavos', mensagem: 'Valor inválido' }]);
+      return;
     }
     const { valor: _valor, mensalidade_valor: _mensalidadeValor, ...resto } = valores;
     executar(async () => {
@@ -63,7 +47,7 @@ export function AbaGeral({ projeto, onSalvo }) {
         method: 'PUT',
         body: {
           ...resto,
-          ...corpoValor,
+          valor_total_centavos: valorCentavos ?? 0,
           cliente_id: Number(resto.cliente_id),
           mensalidade_ativa: Boolean(valores.mensalidade_ativa),
           mensalidade_valor_centavos: mensalidadeValorCentavos ?? 0,
@@ -99,17 +83,7 @@ export function AbaGeral({ projeto, onSalvo }) {
           {ETAPAS.map((e) => <option key={e} value={e}>{ROTULO_ETAPA[e]}</option>)}
         </select>
       </Campo>
-      <CamposServicos
-        servicos={servicos}
-        desconto={descontoCentavos}
-        onChange={({ servicos: proximos, desconto_centavos: proximoDesconto }) => {
-          setServicos(proximos);
-          setDescontoCentavos(proximoDesconto);
-        }}
-      />
-      {servicos.length === 0 && (
-        <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" {...campo('valor')} />
-      )}
+      <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" {...campo('valor')} />
       <Campo rotulo="Início" nome="data_inicio" erros={erros} type="date" {...campo('data_inicio')} />
       <Campo rotulo="Prazo de entrega" nome="prazo_entrega" erros={erros} type="date" {...campo('prazo_entrega')} />
       <Campo rotulo="Data de entrega" nome="data_entrega" erros={erros} type="date" {...campo('data_entrega')} />
