@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { criarContexto } from '../test/contexto.js';
 import { fetchFalso } from '../test/instagramFalso.js';
 
@@ -38,6 +38,44 @@ describe('conexão', () => {
     rotas['/me'] = { status: 400, corpo: { error: { code: 190, message: 'Invalid' } } };
     const res = await ctx.http.put('/api/instagram/conexao').send({ token: 'ruim' }).expect(400);
     expect(res.body.erros).toEqual([{ campo: 'token', mensagem: 'Token inválido ou sem permissão' }]);
+  });
+
+  it('sem internet o erro diz isso, não que o token é inválido', async () => {
+    rotas['/me'] = () => { throw new TypeError('fetch failed'); };
+    const res = await ctx.http.put('/api/instagram/conexao').send({ token: 'bom' }).expect(502);
+    expect(res.body.erro).toMatch(/internet/);
+    expect((await ctx.http.get('/api/instagram/estado')).body.conectado).toBe(false);
+  });
+
+  it('desconectar durante uma sync não deixa a sync reconectar nem gravar erro', async () => {
+    await conectar();
+    ctx.db.prepare("UPDATE config SET valor = '2026-01-01T00:00:00.000Z' WHERE chave = 'instagram_token_expira_em'").run();
+    let soltar;
+    rotas['/refresh_access_token'] = () => new Promise((r) => { soltar = r; });
+    const sync = ctx.app.locals.sincronizarInstagram.executar().catch(() => {});
+    await vi.waitFor(() => expect(soltar).toBeTypeOf('function'));
+    await ctx.http.delete('/api/instagram/conexao').expect(204);
+    soltar({ access_token: 'renovado', expires_in: 5184000 });
+    await sync;
+    const estado = (await ctx.http.get('/api/instagram/estado')).body;
+    expect(estado).toMatchObject({ conectado: false, usuario: null, ultimo_erro: null });
+  });
+
+  it('reconectar durante uma sync sincroniza de novo com o token novo', async () => {
+    await conectar();
+    let soltar;
+    rotas['/me/media'] = (url) => (url.searchParams.get('access_token') === 'segredo-123'
+      ? new Promise((r) => { soltar = r; })
+      : { data: [MIDIA] });
+    const antiga = ctx.app.locals.sincronizarInstagram.executar().catch(() => {});
+    await vi.waitFor(() => expect(soltar).toBeTypeOf('function'));
+    await ctx.http.put('/api/instagram/conexao').send({ token: 'token-novo' }).expect(200);
+    soltar({ status: 400, corpo: { error: { code: 190, message: 'Invalid' } } });
+    await antiga;
+    const comTokenNovo = () => falso.chamadas.filter((u) => u.pathname === '/me/media' && u.searchParams.get('access_token') === 'token-novo');
+    await vi.waitFor(() => expect(comTokenNovo()).toHaveLength(1));
+    await vi.waitFor(() => expect(ctx.app.locals.sincronizarInstagram.emAndamento()).toBe(false));
+    expect((await ctx.http.get('/api/instagram/estado')).body.ultimo_erro).toBeNull();
   });
 
   it('token válido conecta sem devolver o token', async () => {

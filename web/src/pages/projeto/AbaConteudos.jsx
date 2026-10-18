@@ -14,7 +14,11 @@ export function AbaConteudos({ projetoId }) {
   const [editando, setEditando] = useState(null);
 
   async function salvar(dados, arte) {
-    await salvarConteudo(editando.id, dados, arte);
+    const aoCriar = (novo) => {
+      setEditando(novo);
+      planejados.recarregar();
+    };
+    await salvarConteudo(editando.id, dados, arte, { aoCriar });
     setEditando(null);
     planejados.recarregar();
   }

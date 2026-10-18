@@ -12,12 +12,27 @@ const chamar = (fn) => {
 // recebe a mesma promise em vez de disparar outra.
 export function criarExecutorUnico(fn) {
   let atual = null;
+  let proxima = null;
+  const iniciar = () => {
+    const execucao = chamar(fn).finally(() => {
+      if (atual === execucao) atual = null;
+    });
+    atual = execucao;
+    return execucao;
+  };
   return {
-    executar() {
-      if (!atual) atual = chamar(fn).finally(() => { atual = null; });
-      return atual;
+    executar: () => proxima ?? atual ?? iniciar(),
+    // Para quando os dados mudaram no meio (ex.: token novo): a execução em
+    // andamento termina e outra começa logo depois; chamadas seguidas a compartilham.
+    reiniciar() {
+      if (!atual) return iniciar();
+      proxima ??= atual.catch(() => {}).then(() => {
+        proxima = null;
+        return iniciar();
+      });
+      return proxima;
     },
-    emAndamento: () => atual !== null,
+    emAndamento: () => atual !== null || proxima !== null,
   };
 }
 

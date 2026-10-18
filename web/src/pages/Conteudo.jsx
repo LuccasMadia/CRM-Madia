@@ -53,7 +53,11 @@ export function Conteudo() {
   }
 
   async function salvar(dados, arte) {
-    await salvarConteudo(editando.id, dados, arte);
+    const aoCriar = (novo) => {
+      setEditando(novo);
+      recarregarPlanejados();
+    };
+    await salvarConteudo(editando.id, dados, arte, { aoCriar });
     setEditando(null);
     recarregarPlanejados();
   }
@@ -68,7 +72,6 @@ export function Conteudo() {
   const midias = grid.dados?.midias ?? [];
   const prontos = grid.dados?.prontos ?? [];
   const midiaSelecionada = midias.find((m) => m.id === selecionada) ?? null;
-
 
   const itensCalendario = [
     ...[...prontos, ...(rascunhos.dados ?? [])].filter((c) => c.data_planejada)
@@ -121,7 +124,7 @@ export function Conteudo() {
             />
             {rascunhos.dados && <ListaRascunhos rascunhos={rascunhos.dados} onEditar={setEditando} />}
           </div>
-          {conectado && <PainelMidia midia={midiaSelecionada} onMudou={recarregarPlanejados} />}
+          {(conectado || midias.length > 0) && <PainelMidia midia={midiaSelecionada} onMudou={recarregarPlanejados} />}
         </div>
       )}
 

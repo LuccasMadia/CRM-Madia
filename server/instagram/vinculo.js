@@ -47,14 +47,24 @@ export function candidatosManuais(db, midia) {
   return livresAntesDe(db, midia.publicado_em).sort((a, b) => peso(a) - peso(b) || a.ordem - b.ordem || a.id - b.id);
 }
 
+// Par do legado: post do mesmo tipo no mesmo dia; se a data não bater (foi
+// marcado como publicado depois), o post com a mesma legenda.
 // data_publicada antiga foi registrada no dia local; compara no mesmo fuso.
+function paresDoLegado(legado, midias) {
+  const doTipo = midias.filter((m) => m.tipo === legado.tipo);
+  const doDia = doTipo.filter((m) => hojeLocal(new Date(m.publicado_em)) === legado.data_publicada);
+  if (doDia.length === 1) return doDia;
+  const alvo = normalizarLegenda(legado.legenda);
+  return alvo ? doTipo.filter((m) => normalizarLegenda(m.legenda) === alvo) : [];
+}
+
 export function migrarLegado(db) {
   const legados = db.prepare('SELECT * FROM conteudos_legado').all();
   if (!legados.length) return;
-  const midias = db.prepare('SELECT id, tipo, publicado_em FROM instagram_midias WHERE removido = 0').all();
+  const midias = db.prepare('SELECT id, tipo, legenda, publicado_em FROM instagram_midias WHERE removido = 0').all();
   emTransacao(db, () => {
     for (const legado of legados) {
-      const pares = midias.filter((m) => m.tipo === legado.tipo && hojeLocal(new Date(m.publicado_em)) === legado.data_publicada);
+      const pares = paresDoLegado(legado, midias);
       const projetoExiste = db.prepare('SELECT 1 FROM projetos WHERE id = ?').get(legado.projeto_id);
       if (pares.length === 1 && projetoExiste) {
         db.prepare('UPDATE instagram_midias SET projeto_id = ? WHERE id = ? AND projeto_id IS NULL').run(legado.projeto_id, pares[0].id);

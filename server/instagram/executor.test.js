@@ -24,6 +24,31 @@ describe('criarExecutorUnico', () => {
     await expect(executor.executar()).rejects.toThrow('x');
     expect(await executor.executar()).toBe('ok');
   });
+
+  it('reiniciar durante uma execução roda outra logo depois', async () => {
+    const soltar = [];
+    const fn = vi.fn(() => new Promise((r) => { soltar.push(r); }));
+    const executor = criarExecutorUnico(fn);
+    const primeira = executor.executar();
+    const a = executor.reiniciar();
+    const b = executor.reiniciar();
+    expect(executor.executar()).toBe(a);
+    soltar[0]('antiga');
+    expect(await primeira).toBe('antiga');
+    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(2));
+    expect(executor.emAndamento()).toBe(true);
+    soltar[1]('nova');
+    expect(await a).toBe('nova');
+    expect(await b).toBe('nova');
+    expect(executor.emAndamento()).toBe(false);
+  });
+
+  it('reiniciar sem execução em andamento só executa', async () => {
+    const fn = vi.fn().mockResolvedValue('ok');
+    const executor = criarExecutorUnico(fn);
+    expect(await executor.reiniciar()).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('iniciarPeriodico', () => {

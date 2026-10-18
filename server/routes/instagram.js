@@ -43,14 +43,16 @@ export function rotasInstagram({ db, hoje, fetch, sincronizarInstagram }) {
     let perfil;
     try {
       perfil = await criarClienteInstagram({ token, fetch }).perfil();
-    } catch {
+    } catch (erro) {
+      // status 0 = nem chegou ao Instagram (sem internet); o token pode estar certo.
+      if (erro.status === 0) throw new ErroHttp(502, erro.message);
       throw new ErroValidacao([{ campo: 'token', mensagem: 'Token inválido ou sem permissão' }]);
     }
     definirConfig(db, 'instagram_token', token);
     definirConfig(db, 'instagram_usuario', perfil.username);
     definirConfig(db, 'instagram_token_expira_em', new Date(Date.now() + VALIDADE_TOKEN_MS).toISOString());
     db.prepare("DELETE FROM config WHERE chave = 'instagram_ultimo_erro'").run();
-    sincronizarInstagram.executar().catch(() => {}); // o erro fica em instagram_ultimo_erro
+    sincronizarInstagram.reiniciar().catch(() => {}); // o erro fica em instagram_ultimo_erro
     res.json(estado());
   });
 

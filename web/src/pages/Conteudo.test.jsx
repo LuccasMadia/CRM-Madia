@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Conteudo } from './Conteudo.jsx';
-import { mockApi } from '../test/mockApi.js';
+import { mockApi, resposta } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 import { formatarData, hojeISO } from '../lib/datas.js';
 
@@ -149,6 +149,34 @@ describe('Conteudo', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await screen.findByRole('button', { name: '+ Planejar' });
     expect(chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/conteudos').corpo).toMatchObject({ titulo: 'Novo reels', tipo: 'post' });
+  });
+
+  it('se a arte falha ao subir, salvar de novo atualiza o planejado em vez de criar outro', async () => {
+    const { chamadas } = mockApi(rotas({
+      'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho' },
+      'POST /conteudos/10/arte': resposta(500, { erro: 'Falha no upload' }),
+      'PUT /conteudos/10': { id: 10 },
+    }));
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
+    await user.type(screen.getByLabelText('Título'), 'Novo reels');
+    await user.upload(screen.getByLabelText('Arte'), new File(['png'], 'arte.png', { type: 'image/png' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Falha no upload')).toBeInTheDocument();
+    chamadas.length = 0;
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await screen.findByRole('button', { name: '+ Planejar' });
+    expect(chamadas.some((c) => c.metodo === 'POST' && c.caminho === '/conteudos')).toBe(false);
+    expect(chamadas.some((c) => c.metodo === 'PUT' && c.caminho === '/conteudos/10')).toBe(true);
+  });
+
+  it('desconectado, clicar num post já sincronizado mostra os números', async () => {
+    mockApi(rotas({ 'GET /instagram/estado': { ...ESTADO, conectado: false } }));
+    abrir();
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Ver post Reels Popy' }));
+    const painel = screen.getByRole('complementary', { name: 'Detalhes do post' });
+    expect(within(painel).getByText('Curtidas').nextSibling).toHaveTextContent('134');
   });
 
   it('calendário mostra planejados com data e publicados no dia', async () => {
