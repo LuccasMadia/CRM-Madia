@@ -36,4 +36,22 @@ describe('SeletorNicho', () => {
     expect(await screen.findByText('Já existe')).toBeInTheDocument();
     expect(screen.getByLabelText('Nome do novo nicho')).toHaveValue('barbearia');
   });
+
+  it('"+ novo nicho…" limpa o nicho escolhido antes e não traz de volta o erro antigo', async () => {
+    mockApi({ 'GET /nichos': [{ id: 1, nome: 'Barbearia' }], 'POST /nichos': resposta(400, { erros: [{ campo: 'nome', mensagem: 'Já existe' }] }) });
+    render(<Teste />);
+    const user = userEvent.setup();
+    const select = await screen.findByLabelText('Nicho');
+    await screen.findByRole('option', { name: 'Barbearia' });
+    await user.selectOptions(select, '1');
+    expect(screen.getByRole('status')).toHaveTextContent('1');
+    await user.selectOptions(select, 'novo');
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    await user.type(screen.getByLabelText('Nome do novo nicho'), 'barbearia');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    expect(await screen.findByText('Já existe')).toBeInTheDocument();
+    await user.selectOptions(select, '1');
+    await user.selectOptions(select, 'novo');
+    expect(screen.queryByText('Já existe')).toBeNull();
+  });
 });

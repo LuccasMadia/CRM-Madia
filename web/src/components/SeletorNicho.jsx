@@ -12,7 +12,10 @@ export function SeletorNicho({ valor, onChange }) {
 
   function escolher(e) {
     if (e.target.value === 'novo') {
+      // Enquanto cria, nenhum nicho fica escolhido; o erro de uma tentativa anterior não volta.
+      envio.limpar();
       setCriando(true);
+      onChange('');
       return;
     }
     setCriando(false);
