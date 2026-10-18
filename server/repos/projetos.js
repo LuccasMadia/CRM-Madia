@@ -4,13 +4,15 @@ export const CAMPOS_PROJETO = [
   'cliente_id', 'titulo', 'descricao', 'etapa', 'valor_total_centavos', 'desconto_centavos',
   'data_inicio', 'prazo_entrega', 'data_entrega', 'notas',
   'mensalidade_ativa', 'mensalidade_valor_centavos', 'mensalidade_dia_vencimento',
-  'postou_instagram', 'ficticio', 'servico', 'link_perfil',
+  'mensalidade_inicio_modo', 'mensalidade_inicio_data',
+  'postou_instagram', 'ficticio', 'servico', 'link_perfil', 'nicho_id',
 ];
 
-const SELECT_COM_CLIENTE = `SELECT p.*, c.nome AS cliente_nome, COALESCE(pf.publicar, 0) AS no_portfolio
+const SELECT_COM_CLIENTE = `SELECT p.*, c.nome AS cliente_nome, COALESCE(pf.publicar, 0) AS no_portfolio, n.nome AS nicho_nome
   FROM projetos p
   JOIN clientes c ON c.id = p.cliente_id
-  LEFT JOIN portfolio pf ON pf.projeto_id = p.id`;
+  LEFT JOIN portfolio pf ON pf.projeto_id = p.id
+  LEFT JOIN nichos n ON n.id = p.nicho_id`;
 
 export function repoProjetos(db) {
   const base = criarRepo(db, 'projetos', CAMPOS_PROJETO);

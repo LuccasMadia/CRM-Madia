@@ -12,6 +12,8 @@ import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { ETAPAS, aplicarRegrasProjeto } from '../domain/regras.js';
 import { SERVICOS, TIPOS_SERVICO, calcularValorTotal, errosDoServico, valorLinhaServico } from '../domain/servicos.js';
 import { calcularCustoUnitarioModelo } from '../domain/placas.js';
+import { repoCategorias, repoNichos, repoProjetosCategorias } from '../repos/categorias.js';
+import { MODOS_INICIO_MENSALIDADE } from '../domain/mensalidade.js';
 import { REGRAS_CLIENTE } from './clientes.js';
 
 const REGRAS_PROJETO = {
@@ -32,6 +34,9 @@ const REGRAS_PROJETO = {
   ficticio: { tipo: 'bool', padrao: 0 },
   servico: { tipo: 'enum', valores: SERVICOS },
   link_perfil: { tipo: 'texto' },
+  nicho_id: { tipo: 'inteiro', min: 1 },
+  mensalidade_inicio_modo: { tipo: 'enum', valores: MODOS_INICIO_MENSALIDADE },
+  mensalidade_inicio_data: { tipo: 'data' },
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
@@ -44,6 +49,11 @@ function exigirDadosMensalidade(atual, dados) {
   const erros = [];
   if (!valor) erros.push({ campo: 'mensalidade_valor_centavos', mensagem: 'Obrigatório quando a mensalidade está ativa' });
   if (!dia) erros.push({ campo: 'mensalidade_dia_vencimento', mensagem: 'Obrigatório quando a mensalidade está ativa' });
+  const modo = dados.mensalidade_inicio_modo ?? atual?.mensalidade_inicio_modo ?? 'entrega';
+  const dataInicio = 'mensalidade_inicio_data' in dados ? dados.mensalidade_inicio_data : atual?.mensalidade_inicio_data;
+  if (modo === 'data' && !dataInicio) {
+    erros.push({ campo: 'mensalidade_inicio_data', mensagem: 'Obrigatório quando a cobrança começa numa data' });
+  }
   if (erros.length) throw new ErroValidacao(erros);
 }
 
@@ -86,6 +96,9 @@ export function rotasProjetos({ db, hoje }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
   const projetosServicos = repoProjetosServicos(db);
+  const categorias = repoCategorias(db);
+  const nichos = repoNichos(db);
+  const projetosCategorias = repoProjetosCategorias(db);
   const modelos = repoPlacasModelos(db);
   const itensModelo = repoPlacasModelosItens(db);
   const lotes = repoPlacasLotes(db);
@@ -117,10 +130,47 @@ export function rotasProjetos({ db, hoje }) {
     if (erros.length) throw new ErroValidacao(erros);
   }
 
+  function categoriaPadrao() {
+    const id = categorias.idComNome('Site') ?? categorias.listarOrdenadas()[0]?.id;
+    if (!id) throw new ErroValidacao([{ campo: 'categorias', mensagem: 'Cadastre uma categoria em Configurações' }]);
+    return id;
+  }
+
+  // null = não mexer nas categorias.
+  function validarCategorias(bruto, servico, { criando }) {
+    if (servico !== 'site_sistema') {
+      if (bruto !== undefined) throw new ErroValidacao([{ campo: 'categorias', mensagem: 'Só sites e sistemas têm categorias' }]);
+      return null;
+    }
+    if (bruto === undefined) return criando ? [categoriaPadrao()] : null;
+    if (!Array.isArray(bruto) || !bruto.every((id) => Number.isInteger(id) && id > 0)) {
+      throw new ErroValidacao([{ campo: 'categorias', mensagem: 'Deve ser uma lista de categorias' }]);
+    }
+    const ids = [...new Set(bruto)];
+    if (!ids.length) throw new ErroValidacao([{ campo: 'categorias', mensagem: 'Escolha pelo menos uma categoria' }]);
+    if (ids.some((id) => !categorias.obter(id))) throw new ErroValidacao([{ campo: 'categorias', mensagem: 'Categoria não encontrada' }]);
+    return ids;
+  }
+
+  function exigirNicho(nichoId) {
+    if (nichoId != null && !nichos.obter(nichoId)) {
+      throw new ErroValidacao([{ campo: 'nicho_id', mensagem: 'Nicho não encontrado' }]);
+    }
+  }
+
+  // GMN/placas: ligar a mensalidade sem data começa a cobrar hoje (como antes).
+  function inicioDeOutrosServicos(servico, atual, dados) {
+    if (servico === 'site_sistema') return dados;
+    const ligando = dados.mensalidade_ativa && !atual?.mensalidade_ativa;
+    if (!ligando || dados.mensalidade_inicio_data) return dados;
+    return { ...dados, mensalidade_inicio_modo: 'data', mensalidade_inicio_data: hoje() };
+  }
+
   function comServicos(projeto) {
     const modelosTodos = modelos.listar();
     return {
       ...projeto,
+      categorias: projetosCategorias.listar(projeto.id),
       servicos: projetosServicos.listar(projeto.id).map((s) => ({
         ...s,
         modelo_nome: s.tipo === 'placas_nfc' ? (modelosTodos.find((m) => m.id === s.modelo_id)?.nome ?? '—') : null,
@@ -195,8 +245,11 @@ export function rotasProjetos({ db, hoje }) {
       : null;
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
 
+    let categoriasValidadas = null;
+
     function prepararDados(dadosValidados) {
       const servico = dadosValidados.servico ?? 'site_sistema';
+      categoriasValidadas = validarCategorias(corpo.categorias, servico, { criando: true });
       exigirRegrasDoServico({
         servico, etapa: dadosValidados.etapa, ficticio: dadosValidados.ficticio,
         tiposLinhas: servicosValidados?.map((s) => s.tipo) ?? null, criando: true,
@@ -207,6 +260,8 @@ export function rotasProjetos({ db, hoje }) {
         const descontoCentavos = dados.desconto_centavos ?? 0;
         dados = { ...dados, desconto_centavos: descontoCentavos, valor_total_centavos: calcularValorTotal(servicosValidados, descontoCentavos) };
       }
+      dados = inicioDeOutrosServicos(servico, null, dados);
+      exigirNicho(dados.nicho_id);
       exigirDadosMensalidade(null, dados);
       if (servico !== 'site_sistema' && !dados.mensalidade_ativa && dados.valor_total_centavos > 0 && !vencimento) {
         throw new ErroValidacao([{ campo: 'vencimento', mensagem: 'Obrigatório para cobrança única' }]);
@@ -216,6 +271,7 @@ export function rotasProjetos({ db, hoje }) {
 
     function criarProjetoCompleto(dados) {
       const projeto = projetos.criar(dados);
+      if (categoriasValidadas) projetosCategorias.substituir(projeto.id, categoriasValidadas);
       if (temServicos) criarServicosDoProjeto(projeto.id, servicosValidados);
       sincronizarCobrancaUnica(projeto.id, vencimento);
       return projeto;
@@ -269,11 +325,14 @@ export function rotasProjetos({ db, hoje }) {
       tiposLinhas: servicosValidados?.map((s) => s.tipo) ?? null, criando: false,
     });
     const linhasNovas = atual.servico === 'placas_nfc' ? linhasParaTrocar(id, servicosValidados) : servicosValidados;
-    exigirDadosMensalidade(atual, dadosBase);
+    const categoriasValidadas = validarCategorias(corpo.categorias, atual.servico, { criando: false });
+    exigirNicho(dadosBase.nicho_id);
+    const dadosMensalidade = inicioDeOutrosServicos(atual.servico, atual, dadosBase);
+    exigirDadosMensalidade(atual, dadosMensalidade);
     if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
 
     emTransacao(db, () => {
-      let dados = dadosBase;
+      let dados = dadosMensalidade;
       if (linhasNovas) {
         projetosServicos.removerPorProjetoSemVenda(id);
         criarServicosDoProjeto(id, linhasNovas);
@@ -282,6 +341,7 @@ export function rotasProjetos({ db, hoje }) {
       }
       processarEntregaDePlacas(atual, dados, id);
       projetos.atualizar(id, dados);
+      if (categoriasValidadas) projetosCategorias.substituir(id, categoriasValidadas);
       sincronizarCobrancaUnica(id, vencimento);
     });
     res.json(comServicos(projetos.obterComCliente(id)));
