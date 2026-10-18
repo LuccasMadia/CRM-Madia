@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Funil } from './Funil.jsx';
-import { mockApi } from '../test/mockApi.js';
+import { mockApi, resposta } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 
 const projetos = [
@@ -146,6 +146,16 @@ describe('Funil', () => {
       titulo: 'Site', etapa: 'contato', prazo_entrega: '', ficticio: false, cliente_id: 3,
       categorias: [4], nicho_id: 7, valor_total_centavos: 150000,
     });
+  });
+
+  it('nova oportunidade mostra o erro quando as categorias não carregam', async () => {
+    mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /nichos': [],
+      'GET /categorias': resposta(500, { erro: 'Falha ao carregar as categorias' }),
+    });
+    abrir();
+    await userEvent.setup().click(await screen.findByRole('button', { name: '+ Oportunidade' }));
+    expect(await screen.findByText('Falha ao carregar as categorias')).toBeInTheDocument();
   });
 
   it('o nome do cliente no card leva ao perfil', async () => {

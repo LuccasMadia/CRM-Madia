@@ -12,7 +12,7 @@ import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
 export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicial = null }) {
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
-  const { dados: categorias } = useCarregar(() => api('/categorias'), []);
+  const { dados: categorias, erro: erroCategorias } = useCarregar(() => api('/categorias'), []);
   const { valores, campo, setValores } = useFormulario({
     titulo: '', cliente_id: clienteInicial ? String(clienteInicial) : '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
     etapa: ficticioFixo ? 'andamento' : 'contato', ficticio: ficticioFixo,
@@ -75,6 +75,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
         onChange={setCategoriasMarcadas}
         erro={erros.find((e) => e.campo === 'categorias')?.mensagem}
       />
+      <Aviso erro={erroCategorias} />
       <SeletorNicho valor={nichoId} onChange={setNichoId} />
       <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" placeholder="0,00" {...campo('valor')} />
       <Campo rotulo="Prazo de entrega" nome="prazo_entrega" erros={erros} type="date" {...campo('prazo_entrega')} />
