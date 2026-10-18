@@ -66,18 +66,18 @@ describe('migration 014_placas_packs', () => {
     migrate(db);
 
     const linhas = db.prepare('SELECT tipo, valor_total_centavos FROM projetos_servicos ORDER BY id').all().map((r) => ({ ...r }));
-    // a linha 'saas' deixa de existir na 016 (vira categoria)
+    // a linha 'saas' deixa de existir na 017 (vira categoria)
     expect(linhas).toEqual([{ tipo: 'placas_nfc', valor_total_centavos: 14000 }]);
   });
 });
 
-describe('migration 016_categorias_nichos_mensalidade', () => {
-  function bancoAte016() {
+describe('migration 017_categorias_nichos_mensalidade', () => {
+  function bancoAte017() {
     const db = new DatabaseSync(':memory:');
     db.exec('PRAGMA foreign_keys = ON;');
     db.exec('CREATE TABLE schema_migrations (nome TEXT PRIMARY KEY, aplicada_em TEXT NOT NULL)');
     const pasta = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
-    for (const arquivo of readdirSync(pasta).filter((f) => f.endsWith('.sql') && f < '016').sort()) {
+    for (const arquivo of readdirSync(pasta).filter((f) => f.endsWith('.sql') && f < '017').sort()) {
       db.exec(readFileSync(path.join(pasta, arquivo), 'utf8'));
       db.prepare('INSERT INTO schema_migrations (nome, aplicada_em) VALUES (?, ?)').run(arquivo, 'x');
     }
@@ -85,7 +85,7 @@ describe('migration 016_categorias_nichos_mensalidade', () => {
   }
 
   it('converte linhas em categorias, define início das mensalidades e apaga os preços', () => {
-    const db = bancoAte016();
+    const db = bancoAte017();
     const t = '2026-10-01T00:00:00.000Z';
     db.prepare('INSERT INTO clientes (id, nome, criado_em, atualizado_em) VALUES (1, ?, ?, ?)').run('Ana', t, t);
     const projeto = (id, extra = '') => db.exec(`INSERT INTO projetos (id, cliente_id, titulo, criado_em, atualizado_em${extra ? ', ' + extra.split('|')[0] : ''})

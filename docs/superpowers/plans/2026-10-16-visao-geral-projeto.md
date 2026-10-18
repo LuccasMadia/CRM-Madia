@@ -2121,7 +2121,7 @@ console.log(db.prepare('select p.id, p.titulo, group_concat(c.nome) cats from pr
 console.log(db.prepare('select id, mensalidade_inicio_modo, mensalidade_inicio_data from projetos where mensalidade_ativa=1').all());"
 ```
 
-Expected: última migration `016_categorias_nichos_mensalidade.sql`; todos os sites com pelo menos "Site"; projetos 12 e 13 em `entrega` sem data.
+Expected: última migration `017_categorias_nichos_mensalidade.sql` (renomeada de 016, pois o main já tem `016_instagram.sql`); todos os sites com pelo menos "Site"; projetos 12 e 13 em `entrega` sem data.
 
 - [ ] **Step 3: Conferência no navegador** (`http://127.0.0.1:5173`, numa aba nova)
 
