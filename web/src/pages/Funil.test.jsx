@@ -32,12 +32,13 @@ describe('Funil', () => {
   });
 
   it('nova oportunidade: valor inválido não chama a API', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /categorias': [{ id: 1, nome: 'Site' }], 'GET /nichos': [] });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
     await user.type(screen.getByLabelText('Título'), 'Site');
     await user.type(screen.getByLabelText('Valor (R$)'), '12,3,4');
+    await user.click(await screen.findByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Valor inválido')).toBeInTheDocument();
     expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false);
@@ -45,7 +46,7 @@ describe('Funil', () => {
 
   it('nova oportunidade com cliente novo envia novo_cliente e valor em centavos', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 }, 'GET /placas/modelos': [], 'GET /config': {},
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 }, 'GET /categorias': [{ id: 1, nome: 'Site' }], 'GET /nichos': [],
     });
     abrir();
     const user = userEvent.setup();
@@ -54,15 +55,16 @@ describe('Funil', () => {
     await user.selectOptions(screen.getByLabelText('Cliente'), 'novo');
     await user.type(screen.getByLabelText('Nome do novo cliente'), 'Diego');
     await user.type(screen.getByLabelText('Valor (R$)'), '1.500,50');
+    await user.click(await screen.findByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Site', etapa: 'contato', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' },
+      titulo: 'Site', etapa: 'contato', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' }, categorias: [1], nicho_id: null,
     });
   });
 
   it('nova oportunidade: marcar "fictício" restringe etapa a andamento/entregue', async () => {
-    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': {} });
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /categorias': [{ id: 1, nome: 'Site' }], 'GET /nichos': [] });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
@@ -90,7 +92,7 @@ describe('Funil', () => {
   it('+ Oportunidade na aba Fictícios cria com ficticio travado e etapa andamento', async () => {
     const { chamadas } = mockApi({
       'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
-      'GET /placas/modelos': [], 'GET /config': {},
+      'GET /categorias': [{ id: 1, nome: 'Site' }], 'GET /nichos': [],
     });
     abrir();
     const user = userEvent.setup();
@@ -103,10 +105,11 @@ describe('Funil', () => {
     await user.selectOptions(screen.getByLabelText('Cliente'), 'novo');
     await user.type(screen.getByLabelText('Nome do novo cliente'), 'Case');
     await user.type(screen.getByLabelText('Valor (R$)'), '0,00');
+    await user.click(await screen.findByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Case Padaria', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: '', ficticio: true, novo_cliente: { nome: 'Case' },
+      titulo: 'Case Padaria', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: '', ficticio: true, novo_cliente: { nome: 'Case' }, categorias: [1], nicho_id: null,
     });
   });
 
@@ -121,40 +124,28 @@ describe('Funil', () => {
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/5', corpo: { etapa: 'entregue' } });
   });
 
-  it('nova oportunidade com serviço marcado esconde o campo Valor manual e envia servicos', async () => {
+  it('nova oportunidade exige categoria e envia categorias, nicho e valor', async () => {
     const { chamadas } = mockApi({
       'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
-      'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
+      'GET /categorias': [{ id: 1, nome: 'Site' }, { id: 4, nome: 'SaaS' }], 'GET /nichos': [{ id: 7, nome: 'Barbearia' }],
     });
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
     await user.type(screen.getByLabelText('Título'), 'Site');
     await user.selectOptions(screen.getByLabelText('Cliente'), '3');
-    await user.click(await screen.findByLabelText('SaaS'));
-    expect(screen.queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Valor (R$)'), '1.500');
+    await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
+    expect(await screen.findByText('Escolha pelo menos uma categoria')).toBeInTheDocument();
+    expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false);
+    await user.click(await screen.findByRole('button', { name: 'SaaS' }));
+    await user.selectOptions(screen.getByLabelText('Nicho'), '7');
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
-    const corpo = chamadas.find((c) => c.metodo === 'POST').corpo;
-    expect(corpo).toEqual({
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
       titulo: 'Site', etapa: 'contato', prazo_entrega: '', ficticio: false, cliente_id: 3,
-      servicos: [{ tipo: 'saas', valor_unitario_centavos: 15000 }], desconto_centavos: 0,
+      categorias: [4], nicho_id: 7, valor_total_centavos: 150000,
     });
-    expect(corpo).not.toHaveProperty('valor_total_centavos');
-  });
-
-  it('desmarcar o único serviço volta a mostrar o campo Valor manual', async () => {
-    mockApi({
-      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [], 'GET /placas/modelos': [], 'GET /config': { preco_servico_saas_centavos: 15000 },
-    });
-    abrir();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
-    const checkboxSaas = await screen.findByLabelText('SaaS');
-    await user.click(checkboxSaas);
-    expect(screen.queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
-    await user.click(checkboxSaas);
-    expect(screen.getByLabelText('Valor (R$)')).toBeInTheDocument();
   });
 
   it('o nome do cliente no card leva ao perfil', async () => {

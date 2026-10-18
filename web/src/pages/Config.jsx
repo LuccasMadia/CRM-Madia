@@ -6,6 +6,7 @@ import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from '../components/Campo.jsx';
 import { Aviso } from '../components/Aviso.jsx';
+import { CadastroLista } from './config/CadastroLista.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 
 export function Config() {
@@ -15,6 +16,8 @@ export function Config() {
       <header className="pagina__topo"><h1>Configurações</h1></header>
       <Aviso erro={erro} />
       {config && <Repositorio inicial={config} />}
+      <CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />
+      <CadastroLista titulo="Nichos" caminho="/nichos" rotuloNovo="Novo nicho" />
       {config && <PrecosServicos inicial={config} />}
       <Publicacao />
       <section className="cartao">
@@ -28,8 +31,6 @@ export function Config() {
 
 function PrecosServicos({ inicial }) {
   const { valores, campo } = useFormulario({
-    preco_sistemas: centavosParaTexto(inicial.preco_servico_sistemas_centavos ?? 0),
-    preco_saas: centavosParaTexto(inicial.preco_servico_saas_centavos ?? 0),
     preco_gmn: centavosParaTexto(inicial.preco_servico_google_meu_negocio_centavos ?? 0),
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
@@ -38,36 +39,25 @@ function PrecosServicos({ inicial }) {
   function salvar(e) {
     e.preventDefault();
     setSalvo(false);
-    const sistemas = paraCentavos(valores.preco_sistemas);
-    const saas = paraCentavos(valores.preco_saas);
     const gmn = paraCentavos(valores.preco_gmn);
-    if ([sistemas, saas, gmn].some((v) => v === null || Number.isNaN(v))) {
-      setErros([{ campo: 'preco_servico_sistemas_centavos', mensagem: 'Valores inválidos' }]);
+    if (gmn === null || Number.isNaN(gmn)) {
+      setErros([{ campo: 'preco_servico_google_meu_negocio_centavos', mensagem: 'Valor inválido' }]);
       return;
     }
     executar(async () => {
-      await api('/config', {
-        method: 'PUT',
-        body: {
-          preco_servico_sistemas_centavos: sistemas,
-          preco_servico_saas_centavos: saas,
-          preco_servico_google_meu_negocio_centavos: gmn,
-        },
-      });
+      await api('/config', { method: 'PUT', body: { preco_servico_google_meu_negocio_centavos: gmn } });
       setSalvo(true);
     });
   }
 
   return (
     <section className="cartao">
-      <h2>Preços padrão de serviços</h2>
+      <h2>Preço padrão do Google Meu Negócio</h2>
       <form onSubmit={salvar} className="form" noValidate>
-        <Campo rotulo="Sistemas (R$)" nome="preco_servico_sistemas_centavos" erros={erros} inputMode="decimal" {...campo('preco_sistemas')} />
-        <Campo rotulo="SaaS (R$)" nome="preco_servico_saas_centavos" erros={erros} inputMode="decimal" {...campo('preco_saas')} />
         <Campo rotulo="Google Meu Negócio (R$)" nome="preco_servico_google_meu_negocio_centavos" erros={erros} inputMode="decimal" {...campo('preco_gmn')} />
         <Aviso erro={erro} />
-        {salvo && <p className="aviso aviso--ok" role="status">Preços salvos.</p>}
-        <div><button className="btn btn--primario" disabled={enviando}>Salvar preços</button></div>
+        {salvo && <p className="aviso aviso--ok" role="status">Preço salvo.</p>}
+        <div><button className="btn btn--primario" disabled={enviando}>Salvar preço</button></div>
       </form>
     </section>
   );
