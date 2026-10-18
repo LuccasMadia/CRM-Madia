@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { linha } from '../repos/crud.js';
+import { gerarTodasMensalidades } from '../repos/mensalidades.js';
 import { aReceberNoMes, estadoParcela } from '../domain/financeiro.js';
 import { montarProximos, agruparTarefasPorProjeto, montarTarefasDivulgacao } from '../domain/painel.js';
 import { montarFunil, recebidoPorMes, agruparOrigens, faturamentoPorServico } from '../domain/graficos.js';
@@ -9,6 +10,7 @@ export function rotasPainel({ db, hoje }) {
   const todas = (sql) => db.prepare(sql).all().map(linha);
 
   r.get('/painel', (req, res) => {
+    gerarTodasMensalidades(db, hoje());
     const dia = hoje();
     const parcelasAbertas = todas(
       `SELECT pa.*, p.titulo AS projeto_titulo, p.servico, p.cliente_id FROM parcelas pa
@@ -77,6 +79,7 @@ export function rotasPainel({ db, hoje }) {
   });
 
   r.get('/painel/graficos', (req, res) => {
+    gerarTodasMensalidades(db, hoje());
     const dia = hoje();
     const pagas = todas(
       `SELECT pa.valor_centavos, pa.pago_em, p.servico FROM parcelas pa

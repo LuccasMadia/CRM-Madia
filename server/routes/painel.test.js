@@ -162,3 +162,18 @@ describe('GET /api/painel/graficos', () => {
     expect(res.body.por_servico.every((s) => s.total_centavos === 0)).toBe(true);
   });
 });
+
+describe('GET /api/painel mensalidades', () => {
+  it('a Início gera as mensalidades devidas antes de calcular os números', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const cli = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const proj = (await ctx.http.post('/api/projetos').send({ cliente_id: cli.id, titulo: 'Site' })).body;
+    await ctx.http.put(`/api/projetos/${proj.id}`).send({
+      mensalidade_ativa: true, mensalidade_valor_centavos: 5000, mensalidade_dia_vencimento: 10,
+      mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-08-10',
+    }).expect(200);
+    await ctx.http.get('/api/painel').expect(200);
+    expect(ctx.db.prepare('SELECT vencimento FROM parcelas WHERE projeto_id = ? ORDER BY vencimento').all(proj.id).map((p) => p.vencimento))
+      .toEqual(['2026-08-10', '2026-09-10']);
+  });
+});

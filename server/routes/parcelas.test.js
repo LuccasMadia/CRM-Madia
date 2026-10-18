@@ -119,10 +119,13 @@ describe('parcelamento em lote', () => {
 });
 
 describe('mensalidade automática', () => {
-  async function ativarMensalidade(valor = 20000, dia = 10) {
+  async function ativarMensalidade(valor = 20000, dia = 10, inicio = '2026-09-10') {
     await ctx.http
       .put(`/api/projetos/${projeto.id}`)
-      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: valor, mensalidade_dia_vencimento: dia })
+      .send({
+        mensalidade_ativa: true, mensalidade_valor_centavos: valor, mensalidade_dia_vencimento: dia,
+        mensalidade_inicio_modo: 'data', mensalidade_inicio_data: inicio,
+      })
       .expect(200);
   }
 
@@ -131,9 +134,37 @@ describe('mensalidade automática', () => {
     const res1 = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
     expect(res1.body.parcelas).toHaveLength(1);
     expect(res1.body.parcelas[0]).toMatchObject({ descricao: 'Mensalidade', valor_centavos: 20000, vencimento: '2026-09-10' });
-
     const res2 = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
     expect(res2.body.parcelas).toHaveLength(1);
+  });
+
+  it('preenche os meses que ficaram para trás, começando na data do gatilho', async () => {
+    await ativarMensalidade(20000, 10, '2026-07-20');
+    const res = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(res.body.parcelas.map((p) => p.vencimento)).toEqual(['2026-07-20', '2026-08-10', '2026-09-10']);
+  });
+
+  it('mês que já tem mensalidade (mesmo em outro dia) não ganha outra; nada é apagado ao mudar o início', async () => {
+    await ctx.http.post(`/api/projetos/${projeto.id}/parcelas`).send({ valor_centavos: 20000, vencimento: '2026-08-03' }).expect(201);
+    ctx.db.prepare('UPDATE parcelas SET mensalidade = 1 WHERE projeto_id = ?').run(projeto.id);
+    await ativarMensalidade(20000, 10, '2026-07-20');
+    await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    await ativarMensalidade(20000, 10, '2026-09-01');
+    const res = await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`).expect(200);
+    expect(res.body.parcelas.map((p) => p.vencimento)).toEqual(['2026-07-20', '2026-08-03', '2026-09-10']);
+  });
+
+  it('modo entrega sem data de entrega ainda não cobra', async () => {
+    await ctx.http.put(`/api/projetos/${projeto.id}`)
+      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: 100, mensalidade_dia_vencimento: 5, mensalidade_inicio_modo: 'entrega' })
+      .expect(200);
+    expect((await ctx.http.get(`/api/projetos/${projeto.id}/parcelas`)).body.parcelas).toEqual([]);
+  });
+
+  it('o Financeiro gera as mensalidades sem abrir o projeto', async () => {
+    await ativarMensalidade();
+    const lista = (await ctx.http.get('/api/parcelas').expect(200)).body;
+    expect(lista.filter((p) => p.projeto_id === projeto.id).map((p) => p.vencimento)).toEqual(['2026-09-10']);
   });
 
   it('não gera quando a mensalidade está desativada', async () => {
@@ -155,10 +186,13 @@ describe('mensalidade automática', () => {
     const proj = (await ctxFevereiro.http.post('/api/projetos').send({ cliente_id: cli.id, titulo: 'App' })).body;
     await ctxFevereiro.http
       .put(`/api/projetos/${proj.id}`)
-      .send({ mensalidade_ativa: true, mensalidade_valor_centavos: 10000, mensalidade_dia_vencimento: 31 })
+      .send({
+        mensalidade_ativa: true, mensalidade_valor_centavos: 10000, mensalidade_dia_vencimento: 31,
+        mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-01-31',
+      })
       .expect(200);
     const res = await ctxFevereiro.http.get(`/api/projetos/${proj.id}/parcelas`).expect(200);
-    expect(res.body.parcelas[0].vencimento).toBe('2026-02-28');
+    expect(res.body.parcelas.map((p) => p.vencimento)).toEqual(['2026-01-31', '2026-02-28']);
   });
 });
 

@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { linha, emTransacao } from '../repos/crud.js';
 import { repoParcelas } from '../repos/parcelas.js';
 import { repoProjetos } from '../repos/projetos.js';
+import { gerarMensalidades, gerarTodasMensalidades } from '../repos/mensalidades.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
 import { estadoParcela, resumoParcelas, recebidoPorMes } from '../domain/financeiro.js';
-import { mesDe, somarMeses, dataNoMes } from '../domain/datas.js';
+import { mesDe, somarMeses } from '../domain/datas.js';
 import { SERVICOS } from '../domain/servicos.js';
 
 const REGRAS_PARCELA = {
@@ -33,24 +34,9 @@ export function rotasParcelas({ db, hoje }) {
     return projeto;
   }
 
-  function gerarMensalidadeSeNecessario(projeto) {
-    if (!projeto.mensalidade_ativa) return;
-    const mesAtual = mesDe(hoje());
-    const existentes = parcelas.listar({ projeto_id: projeto.id });
-    const jaGerada = existentes.some((p) => p.mensalidade && mesDe(p.vencimento) === mesAtual);
-    if (jaGerada) return;
-    parcelas.criar({
-      projeto_id: projeto.id,
-      descricao: 'Mensalidade',
-      valor_centavos: projeto.mensalidade_valor_centavos,
-      vencimento: dataNoMes(mesAtual, projeto.mensalidade_dia_vencimento),
-      mensalidade: 1,
-    });
-  }
-
   r.get('/projetos/:id/parcelas', (req, res) => {
     const projeto = exigirProjeto(req);
-    gerarMensalidadeSeNecessario(projeto);
+    gerarMensalidades(db, projeto, hoje());
     const lista = parcelas.listar({ projeto_id: projeto.id }, 'vencimento, id');
     res.json({
       parcelas: lista.map(comEstado),
@@ -92,6 +78,7 @@ export function rotasParcelas({ db, hoje }) {
   });
 
   r.get('/parcelas', (req, res) => {
+    gerarTodasMensalidades(db, hoje());
     const { estado, mes, servico } = req.query;
     if (estado && !ESTADOS.includes(estado)) throw new ErroHttp(400, 'Estado inválido');
     if (mes && !/^\d{4}-\d{2}$/.test(mes)) throw new ErroHttp(400, 'Mês inválido (use AAAA-MM)');
@@ -110,6 +97,7 @@ export function rotasParcelas({ db, hoje }) {
   });
 
   r.get('/financeiro/mensal', (req, res) => {
+    gerarTodasMensalidades(db, hoje());
     const ano = Number(req.query.ano ?? hoje().slice(0, 4));
     if (!Number.isInteger(ano)) throw new ErroHttp(400, 'Ano inválido');
     const lista = db
