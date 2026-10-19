@@ -7,6 +7,7 @@ import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { Icone } from '../components/Icone.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
+import { salvarFotoCliente } from '../lib/clientes.js';
 
 export function Clientes() {
   const [busca, setBusca] = useState('');
@@ -15,13 +16,15 @@ export function Clientes() {
   const navegar = useNavigate();
   const { dados: clientes, erro, recarregar } = useCarregar(() => api(`/clientes?busca=${encodeURIComponent(busca)}`), [busca]);
 
-  async function criar(dados) {
+  async function criar(dados, fotoEscolhida) {
     const cliente = await api('/clientes', { method: 'POST', body: dados });
+    await salvarFotoCliente(cliente.id, fotoEscolhida);
     navegar(`/clientes/${cliente.id}`);
   }
 
-  async function salvar(dados) {
+  async function salvar(dados, fotoEscolhida) {
     await api(`/clientes/${editando.id}`, { method: 'PUT', body: dados });
+    await salvarFotoCliente(editando.id, fotoEscolhida);
     setEditando(null);
     recarregar();
   }

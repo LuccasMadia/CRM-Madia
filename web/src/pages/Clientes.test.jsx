@@ -81,4 +81,16 @@ describe('Clientes', () => {
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toMatchObject({ nome: 'Doces da Ana', responsavel: 'Ana Souza' });
   });
+
+  it('ao criar com foto, envia a foto para o cliente novo antes de abrir o perfil', async () => {
+    const { chamadas } = mockApi({ 'GET /clientes?busca=': [], 'POST /clientes': { ...ana, id: 7 }, 'POST /clientes/7/foto': { ...ana, id: 7, foto: 'x.jpg' } });
+    renderizar(<Clientes />, { rota: '/clientes', padrao: '/clientes' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Cliente' }));
+    await user.type(screen.getByLabelText('Empresa'), 'Doces da Ana');
+    await user.upload(screen.getByLabelText('Foto'), new File(['img'], 'logo.png', { type: 'image/png' }));
+    await user.click(screen.getByRole('button', { name: 'Criar cliente' }));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
+    expect(chamadas.filter((c) => c.metodo === 'POST').map((c) => c.caminho)).toEqual(['/clientes', '/clientes/7/foto']);
+  });
 });

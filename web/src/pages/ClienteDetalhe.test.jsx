@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ClienteDetalhe } from './ClienteDetalhe.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -60,28 +60,46 @@ describe('ClienteDetalhe', () => {
     expect(await screen.findByText('Este cliente tem projetos.')).toBeInTheDocument();
   });
 
-  it('sem foto mostra as iniciais e envia uma foto nova', async () => {
-    const { chamadas } = mockApi(rotasPerfil({ 'POST /clientes/1/foto': { ...clienteExemplo, foto: 'nova.jpg' } }));
+  it('o topo só mostra a foto (ou as iniciais), sem controles de foto', async () => {
+    mockApi(rotasPerfil({ 'GET /clientes/1': { ...clienteExemplo, foto: 'abc.jpg' } }));
     abrir();
-    await screen.findByRole('heading', { name: 'Padaria da Ana' });
-    expect(document.querySelector('.foto-cliente')).toHaveTextContent('PA');
+    expect(await screen.findByRole('img', { name: 'Foto de Padaria da Ana' })).toHaveAttribute('src', '/uploads/abc.jpg');
+    expect(screen.queryByLabelText(/foto/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Remover foto' })).toBeNull();
-    const arquivo = new File(['img'], 'logo.png', { type: 'image/png' });
-    await userEvent.setup().upload(screen.getByLabelText('Enviar foto'), arquivo);
+  });
+
+  it('Editar dados envia uma foto nova depois de salvar os dados', async () => {
+    const { chamadas } = mockApi(rotasPerfil({
+      'PUT /clientes/1': clienteExemplo,
+      'POST /clientes/1/foto': { ...clienteExemplo, foto: 'nova.jpg' },
+    }));
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar dados' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Editar dados' });
+    expect(within(dialogo).getByText('PA')).toBeInTheDocument();
+    await user.upload(within(dialogo).getByLabelText('Foto'), new File(['img'], 'logo.png', { type: 'image/png' }));
+    await user.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(chamadas.find((c) => c.metodo === 'POST')?.caminho).toBe('/clientes/1/foto'));
+    const metodos = chamadas.filter((c) => c.metodo !== 'GET').map((c) => c.metodo);
+    expect(metodos).toEqual(['PUT', 'POST']);
     expect(chamadas.find((c) => c.metodo === 'POST').corpo.get('foto').name).toBe('logo.png');
   });
 
-  it('com foto mostra a imagem e permite remover', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('Editar dados remove a foto', async () => {
     const { chamadas } = mockApi(rotasPerfil({
       'GET /clientes/1': { ...clienteExemplo, foto: 'abc.jpg' },
+      'PUT /clientes/1': clienteExemplo,
       'DELETE /clientes/1/foto': { ...clienteExemplo, foto: null },
     }));
     abrir();
-    expect(await screen.findByRole('img', { name: 'Foto de Padaria da Ana' })).toHaveAttribute('src', '/uploads/abc.jpg');
-    expect(screen.getByLabelText('Trocar foto')).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Remover foto' }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar dados' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Editar dados' });
+    await user.click(within(dialogo).getByRole('button', { name: 'Remover foto' }));
+    expect(within(dialogo).queryByRole('img')).toBeNull();
+    expect(chamadas.some((c) => c.metodo === 'DELETE')).toBe(false);
+    await user.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(chamadas.some((c) => c.metodo === 'DELETE' && c.caminho === '/clientes/1/foto')).toBe(true));
   });
 });

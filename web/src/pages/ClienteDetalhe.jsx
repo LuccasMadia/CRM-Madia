@@ -7,6 +7,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
+import { salvarFotoCliente } from '../lib/clientes.js';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { AbaSites } from './cliente/AbaSites.jsx';
 import { AbaGmn } from './cliente/AbaGmn.jsx';
@@ -29,7 +30,6 @@ export function ClienteDetalhe() {
   );
   const [editando, setEditando] = useState(false);
   const exclusao = useEnvio();
-  const foto = useEnvio();
 
   if (erro || erroProjetos) return <Aviso erro={erro ?? erroProjetos} />;
   if (!cliente || !projetos) return <p>Carregando…</p>;
@@ -37,8 +37,9 @@ export function ClienteDetalhe() {
   const doServico = (servico) => projetos.filter((p) => p.servico === servico);
   const contato = [cliente.responsavel, cliente.telefone, cliente.email, cliente.instagram].filter(Boolean).join(' · ');
 
-  async function salvar(dados) {
+  async function salvar(dados, fotoEscolhida) {
     await api(`/clientes/${id}`, { method: 'PUT', body: dados });
+    await salvarFotoCliente(id, fotoEscolhida);
     setEditando(false);
     recarregar();
   }
@@ -51,26 +52,6 @@ export function ClienteDetalhe() {
     });
   }
 
-  function enviarFoto(e) {
-    const arquivo = e.target.files?.[0];
-    e.target.value = ''; // permite escolher o mesmo arquivo de novo
-    if (!arquivo) return;
-    const corpo = new FormData();
-    corpo.append('foto', arquivo);
-    foto.executar(async () => {
-      await api(`/clientes/${id}/foto`, { method: 'POST', body: corpo });
-      recarregar();
-    });
-  }
-
-  function removerFoto() {
-    if (!window.confirm('Remover a foto deste cliente?')) return;
-    foto.executar(async () => {
-      await api(`/clientes/${id}/foto`, { method: 'DELETE' });
-      recarregar();
-    });
-  }
-
   function mudou() {
     recarregar();
     recarregarProjetos();
@@ -80,19 +61,8 @@ export function ClienteDetalhe() {
     <section>
       <header className="pagina__topo">
         <div className="perfil-cliente">
-          <div className="perfil-cliente__foto">
-            <FotoCliente cliente={cliente} tamanho={72} rotulo={`Foto de ${cliente.nome || 'cliente'}`} />
-            <label className="perfil-cliente__trocar">
-              {cliente.foto ? 'Trocar' : 'Enviar foto'}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                aria-label={cliente.foto ? 'Trocar foto' : 'Enviar foto'}
-                onChange={enviarFoto}
-              />
-            </label>
-            {cliente.foto && <button type="button" className="perfil-cliente__remover" onClick={removerFoto}>Remover foto</button>}
-          </div>
+          {/* A foto só muda em "Editar dados". */}
+          <FotoCliente cliente={cliente} tamanho={72} rotulo={`Foto de ${cliente.nome || 'cliente'}`} />
           <div>
             <p className="sobretitulo"><Link to="/clientes">Clientes</Link></p>
             <h1>{cliente.nome || 'Sem empresa'}</h1>
@@ -105,7 +75,7 @@ export function ClienteDetalhe() {
           <button type="button" className="btn btn--perigo" onClick={excluir}>Excluir</button>
         </div>
       </header>
-      <Aviso erro={exclusao.erro ?? foto.erro} />
+      <Aviso erro={exclusao.erro} />
       <div role="tablist" className="abas">
         {ABAS.map(([chave, rotulo, servico]) => (
           <button

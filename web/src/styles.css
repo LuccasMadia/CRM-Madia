@@ -351,8 +351,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .foto-cliente--iniciais { display: inline-grid; place-items: center; font-weight: 600; color: var(--primaria); background: var(--primaria-suave); border-color: transparent; letter-spacing: 0.02em; }
 .cliente-nome { display: inline-flex; align-items: center; gap: 10px; }
 .perfil-cliente { display: flex; align-items: center; gap: 20px; }
-.perfil-cliente__foto { display: grid; justify-items: center; gap: 4px; }
-.perfil-cliente__trocar, .perfil-cliente__remover { font: inherit; font-size: 0.75rem; color: var(--texto-suave); background: none; border: 0; padding: 0; cursor: pointer; }
-.perfil-cliente__trocar:hover, .perfil-cliente__remover:hover { color: var(--primaria); }
-.perfil-cliente__trocar input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
-.perfil-cliente__trocar:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px; border-radius: 4px; }
+.form-cliente__foto { display: flex; align-items: center; gap: 16px; }
+.form-cliente__foto-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.form-cliente__arquivo { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px; }
