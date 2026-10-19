@@ -20,4 +20,14 @@ describe('proteção contra outros sites', () => {
     await request(app).get('/api/backup').set('Host', 'site-malicioso.com').expect(403);
     await request(app).get('/api/painel').set('Host', 'localhost:5173').expect(200);
   });
+
+  it('aceita o host público (chega pelo túnel do Cloudflare)', async () => {
+    const { app } = criarContexto();
+    await request(app).get('/api/painel').set('Host', 'crm.luccasmadia.com.br').expect(200);
+  });
+
+  it('continua exigindo X-CRM pelo host público', async () => {
+    const { app } = criarContexto();
+    await request(app).post('/api/clientes').set('Host', 'crm.luccasmadia.com.br').send({ nome: 'Ana' }).expect(403);
+  });
 });
