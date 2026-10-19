@@ -10,6 +10,16 @@ npm start        # API em 127.0.0.1:5174 + interface em http://127.0.0.1:5173
 npm test
 ```
 
+### Em produção (pm2 + túnel)
+
+O Express serve também o front compilado (`dist/`), então só o processo `crm-madia-api` precisa rodar:
+
+```bash
+npm run build && pm2 restart crm-madia-api
+```
+
+O desenvolvimento continua com `npm run dev` (ou `npm start`). Para expor o CRM em `crm.luccasmadia.com.br`, siga o passo a passo em [docs/tunel-cloudflare.md](docs/tunel-cloudflare.md).
+
 Os dados ficam em `data/` (`crm.db` e `uploads/`), que é ignorada pelo git. Faça backup por **Configurações → Exportar backup** ou copiando a pasta `data/` com o CRM parado.
 
 ## Portfólio

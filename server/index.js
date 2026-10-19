@@ -10,7 +10,7 @@ const dataDir = process.env.CRM_DATA_DIR ?? path.join(raiz, 'data');
 const PORTA = 5174;
 
 const db = openDb(path.join(dataDir, 'crm.db'));
-const app = criarApp({ db, dataDir });
+const app = criarApp({ db, dataDir, distDir: path.join(raiz, 'dist') });
 app.listen(PORTA, '127.0.0.1', () => {
   console.log(`API do CRM em http://127.0.0.1:${PORTA}`);
   // Sincroniza o Instagram ao subir e a cada 6 horas, só se estiver conectado.

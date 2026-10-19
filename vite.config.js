@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   root: 'web',
+  build: { outDir: '../dist', emptyOutDir: true },
   plugins: [
     react(),
     VitePWA({
@@ -27,7 +28,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg}'],
-        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/publico\//, /^\/cdn-cgi\//],
       },
       devOptions: {
         enabled: true,

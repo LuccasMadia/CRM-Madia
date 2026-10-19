@@ -5,10 +5,5 @@ module.exports = {
       script: "server/index.js",
       cwd: __dirname,
     },
-    {
-      name: "crm-madia-web",
-      script: "node_modules/vite/bin/vite.js",
-      cwd: __dirname,
-    },
   ],
 };
