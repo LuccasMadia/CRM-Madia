@@ -100,4 +100,52 @@ describe('cliente do Instagram', () => {
     const { ig } = cliente({ '/me/insights': { status: 400, corpo: { error: { code: 100 } } } });
     expect(await ig.historicoSeguidores(100)).toEqual([]);
   });
+
+  describe('publicação', () => {
+    const MSG_PERMISSAO = 'O token não tem permissão para publicar. Em Configurações → Instagram, gere um token novo com a permissão de publicação e cole de novo.';
+
+    it('criarContainer faz POST com os parâmetros e o token no corpo e devolve o id', async () => {
+      const { ig, requisicoes } = cliente({ 'POST /178/media': { id: 'c1' } });
+      expect(await ig.criarContainer('178', { video_url: 'https://x/v.mp4', media_type: 'REELS' })).toBe('c1');
+      expect(requisicoes[0].metodo).toBe('POST');
+      expect(requisicoes[0].corpo).toEqual({ video_url: 'https://x/v.mp4', media_type: 'REELS', access_token: 'tok' });
+    });
+
+    it('statusContainer traduz status_code e a mensagem', async () => {
+      const { ig, chamadas } = cliente({ '/c1': { status_code: 'ERROR', status: 'Erro 2207026' } });
+      expect(await ig.statusContainer('c1')).toEqual({ status: 'ERROR', mensagem: 'Erro 2207026' });
+      expect(chamadas[0].searchParams.get('fields')).toBe('status_code,status');
+    });
+
+    it('statusContainer sem texto devolve mensagem nula', async () => {
+      const { ig } = cliente({ '/c1': { status_code: 'FINISHED' } });
+      expect(await ig.statusContainer('c1')).toEqual({ status: 'FINISHED', mensagem: null });
+    });
+
+    it('publicarContainer faz POST em media_publish e devolve o id da mídia', async () => {
+      const { ig, requisicoes } = cliente({ 'POST /178/media_publish': { id: 'm9' } });
+      expect(await ig.publicarContainer('178', 'c1')).toBe('m9');
+      expect(requisicoes[0].corpo).toEqual({ creation_id: 'c1', access_token: 'tok' });
+    });
+
+    it.each([[10], [200]])('código %i vira semPermissao com a mensagem fixa', async (code) => {
+      const { ig } = cliente({ 'POST /178/media': { status: 400, corpo: { error: { code, message: 'x' } } } });
+      const erro = await ig.criarContainer('178', {}).catch((e) => e);
+      expect(erro).toBeInstanceOf(ErroInstagram);
+      expect(erro.semPermissao).toBe(true);
+      expect(erro.message).toBe(MSG_PERMISSAO);
+    });
+
+    it('mensagem citando permissão também é semPermissao', async () => {
+      const { ig } = cliente({ 'POST /178/media': { status: 400, corpo: { error: { code: 1, message: 'Falta a Permissão X' } } } });
+      expect((await ig.criarContainer('178', {}).catch((e) => e)).semPermissao).toBe(true);
+    });
+
+    it('código 190 é tokenInvalido e não semPermissao', async () => {
+      const { ig } = cliente({ 'POST /178/media': { status: 400, corpo: { error: { code: 190, message: 'expirou' } } } });
+      const erro = await ig.criarContainer('178', {}).catch((e) => e);
+      expect(erro.tokenInvalido).toBe(true);
+      expect(erro.semPermissao).toBe(false);
+    });
+  });
 });

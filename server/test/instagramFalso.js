@@ -2,10 +2,16 @@
 // { status, corpo, tipo? } ou função (url) => ...; registra as URLs chamadas.
 export function fetchFalso(rotas) {
   const chamadas = [];
-  const fetch = async (entrada) => {
+  // requisicoes: { url, metodo, corpo } — corpo é o form-urlencoded já convertido em objeto.
+  const requisicoes = [];
+  const fetch = async (entrada, init = {}) => {
     const url = new URL(String(entrada));
+    const metodo = (init.method ?? 'GET').toUpperCase();
+    const corpoEnviado = init.body === undefined ? null : Object.fromEntries(new URLSearchParams(String(init.body)));
     chamadas.push(url);
-    const chave = url.hostname === 'graph.instagram.com' ? url.pathname : url.href;
+    requisicoes.push({ url, metodo, corpo: corpoEnviado });
+    const caminho = url.hostname === 'graph.instagram.com' ? url.pathname : url.href;
+    const chave = `${metodo} ${caminho}` in rotas ? `${metodo} ${caminho}` : caminho;
     let r = rotas[chave];
     if (typeof r === 'function') r = await r(url);
     if (r === undefined) r = { status: 404, corpo: { error: { message: `sem rota ${chave}` } } };
@@ -13,5 +19,5 @@ export function fetchFalso(rotas) {
     if (corpo instanceof Uint8Array) return new Response(corpo, { status, headers: { 'Content-Type': tipo } });
     return new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } });
   };
-  return { fetch, chamadas };
+  return { fetch, chamadas, requisicoes };
 }
