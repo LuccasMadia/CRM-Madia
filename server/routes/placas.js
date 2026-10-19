@@ -121,7 +121,8 @@ export function rotasPlacas({ db, hoje }) {
     return {
       ...montagem,
       modelo_nome: modelosTodos.find((m) => m.id === montagem.modelo_id)?.nome ?? '—',
-      itens: itensMontagem.listar({ montagem_id: montagem.id }),
+      itens: itensMontagem.listar({ montagem_id: montagem.id })
+        .map((i) => ({ ...i, material_nome: materiais.obter(i.material_id)?.nome ?? '—' })),
     };
   }
 
@@ -437,9 +438,16 @@ export function rotasPlacas({ db, hoje }) {
   r.post('/placas/montagens', (req, res) => {
     const dados = validar(req.body, REGRAS_MONTAGEM);
     if (!modelos.obter(dados.modelo_id)) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
-    const receita = itensModelo.listar({ modelo_id: dados.modelo_id });
+    // Os materiais podem vir editados: valem só para esta montagem, ou viram a receita do modelo.
+    const editados = req.body.itens !== undefined ? validarItens(req.body.itens) : null;
+    if (editados && !editados.length) throw new ErroValidacao([{ campo: 'itens', mensagem: 'Informe ao menos um material' }]);
+    const receita = editados ?? itensModelo.listar({ modelo_id: dados.modelo_id });
     if (!receita.length) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
     const criada = emTransacao(db, () => {
+      if (editados && req.body.atualizar_receita === true) {
+        itensModelo.removerPorModelo(dados.modelo_id);
+        for (const item of editados) itensModelo.criar({ ...item, modelo_id: dados.modelo_id });
+      }
       const montagem = montagens.criar(dados);
       for (const item of receita) {
         itensMontagem.criar({ montagem_id: montagem.id, material_id: item.material_id, quantidade: item.quantidade });

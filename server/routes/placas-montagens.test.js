@@ -54,7 +54,7 @@ describe('/api/placas/montagens', () => {
     const res = await ctx.http.get('/api/placas/montagens').expect(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0]).toMatchObject({ modelo_nome: 'Placa 10x10', quantidade: 2, data_montagem: '2026-10-10' });
-    expect(res.body[0].itens).toHaveLength(2);
+    expect(res.body[0].itens.map((i) => i.material_nome)).toEqual(['Placa', 'Tag']);
   });
 
   it('avisa quando falta material, mas deixa montar', async () => {
@@ -205,5 +205,40 @@ describe('/api/clientes/:id/placas', () => {
     const { body } = await ctx.http.get(`/api/clientes/${cliente.id}/placas`).expect(200);
     expect(body.vendas).toHaveLength(1);
     expect(body.vendas[0]).toMatchObject({ modelo_nome: 'Placa 10x10', estado: 'pendente', valor_total_centavos: 16000 });
+  });
+});
+
+describe('/api/placas/montagens com materiais editados', () => {
+  const montarCom = (modeloId, itens, extra = {}, esperado = 201) => ctx.http.post('/api/placas/montagens')
+    .send({ modelo_id: modeloId, quantidade: 2, data_montagem: '2026-10-10', itens, ...extra }).expect(esperado);
+
+  it('materiais diferentes valem só para esta montagem', async () => {
+    const { placa, tag, modelo } = await prepararModelo();
+    const res = await montarCom(modelo.id, [{ material_id: placa.id, quantidade: 2 }]);
+    expect(res.body.montagem.itens).toMatchObject([{ material_id: placa.id, quantidade: 2 }]);
+    expect(await estoque(placa.id)).toBe(6);
+    expect(await estoque(tag.id)).toBe(10);
+    const receita = (await ctx.http.get('/api/placas/modelos')).body.find((m) => m.id === modelo.id).itens;
+    expect(receita).toHaveLength(2);
+  });
+
+  it('com atualizar_receita, a receita do modelo passa a ser a nova', async () => {
+    const { placa, modelo } = await prepararModelo();
+    await montarCom(modelo.id, [{ material_id: placa.id, quantidade: 2 }], { atualizar_receita: true });
+    const receita = (await ctx.http.get('/api/placas/modelos')).body.find((m) => m.id === modelo.id).itens;
+    expect(receita).toMatchObject([{ material_id: placa.id, quantidade: 2 }]);
+  });
+
+  it('modelo sem receita pode ser montado informando os materiais', async () => {
+    const { placa } = await prepararModelo();
+    const vazio = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Sem receita', preco_venda_centavos: 5000 }).expect(201)).body;
+    await montarCom(vazio.id, [{ material_id: placa.id, quantidade: 1 }]);
+    expect(await estoque(placa.id)).toBe(8);
+  });
+
+  it('recusa lista de materiais vazia ou material inválido', async () => {
+    const { modelo } = await prepararModelo();
+    await montarCom(modelo.id, [], {}, 400);
+    await montarCom(modelo.id, [{ material_id: 999, quantidade: 1 }], {}, 400);
   });
 });

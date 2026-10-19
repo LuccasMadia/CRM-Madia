@@ -48,7 +48,7 @@ export function AbaMontagem() {
       {montagens && (montagens.length ? (
         <table className="tabela">
           <thead>
-            <tr><th>Data</th><th>Modelo</th><th className="num">Qtd.</th><th></th></tr>
+            <tr><th>Data</th><th>Modelo</th><th className="num">Qtd.</th><th>Materiais (por placa)</th><th></th></tr>
           </thead>
           <tbody>
             {montagens.map((m) => (
@@ -56,6 +56,7 @@ export function AbaMontagem() {
                 <td>{formatarData(m.data_montagem)}</td>
                 <td>{m.modelo_nome}</td>
                 <td className="num">{m.quantidade}</td>
+                <td>{m.itens.map((i) => `${i.quantidade} × ${i.material_nome}`).join(', ')}</td>
                 <td><button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => remover(m)}>Excluir</button></td>
               </tr>
             ))}
