@@ -33,4 +33,14 @@ app.listen(PORTA, '127.0.0.1', () => {
   };
   verificarAgendadosSeguro();
   setInterval(verificarAgendadosSeguro, 60_000);
+
+  const checarSitesSeguro = () => {
+    try {
+      app.locals.monitorSites.checarTodos().catch((erro) => console.error('[monitor] checagem falhou:', erro));
+    } catch (erro) {
+      console.error('[monitor] checagem falhou:', erro);
+    }
+  };
+  checarSitesSeguro();
+  setInterval(checarSitesSeguro, 5 * 60_000);
 });
