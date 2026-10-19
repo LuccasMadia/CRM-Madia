@@ -33,6 +33,27 @@ describe('AbaHospedagem', () => {
     expect(put.corpo).toEqual({ tipo: 'vercel', url: 'rangodobicho.com.br', vercel_projeto_id: 'prj_1', vercel_projeto_nome: 'rango-do-bicho-site' });
   });
 
+  it('erro da lista de projetos que nao e 409 mostra a mensagem do erro', async () => {
+    mockApi({
+      'GET /projetos/5/hospedagem': vazio,
+      'GET /vercel/projetos': resposta(502, { erro: 'Token da Vercel inválido ou sem permissão.' }),
+      'GET /vercel/estado': estado,
+    });
+    renderizar(<AbaHospedagem projeto={projeto} />);
+    expect(await screen.findByText('Token da Vercel inválido ou sem permissão.')).toBeInTheDocument();
+    expect(screen.queryByText(/Conecte a Vercel/)).toBeNull();
+  });
+
+  it('pausa feita direto na Vercel aparece como "Pausado na Vercel"', async () => {
+    mockApi({
+      'GET /projetos/5/hospedagem': { ...vazio, hospedagem: { ...noAr, status: 'pausado', pausado_por_crm: false } },
+      'GET /vercel/projetos': projetosVercel,
+      'GET /vercel/estado': estado,
+    });
+    renderizar(<AbaHospedagem projeto={projeto} />);
+    expect(await screen.findByText(/^Pausado na Vercel desde/)).toBeInTheDocument();
+  });
+
   it('sem Vercel conectada avisa e deixa salvar só com o endereço', async () => {
     const { chamadas } = mockApi({
       'GET /projetos/5/hospedagem': vazio,

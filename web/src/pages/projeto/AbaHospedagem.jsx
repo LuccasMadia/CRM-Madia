@@ -46,7 +46,11 @@ function FormCadastro({ projetoId, hospedagem, projetosVercel, aoSalvar }) {
         <>
           <Campo rotulo="Endereço do site" nome="url" erros={erros} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="meusite.com.br" />
           {projetosVercel.erro ? (
-            <p className="form__ajuda">Conecte a Vercel em Configurações para escolher o projeto.</p>
+            <p className="form__ajuda">
+              {projetosVercel.erro.status === 409
+                ? 'Conecte a Vercel em Configurações para escolher o projeto.'
+                : projetosVercel.erro.message}
+            </p>
           ) : (
             <Campo rotulo="Projeto da Vercel" nome="vercel_projeto_id">
               <select value={projetoVercel} onChange={(e) => setProjetoVercel(e.target.value)}>

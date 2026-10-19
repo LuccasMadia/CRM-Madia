@@ -15,9 +15,11 @@ export function dataHoraCurta(iso) {
   return `${p2(d.getDate())}/${p2(d.getMonth() + 1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
 }
 
-export function textoStatus(h) {
+// pausadoPorCrm=false: o corte foi feito direto na Vercel, não pelo CRM.
+export function textoStatus(h, pausadoPorCrm = h?.pausado_por_crm ?? true) {
   const status = h?.status ?? 'desconhecido';
   const desde = h?.status_desde ? ` desde ${dataHoraCurta(h.status_desde)}` : '';
+  if (status === 'pausado' && !pausadoPorCrm) return `Pausado na Vercel${desde}`;
   if (status === 'fora_do_ar' || status === 'pausado') return `${ROTULO_STATUS[status]}${desde}`;
   return ROTULO_STATUS[status] ?? ROTULO_STATUS.desconhecido;
 }

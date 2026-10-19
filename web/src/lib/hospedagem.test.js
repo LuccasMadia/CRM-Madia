@@ -10,6 +10,9 @@ describe('hospedagem', () => {
     expect(textoStatus({ status: 'fora_do_ar', status_desde: desde })).toBe('Fora do ar desde 19/11 14:32');
     expect(textoStatus({ status: 'no_ar', status_desde: desde })).toBe('No ar');
     expect(textoStatus({ status: 'pausado', status_desde: new Date(2026, 10, 20, 14, 5).toISOString() })).toBe('Pausado por você desde 20/11 14:05');
+    expect(textoStatus({ status: 'pausado', status_desde: new Date(2026, 10, 20, 14, 5).toISOString(), pausado_por_crm: false })).toBe('Pausado na Vercel desde 20/11 14:05');
+    expect(textoStatus({ status: 'pausado', status_desde: new Date(2026, 10, 20, 14, 5).toISOString(), pausado_por_crm: true })).toBe('Pausado por você desde 20/11 14:05');
+    expect(textoStatus({ status: 'pausado' }, false)).toBe('Pausado na Vercel');
     expect(textoStatus({ status: 'desconhecido' })).toBe('Verificando…');
     expect(textoStatus(null)).toBe('Verificando…');
   });

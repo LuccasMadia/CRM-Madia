@@ -141,6 +141,7 @@ describe('SitesSistemas', () => {
     const linhas = await screen.findAllByRole('row');
     expect(screen.getByRole('columnheader', { name: 'No ar' })).toBeInTheDocument();
     await within(linhas[2]).findByRole('img', { name: 'Fora do ar' });
+    expect(within(linhas[2]).getByText(/^Fora do ar desde \d{2}\/\d{2} \d{2}:\d{2}$/)).toBeInTheDocument();
     expect(within(linhas[1]).queryByRole('img', { name: /ar$/ })).toBeNull();
     expect(within(linhas[1]).getAllByText('—').length).toBeGreaterThan(0);
   });
