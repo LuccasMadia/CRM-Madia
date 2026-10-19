@@ -8,9 +8,9 @@ import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { criarUpload, removerArquivos, EXTENSOES_MIDIA_POST } from '../http/upload.js';
 import { ehAcessoPublico } from '../http/protecao.js';
-import { aceitaVideo, MENSAGEM_CARROSSEL_VIDEO } from '../instagram/regrasPublicacao.js';
+import { aceitaVideo, validarParaPublicar, MENSAGEM_CARROSSEL_VIDEO } from '../instagram/regrasPublicacao.js';
 import { prepararMidia } from '../instagram/midiaArquivo.js';
-import { TIPOS_CONTEUDO, ESTADOS_CONTEUDO } from '../domain/regras.js';
+import { TIPOS_CONTEUDO, ESTADOS_CONTEUDO, ESTADOS_PUBLICACAO } from '../domain/regras.js';
 
 const REGRAS_CONTEUDO = {
   projeto_id: { tipo: 'inteiro' },
@@ -25,7 +25,10 @@ const SELECT = 'SELECT c.*, p.titulo AS projeto_titulo FROM conteudos c LEFT JOI
 const TAMANHO_MAXIMO_MIDIA = 300 * 1024 * 1024;
 const MENSAGEM_POST_VIDEO = 'Post aceita só imagem.';
 
-export function rotasConteudos({ db, dataDir }) {
+const TODOS_ESTADOS = [...ESTADOS_CONTEUDO, ...ESTADOS_PUBLICACAO];
+const REGEX_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+
+export function rotasConteudos({ db, dataDir, publicador }) {
   const conteudos = criarRepo(db, 'conteudos', CAMPOS);
   const projetos = repoProjetos(db);
   const midias = repoConteudoMidias(db);
@@ -67,8 +70,15 @@ export function rotasConteudos({ db, dataDir }) {
     const condicoes = ['c.midia_id IS NULL'];
     const args = [];
     if (req.query.estado) {
+      if (!TODOS_ESTADOS.includes(req.query.estado)) {
+        throw new ErroValidacao([{ campo: 'estado', mensagem: 'Estado inválido' }]);
+      }
       condicoes.push('c.estado = ?');
       args.push(req.query.estado);
+    } else {
+      // Sem filtro: só o que o planejamento sempre mostrou (rascunhos e prontos).
+      condicoes.push(`c.estado IN (${ESTADOS_CONTEUDO.map(() => '?').join(', ')})`);
+      args.push(...ESTADOS_CONTEUDO);
     }
     if (req.query.projeto_id) {
       condicoes.push('c.projeto_id = ?');
@@ -80,6 +90,16 @@ export function rotasConteudos({ db, dataDir }) {
       .map(linha)
       .map(midias.comMidias);
     res.json(lista);
+  });
+
+  // Declarada antes de /conteudos/:id para "avisos" não ser lido como id.
+  r.get('/conteudos/avisos', (req, res) => {
+    const buscar = (estado, ordem) =>
+      db.prepare(`${SELECT} WHERE c.estado = ? AND c.midia_id IS NULL ORDER BY ${ordem}`).all(estado).map(linha).map(midias.comMidias);
+    res.json({
+      atrasados: buscar('atrasado', 'c.agendado_para, c.id'),
+      falhas: buscar('falhou', 'c.atualizado_em DESC, c.id DESC'),
+    });
   });
 
   r.post('/conteudos', (req, res) => {
@@ -118,6 +138,38 @@ export function rotasConteudos({ db, dataDir }) {
     conteudos.remover(id);
     apagarArquivos(arquivos);
     res.status(204).end();
+  });
+
+  r.post('/conteudos/:id/publicar', (req, res) => {
+    const id = lerId(req.params.id);
+    publicador.iniciar(id); // valida e trava de forma síncrona; o envio segue em segundo plano
+    res.status(202).json(obterCompleto(id));
+  });
+
+  r.post('/conteudos/:id/agendar', (req, res) => {
+    const atual = exigirEditavelPorId(lerId(req.params.id));
+    if (atual.estado === 'publicado') throw new ErroHttp(409, 'Este post já foi publicado.');
+    const momento = Date.parse(req.body?.agendado_para);
+    if (typeof req.body?.agendado_para !== 'string' || !REGEX_ISO.test(req.body.agendado_para) || Number.isNaN(momento)) {
+      throw new ErroValidacao([{ campo: 'agendado_para', mensagem: 'Data e hora inválidas.' }]);
+    }
+    if (momento <= Date.now()) throw new ErroValidacao([{ campo: 'agendado_para', mensagem: 'Escolha um horário no futuro.' }]);
+    const erros = validarParaPublicar(atual, midias.listar(atual.id));
+    if (erros.length) throw new ErroValidacao(erros.map((mensagem) => ({ campo: 'publicacao', mensagem })));
+    db.prepare(
+      "UPDATE conteudos SET estado = 'agendado', agendado_para = ?, publicacao_erro = NULL, atualizado_em = ? WHERE id = ?",
+    ).run(new Date(momento).toISOString(), new Date().toISOString(), atual.id);
+    res.json(obterCompleto(atual.id));
+  });
+
+  r.delete('/conteudos/:id/agendamento', (req, res) => {
+    const atual = exigirEditavelPorId(lerId(req.params.id));
+    if (atual.estado !== 'agendado' && atual.estado !== 'atrasado') throw new ErroHttp(409, 'Este post não está agendado.');
+    db.prepare("UPDATE conteudos SET estado = 'rascunho', agendado_para = NULL, atualizado_em = ? WHERE id = ?").run(
+      new Date().toISOString(),
+      atual.id,
+    );
+    res.json(obterCompleto(atual.id));
   });
 
   r.post('/conteudos/:id/midias', prepararEnvio, upload.array('midias', 10), async (req, res) => {

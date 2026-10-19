@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { hojeLocal } from './domain/datas.js';
 import { tratarErros } from './http/erros.js';
-import { protegerLocal } from './http/protecao.js';
+import { protegerLocal, URL_PUBLICA } from './http/protecao.js';
+import { criarPublicador } from './instagram/publicador.js';
 import { rotasClientes } from './routes/clientes.js';
 import { rotasProjetos } from './routes/projetos.js';
 import { rotasParcelas } from './routes/parcelas.js';
@@ -20,11 +21,13 @@ import { sincronizar } from './instagram/sync.js';
 import { criarExecutorUnico } from './instagram/executor.js';
 import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
 
-export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir }) {
+export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
   const app = express();
   const sincronizarInstagram = criarExecutorUnico(() => sincronizar({ db, dataDir, fetch }));
-  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram };
+  publicador ??= criarPublicador({ db, fetch, urlPublica: URL_PUBLICA, sincronizar: () => sincronizarInstagram.reiniciar() });
+  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador };
   app.locals.sincronizarInstagram = sincronizarInstagram;
+  app.locals.publicador = publicador;
   // Única rota sem proteção de host (Cloudflare Access libera /publico/*): precisa vir antes do protegerLocal.
   app.use('/publico', rotasPublico(ctx));
   app.use(protegerLocal);

@@ -75,7 +75,8 @@ export function rotasInstagram({ db, hoje, fetch, sincronizarInstagram }) {
   r.get('/instagram/grid', (req, res) => {
     const prontos = db
       .prepare(`SELECT c.*, p.titulo AS projeto_titulo FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id
-        WHERE c.estado = 'pronto' AND c.midia_id IS NULL ORDER BY c.ordem, c.id`)
+        WHERE c.estado IN ('pronto', 'agendado', 'publicando') AND c.midia_id IS NULL
+        ORDER BY (c.estado = 'pronto'), (c.agendado_para IS NOT NULL), c.agendado_para, c.ordem, c.id`)
       .all()
       .map(linha)
       .map(conteudoMidias.comMidias);
