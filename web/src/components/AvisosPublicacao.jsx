@@ -6,6 +6,13 @@ import { Aviso } from './Aviso.jsx';
 
 const dataHora = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
+// Dentro do Conteúdo abre o modal direto; fora dele (Início), leva para /conteudo?abrir=<id>.
+function BotaoAbrir({ conteudo, onAbrir, children }) {
+  return onAbrir
+    ? <button type="button" className="btn" onClick={() => onAbrir(conteudo)}>{children}</button>
+    : <Link className="btn" to={`/conteudo?abrir=${conteudo.id}`}>{children}</Link>;
+}
+
 // Faixa de posts agendados que não saíram e de publicações que falharam; some quando não há nada a avisar.
 export function AvisosPublicacao({ onAbrir, onMudou, versao = 0 }) {
   const avisos = useCarregar(() => api('/conteudos/avisos'), [versao]);
@@ -49,9 +56,7 @@ export function AvisosPublicacao({ onAbrir, onMudou, versao = 0 }) {
                 </span>
                 <span className="form--linha">
                   <button type="button" className="btn btn--primario" disabled={enviando} onClick={() => publicar(c)}>Publicar agora</button>
-                  {onAbrir
-                    ? <button type="button" className="btn" onClick={() => onAbrir(c)}>Reagendar</button>
-                    : <Link className="btn" to={`/conteudo?abrir=${c.id}`}>Reagendar</Link>}
+                  <BotaoAbrir conteudo={c} onAbrir={onAbrir}>Reagendar</BotaoAbrir>
                   <button type="button" className="btn" disabled={enviando} onClick={() => voltar(c)}>Voltar para rascunho</button>
                 </span>
               </li>
@@ -71,7 +76,10 @@ export function AvisosPublicacao({ onAbrir, onMudou, versao = 0 }) {
                   <span>{c.titulo}</span>
                   {c.publicacao_erro && <> · <span className="vazio">{c.publicacao_erro}</span></>}
                 </span>
-                <button type="button" className="btn" disabled={enviando} onClick={() => publicar(c)}>Tentar de novo</button>
+                <span className="form--linha">
+                  <button type="button" className="btn" disabled={enviando} onClick={() => publicar(c)}>Tentar de novo</button>
+                  <BotaoAbrir conteudo={c} onAbrir={onAbrir}>Abrir</BotaoAbrir>
+                </span>
               </li>
             ))}
           </ul>

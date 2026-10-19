@@ -74,4 +74,16 @@ describe('AvisosPublicacao', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Tentar de novo' }));
     await waitFor(() => expect(chamadas.some((c) => c.metodo === 'POST' && c.caminho === '/conteudos/5/publicar')).toBe(true));
   });
+
+  it('falha tem Abrir: chama onAbrir quando existe, senão é link para o Conteúdo', async () => {
+    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [FALHA] } });
+    const onAbrir = vi.fn();
+    const { unmount } = renderizar(<AvisosPublicacao onAbrir={onAbrir} />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Abrir' }));
+    expect(onAbrir).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
+    unmount();
+
+    renderizar(<AvisosPublicacao />);
+    expect(await screen.findByRole('link', { name: 'Abrir' })).toHaveAttribute('href', '/conteudo?abrir=5');
+  });
 });
