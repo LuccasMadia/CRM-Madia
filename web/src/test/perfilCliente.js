@@ -12,7 +12,7 @@ export function rotasPerfil(extra = {}) {
   return {
     'GET /clientes/1': clienteExemplo,
     'GET /projetos?cliente_id=1': [site, gmn],
-    'GET /clientes/1/placas': { vendas_avulsas: [], ja_comprou: 0 },
+    'GET /clientes/1/placas': { vendas_avulsas: [], vendas: [], ja_comprou: 0 },
     'GET /projetos/6/parcelas': { parcelas: [], resumo: {} },
     ...extra,
   };

@@ -5,6 +5,7 @@ import {
   lucroPrevisto, lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
   custoItensAvaria, quantidadeConsumidaAvariaMaterial, resumoPrejuizoAvarias,
   calcularCustoUnitarioModelo,
+  montadasDoModelo, quantasDaPraMontar, estadoVendaPlaca, valorVendaPlaca,
 } from './placas.js';
 
 const PLACA = 1;
@@ -270,5 +271,66 @@ describe('precoPlacas', () => {
   it('tabela com buraco mantém o pack exato para cliente novo', () => {
     const packs = [{ quantidade: 3, preco_total_centavos: 25001 }];
     expect(precoPlacas({ preco_venda_centavos: 10000 }, packs, 0, 3).total_centavos).toBe(25001);
+  });
+});
+
+describe('estoqueMaterial com montagens', () => {
+  const montagens = [{ id: 1, modelo_id: MODELO_10x10, quantidade: 2 }];
+  const itensMontagem = [{ montagem_id: 1, material_id: TAG_NFC, quantidade: 1 }];
+
+  it('sem montagens o cálculo é o mesmo de antes', () => {
+    const vendas = [{ modelo_id: MODELO_10x10, quantidade: 3 }];
+    expect(estoqueMaterial(TAG_NFC, lotes, vendas, itensModelo, [], [], [], [])).toBe(50 - 3);
+  });
+
+  it('a montagem tira os materiais da receita guardada nela', () => {
+    expect(estoqueMaterial(TAG_NFC, lotes, [], itensModelo, [], [], montagens, itensMontagem)).toBe(50 - 2);
+    expect(estoqueMaterial(PLACA, lotes, [], itensModelo, [], [], montagens, itensMontagem)).toBe(10);
+  });
+
+  it('a venda só tira dos materiais a parte que não saiu de montadas', () => {
+    const vendas = [{ modelo_id: MODELO_10x10, quantidade: 3, quantidade_montada: 2 }];
+    expect(estoqueMaterial(TAG_NFC, lotes, vendas, itensModelo, [], [], montagens, itensMontagem)).toBe(50 - 2 - 1);
+  });
+});
+
+describe('montadasDoModelo', () => {
+  it('soma as montagens e desconta o que as vendas tiraram de montadas', () => {
+    const montagens = [{ modelo_id: MODELO_10x10, quantidade: 2 }, { modelo_id: MODELO_10x10, quantidade: 3 }, { modelo_id: MODELO_10x15, quantidade: 4 }];
+    const vendas = [{ modelo_id: MODELO_10x10, quantidade: 3, quantidade_montada: 2 }, { modelo_id: MODELO_10x10, quantidade: 1 }];
+    expect(montadasDoModelo(MODELO_10x10, montagens, vendas)).toBe(3);
+  });
+});
+
+describe('quantasDaPraMontar', () => {
+  it('é o mínimo que cada material da receita permite', () => {
+    const estoque = new Map([[PLACA, 10], [ADESIVO_10x10, 3], [TAG_NFC, 5]]);
+    expect(quantasDaPraMontar(MODELO_10x10, itensModelo, estoque)).toBe(3);
+  });
+
+  it('nunca fica negativo', () => {
+    const estoque = new Map([[PLACA, -2], [ADESIVO_10x10, 3], [TAG_NFC, 5]]);
+    expect(quantasDaPraMontar(MODELO_10x10, itensModelo, estoque)).toBe(0);
+  });
+
+  it('sem receita devolve null', () => {
+    expect(quantasDaPraMontar(99, itensModelo, new Map())).toBeNull();
+  });
+});
+
+describe('estadoVendaPlaca e valorVendaPlaca', () => {
+  const hoje = '2026-10-18';
+
+  it('até 7 dias sem receber fica pendente; depois, atrasada', () => {
+    expect(estadoVendaPlaca({ data_venda: '2026-10-11', recebido_em: null }, hoje)).toBe('pendente');
+    expect(estadoVendaPlaca({ data_venda: '2026-10-10', recebido_em: null }, hoje)).toBe('atrasada');
+  });
+
+  it('recebida fica paga', () => {
+    expect(estadoVendaPlaca({ data_venda: '2026-09-01', recebido_em: '2026-09-05' }, hoje)).toBe('paga');
+  });
+
+  it('o valor é o preço vendido vezes a quantidade', () => {
+    expect(valorVendaPlaca({ preco_vendido_centavos: 8000, quantidade: 3 })).toBe(24000);
   });
 });

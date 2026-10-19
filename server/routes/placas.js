@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   repoPlacasMateriais, repoPlacasLotes, repoPlacasModelos, repoPlacasModelosItens, repoPlacasVendas,
   repoPlacasAvarias, repoPlacasAvariasItens, repoPlacasModelosPacks, precoSugeridoPlacas,
+  repoPlacasMontagens, repoPlacasMontagensItens, idsVendasDeProjeto, montadasDisponiveis,
 } from '../repos/placas.js';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
@@ -12,7 +13,9 @@ import {
   estoqueMaterial, custoAtualMaterial, custoReceitaModelo, lucroPrevisto,
   lucroRealVenda, resumoLucroReal, materiaisComEstoqueNegativo,
   custoItensAvaria, resumoPrejuizoAvarias, calcularCustoUnitarioModelo,
+  montadasDoModelo, quantasDaPraMontar, estadoVendaPlaca, valorVendaPlaca,
 } from '../domain/placas.js';
+import { mesDe } from '../domain/datas.js';
 
 const REGRAS_MATERIAL = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -41,6 +44,12 @@ const REGRAS_VENDA = {
   data_venda: { tipo: 'data', obrigatorio: true },
 };
 
+const REGRAS_MONTAGEM = {
+  modelo_id: { tipo: 'inteiro', obrigatorio: true },
+  quantidade: { tipo: 'inteiro', obrigatorio: true, min: 1 },
+  data_montagem: { tipo: 'data', obrigatorio: true },
+};
+
 const REGRAS_AVARIA = {
   modelo_id: { tipo: 'inteiro', obrigatorio: true },
   quantidade: { tipo: 'inteiro', min: 1 },
@@ -48,7 +57,7 @@ const REGRAS_AVARIA = {
   data_avaria: { tipo: 'data', obrigatorio: true },
 };
 
-export function rotasPlacas({ db }) {
+export function rotasPlacas({ db, hoje }) {
   const materiais = repoPlacasMateriais(db);
   const lotes = repoPlacasLotes(db);
   const modelos = repoPlacasModelos(db);
@@ -59,18 +68,60 @@ export function rotasPlacas({ db }) {
   const avarias = repoPlacasAvarias(db);
   const itensAvaria = repoPlacasAvariasItens(db);
   const projetosServicos = repoProjetosServicos(db);
+  const montagens = repoPlacasMontagens(db);
+  const itensMontagem = repoPlacasMontagensItens(db);
   const r = Router();
 
+  // Tudo o que entra no cálculo de estoque, lido uma vez por requisição.
+  function lerEstoque() {
+    return {
+      lotes: lotes.listar(),
+      vendas: vendas.listar(),
+      itensModelo: itensModelo.listar(),
+      avarias: avarias.listar(),
+      itensAvaria: itensAvaria.listar(),
+      montagens: montagens.listar(),
+      itensMontagem: itensMontagem.listar(),
+    };
+  }
+
+  const estoqueDe = (materialId, e) => estoqueMaterial(
+    materialId, e.lotes, e.vendas, e.itensModelo, e.avarias, e.itensAvaria, e.montagens, e.itensMontagem,
+  );
+
+  function avisosEstoque(materialIds) {
+    const e = lerEstoque();
+    const afetados = [...new Set(materialIds)].map((id) => materiais.obter(id));
+    return materiaisComEstoqueNegativo(afetados, e.lotes, e.vendas, e.itensModelo, e.avarias, e.itensAvaria, e.montagens, e.itensMontagem)
+      .map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
+  }
+
   function comCalculo(material) {
-    const lotesTodos = lotes.listar();
-    const vendasTodas = vendas.listar();
-    const todosItens = itensModelo.listar();
-    const avariasTodas = avarias.listar();
-    const todosItensAvaria = itensAvaria.listar();
+    const e = lerEstoque();
     return {
       ...material,
-      estoque_atual: estoqueMaterial(material.id, lotesTodos, vendasTodas, todosItens, avariasTodas, todosItensAvaria),
-      custo_unitario_atual: custoAtualMaterial(material.id, lotesTodos),
+      estoque_atual: estoqueDe(material.id, e),
+      custo_unitario_atual: custoAtualMaterial(material.id, e.lotes),
+    };
+  }
+
+  function montarVenda(venda, { modelosTodos = modelos.listar(), clientesTodos = clientes.listar(), deProjeto = idsVendasDeProjeto(db) } = {}) {
+    return {
+      ...venda,
+      lucro_real_centavos: lucroRealVenda(venda),
+      valor_total_centavos: valorVendaPlaca(venda),
+      estado: estadoVendaPlaca(venda, hoje()),
+      via_projeto: deProjeto.has(venda.id),
+      modelo_nome: modelosTodos.find((m) => m.id === venda.modelo_id)?.nome ?? '—',
+      cliente_nome: venda.cliente_id ? (clientesTodos.find((c) => c.id === venda.cliente_id)?.nome ?? '—') : null,
+    };
+  }
+
+  function montarMontagem(montagem, modelosTodos = modelos.listar()) {
+    return {
+      ...montagem,
+      modelo_nome: modelosTodos.find((m) => m.id === montagem.modelo_id)?.nome ?? '—',
+      itens: itensMontagem.listar({ montagem_id: montagem.id }),
     };
   }
 
@@ -177,6 +228,9 @@ export function rotasPlacas({ db }) {
     if (itensAvaria.listar().some((i) => i.material_id === id)) {
       throw new ErroValidacao([{ campo: 'id', mensagem: 'Material está usado em uma avaria' }]);
     }
+    if (itensMontagem.listar().some((i) => i.material_id === id)) {
+      throw new ErroValidacao([{ campo: 'id', mensagem: 'Material está usado em uma montagem' }]);
+    }
     materiais.remover(id);
     res.status(204).end();
   });
@@ -266,6 +320,9 @@ export function rotasPlacas({ db }) {
     if (avarias.listar().some((a) => a.modelo_id === id)) {
       throw new ErroValidacao([{ campo: 'id', mensagem: 'Modelo tem avarias vinculadas' }]);
     }
+    if (montagens.listar().some((m) => m.modelo_id === id)) {
+      throw new ErroValidacao([{ campo: 'id', mensagem: 'Modelo tem montagens vinculadas' }]);
+    }
     emTransacao(db, () => {
       itensModelo.removerPorModelo(id);
       packsModelo.removerPorModelo(id);
@@ -301,14 +358,8 @@ export function rotasPlacas({ db }) {
   });
 
   r.get('/placas/vendas', (req, res) => {
-    const modelosTodos = modelos.listar();
-    const clientesTodos = clientes.listar();
-    res.json(vendas.listar().map((v) => ({
-      ...v,
-      lucro_real_centavos: lucroRealVenda(v),
-      modelo_nome: modelosTodos.find((m) => m.id === v.modelo_id)?.nome ?? '—',
-      cliente_nome: v.cliente_id ? (clientesTodos.find((c) => c.id === v.cliente_id)?.nome ?? '—') : null,
-    })));
+    const contexto = { modelosTodos: modelos.listar(), clientesTodos: clientes.listar(), deProjeto: idsVendasDeProjeto(db) };
+    res.json(vendas.listar().map((v) => montarVenda(v, contexto)));
   });
 
   r.post('/placas/vendas', (req, res) => {
@@ -325,8 +376,7 @@ export function rotasPlacas({ db }) {
     if (!modelo) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
 
     const itensDoModelo = itensModelo.listar({ modelo_id: modelo.id });
-    const lotesTodos = lotes.listar();
-    const resultadoCusto = calcularCustoUnitarioModelo(modelo.id, itensModelo.listar(), lotesTodos);
+    const resultadoCusto = calcularCustoUnitarioModelo(modelo.id, itensModelo.listar(), lotes.listar());
     if (resultadoCusto.erro === 'sem_receita') {
       throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
     }
@@ -335,34 +385,81 @@ export function rotasPlacas({ db }) {
     }
     const custoUnitario = resultadoCusto.custoUnitarioCentavos;
 
+    const quantidade = dados.quantidade ?? 1;
     const venda = vendas.criar({
       modelo_id: modelo.id,
-      quantidade: dados.quantidade ?? 1,
+      quantidade,
       preco_vendido_centavos: dados.preco_vendido_centavos,
       custo_unitario_centavos: custoUnitario,
       cliente_id: temCliente ? dados.cliente_id : null,
       comprador_nome: temNome ? dados.comprador_nome.trim() : null,
       data_venda: dados.data_venda,
+      recebido_em: req.body.recebido === true ? dados.data_venda : null,
+      quantidade_montada: Math.min(quantidade, Math.max(0, montadasDisponiveis(db, modelo.id))),
     });
 
-    const vendasTodas = vendas.listar();
-    const todosItensModelo = itensModelo.listar();
-    const avariasTodas = avarias.listar();
-    const todosItensAvaria = itensAvaria.listar();
-    const materiaisAfetados = itensDoModelo.map((i) => materiais.obter(i.material_id));
-    const avisosEstoque = materiaisComEstoqueNegativo(
-      materiaisAfetados, lotesTodos, vendasTodas, todosItensModelo, avariasTodas, todosItensAvaria,
-    ).map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
-
-    res.status(201).json({ venda: { ...venda, lucro_real_centavos: lucroRealVenda(venda) }, avisos_estoque: avisosEstoque });
+    res.status(201).json({
+      venda: montarVenda(venda),
+      avisos_estoque: avisosEstoque(itensDoModelo.map((i) => i.material_id)),
+    });
   });
 
   r.put('/placas/vendas/:id', (req, res) => {
     const id = lerId(req.params.id);
+    const atual = vendas.obter(id);
+    if (!atual) throw naoEncontrado('Venda');
     const dados = validar(req.body, REGRAS_VENDA, { parcial: true });
-    const atualizada = vendas.atualizar(id, dados);
+    if (dados.quantidade !== undefined || dados.modelo_id !== undefined) {
+      const modeloId = dados.modelo_id ?? atual.modelo_id;
+      const livres = Math.max(0, montadasDisponiveis(db, modeloId, { ignorarVendaId: id }));
+      dados.quantidade_montada = Math.min(dados.quantidade ?? atual.quantidade, livres);
+    }
+    res.json(montarVenda(vendas.atualizar(id, dados)));
+  });
+
+  r.post('/placas/vendas/:id/recebimento', (req, res) => {
+    const atualizada = vendas.atualizar(lerId(req.params.id), { recebido_em: hoje() });
     if (!atualizada) throw naoEncontrado('Venda');
-    res.json({ ...atualizada, lucro_real_centavos: lucroRealVenda(atualizada) });
+    res.json(montarVenda(atualizada));
+  });
+
+  r.delete('/placas/vendas/:id/recebimento', (req, res) => {
+    const atualizada = vendas.atualizar(lerId(req.params.id), { recebido_em: null });
+    if (!atualizada) throw naoEncontrado('Venda');
+    res.json(montarVenda(atualizada));
+  });
+
+  r.get('/placas/montagens', (req, res) => {
+    const modelosTodos = modelos.listar();
+    res.json(montagens.listar().map((m) => montarMontagem(m, modelosTodos)));
+  });
+
+  r.post('/placas/montagens', (req, res) => {
+    const dados = validar(req.body, REGRAS_MONTAGEM);
+    if (!modelos.obter(dados.modelo_id)) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
+    const receita = itensModelo.listar({ modelo_id: dados.modelo_id });
+    if (!receita.length) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
+    const criada = emTransacao(db, () => {
+      const montagem = montagens.criar(dados);
+      for (const item of receita) {
+        itensMontagem.criar({ montagem_id: montagem.id, material_id: item.material_id, quantidade: item.quantidade });
+      }
+      return montagem;
+    });
+    res.status(201).json({
+      montagem: montarMontagem(criada),
+      avisos_estoque: avisosEstoque(receita.map((i) => i.material_id)),
+    });
+  });
+
+  r.delete('/placas/montagens/:id', (req, res) => {
+    const montagem = montagens.obter(lerId(req.params.id));
+    if (!montagem) throw naoEncontrado('Montagem');
+    if (montadasDisponiveis(db, montagem.modelo_id) - montagem.quantidade < 0) {
+      throw new ErroHttp(409, 'Placas desta montagem já foram vendidas');
+    }
+    montagens.remover(montagem.id);
+    res.status(204).end();
   });
 
   r.delete('/placas/vendas/:id', (req, res) => {
@@ -406,16 +503,7 @@ export function rotasPlacas({ db }) {
       return avaria;
     });
 
-    const vendasTodas = vendas.listar();
-    const todosItensModelo = itensModelo.listar();
-    const avariasTodas = avarias.listar();
-    const todosItensAvaria = itensAvaria.listar();
-    const materiaisAfetados = itens.map((i) => materiais.obter(i.material_id));
-    const avisosEstoque = materiaisComEstoqueNegativo(
-      materiaisAfetados, lotesTodos, vendasTodas, todosItensModelo, avariasTodas, todosItensAvaria,
-    ).map((m) => ({ material_id: m.id, nome: m.nome, estoque_atual: m.estoque_atual }));
-
-    res.status(201).json({ avaria: montarAvaria(criada), avisos_estoque: avisosEstoque });
+    res.status(201).json({ avaria: montarAvaria(criada), avisos_estoque: avisosEstoque(itens.map((i) => i.material_id)) });
   });
 
   r.put('/placas/avarias/:id', (req, res) => {
@@ -454,11 +542,15 @@ export function rotasPlacas({ db }) {
   r.get('/placas/resumo', (req, res) => {
     const materiaisTodos = materiais.listar();
     const modelosTodos = modelos.listar();
-    const lotesTodos = lotes.listar();
-    const vendasTodas = vendas.listar();
-    const todosItens = itensModelo.listar();
-    const avariasTodas = avarias.listar();
-    const todosItensAvaria = itensAvaria.listar();
+    const e = lerEstoque();
+    const { lotes: lotesTodos, vendas: vendasTodas, itensModelo: todosItens, avarias: avariasTodas } = e;
+    const estoquePorMaterial = new Map(materiaisTodos.map((m) => [m.id, estoqueDe(m.id, e)]));
+    const contextoVenda = { modelosTodos, clientesTodos: clientes.listar(), deProjeto: idsVendasDeProjeto(db) };
+    const aReceber = vendasTodas
+      .filter((v) => !v.recebido_em && !contextoVenda.deProjeto.has(v.id))
+      .map((v) => montarVenda(v, contextoVenda))
+      .sort((a, b) => a.data_venda.localeCompare(b.data_venda) || a.id - b.id);
+    const doMes = vendasTodas.filter((v) => mesDe(v.data_venda) === mesDe(hoje()));
 
     const lucroPrevistoPorModelo = modelosTodos.map((m) => {
       const custoReceita = custoReceitaModelo(m.id, todosItens, lotesTodos);
@@ -474,10 +566,24 @@ export function rotasPlacas({ db }) {
     const materiaisComEstoque = materiaisTodos.map((m) => ({
       material_id: m.id,
       nome: m.nome,
-      estoque_atual: estoqueMaterial(m.id, lotesTodos, vendasTodas, todosItens, avariasTodas, todosItensAvaria),
+      estoque_atual: estoquePorMaterial.get(m.id),
     }));
 
     res.json({
+      a_receber: {
+        total_centavos: aReceber.reduce((s, v) => s + v.valor_total_centavos, 0),
+        vendas: aReceber,
+      },
+      montadas: modelosTodos.filter((m) => m.ativo).map((m) => ({
+        modelo_id: m.id,
+        modelo_nome: m.nome,
+        montadas: montadasDoModelo(m.id, e.montagens, vendasTodas),
+        da_pra_montar: quantasDaPraMontar(m.id, todosItens, estoquePorMaterial),
+      })),
+      mes: {
+        vendidas: doMes.reduce((s, v) => s + v.quantidade, 0),
+        lucro_centavos: doMes.reduce((s, v) => s + lucroRealVenda(v), 0),
+      },
       lucro_previsto_por_modelo: lucroPrevistoPorModelo,
       lucro_real_por_modelo: resumoLucroReal(vendasTodas).map((rl) => ({
         ...rl,

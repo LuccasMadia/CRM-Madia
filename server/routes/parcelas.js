@@ -8,6 +8,7 @@ import { ErroHttp, naoEncontrado } from '../http/erros.js';
 import { estadoParcela, resumoParcelas, recebidoPorMes } from '../domain/financeiro.js';
 import { mesDe, somarMeses } from '../domain/datas.js';
 import { SERVICOS } from '../domain/servicos.js';
+import { vendasPlacasComoParcelas } from '../repos/placas.js';
 
 const REGRAS_PARCELA = {
   descricao: { tipo: 'texto' },
@@ -91,7 +92,9 @@ export function rotasParcelas({ db, hoje }) {
          ORDER BY pa.vencimento, pa.id`,
       )
       .all()
-      .map((row) => comEstado(linha(row)))
+      .map((row) => ({ tipo: 'parcela', ...comEstado(linha(row)) }))
+      .concat(vendasPlacasComoParcelas(db, hoje()))
+      .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
       .filter((p) => (!estado || p.estado === estado) && (!mes || mesDe(p.vencimento) === mes) && (!servico || p.servico === servico));
     res.json(lista);
   });
@@ -104,7 +107,7 @@ export function rotasParcelas({ db, hoje }) {
       .prepare('SELECT pa.* FROM parcelas pa JOIN projetos p ON p.id = pa.projeto_id WHERE p.ficticio = 0')
       .all()
       .map(linha);
-    res.json(recebidoPorMes(lista, ano));
+    res.json(recebidoPorMes([...lista, ...vendasPlacasComoParcelas(db, hoje())], ano));
   });
 
   return r;

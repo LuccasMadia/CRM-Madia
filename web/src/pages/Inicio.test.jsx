@@ -107,7 +107,7 @@ describe('Inicio', () => {
       },
     });
     renderizar(<Inicio />);
-    expect(await screen.findByText('1 GMN pendente · 1 venda de placas a entregar')).toBeInTheDocument();
+    expect(await screen.findByText('1 GMN pendente · 1 venda de placas a receber')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ana — Google Meu Negócio' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
     expect(screen.getByRole('link', { name: 'Bruno — Placas NFC' })).toHaveAttribute('href', '/clientes/2?aba=placas');
     expect(screen.getByRole('link', { name: 'Pagamento' })).toHaveAttribute('href', '/clientes/1?aba=gmn');

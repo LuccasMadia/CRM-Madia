@@ -4,7 +4,7 @@ import { repoProjetos } from '../repos/projetos.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
 import { repoParcelas } from '../repos/parcelas.js';
 import { planejarCobrancaUnica } from '../domain/cobranca.js';
-import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasVendas, precoSugeridoPlacas } from '../repos/placas.js';
+import { repoPlacasModelos, repoPlacasModelosItens, repoPlacasLotes, repoPlacasVendas, precoSugeridoPlacas, montadasDisponiveis } from '../repos/placas.js';
 import { obterConfig } from '../repos/config.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
@@ -229,6 +229,9 @@ export function rotasProjetos({ db, hoje }) {
         cliente_id: atual.cliente_id,
         comprador_nome: null,
         data_venda: hoje(),
+        // O dinheiro desta venda entra pelas parcelas do projeto.
+        recebido_em: hoje(),
+        quantidade_montada: Math.min(linhaServico.quantidade, Math.max(0, montadasDisponiveis(db, linhaServico.modelo_id))),
       });
       projetosServicos.atualizar(linhaServico.id, { venda_id: venda.id });
     }

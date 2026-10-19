@@ -1,3 +1,5 @@
+import { somarDias } from './datas.js';
+
 export function custoUnitarioLote(lote) {
   return Math.round((lote.valor_kit_centavos + lote.valor_frete_centavos) / lote.quantidade);
 }
@@ -21,7 +23,8 @@ export function quantidadeConsumidaMaterial(materialId, vendas, itensModelo) {
     const porUnidade = itensModelo
       .filter((i) => i.modelo_id === venda.modelo_id && i.material_id === materialId)
       .reduce((s, i) => s + i.quantidade, 0);
-    return soma + porUnidade * venda.quantidade;
+    // A parte que saiu de placas montadas já foi descontada na montagem.
+    return soma + porUnidade * (venda.quantidade - (venda.quantidade_montada ?? 0));
   }, 0);
 }
 
@@ -34,11 +37,43 @@ export function quantidadeConsumidaAvariaMaterial(materialId, avarias, itensAvar
   }, 0);
 }
 
-export function estoqueMaterial(materialId, lotes, vendas, itensModelo, avarias = [], itensAvaria = []) {
+// Cada montagem guarda a receita do momento em que foi feita.
+export function quantidadeConsumidaMontagemMaterial(materialId, montagens, itensMontagem) {
+  return montagens.reduce((soma, montagem) => {
+    const porUnidade = itensMontagem
+      .filter((i) => i.montagem_id === montagem.id && i.material_id === materialId)
+      .reduce((s, i) => s + i.quantidade, 0);
+    return soma + porUnidade * montagem.quantidade;
+  }, 0);
+}
+
+export function estoqueMaterial(materialId, lotes, vendas, itensModelo, avarias = [], itensAvaria = [], montagens = [], itensMontagem = []) {
   return totalCompradoMaterial(materialId, lotes)
     - quantidadeConsumidaMaterial(materialId, vendas, itensModelo)
-    - quantidadeConsumidaAvariaMaterial(materialId, avarias, itensAvaria);
+    - quantidadeConsumidaAvariaMaterial(materialId, avarias, itensAvaria)
+    - quantidadeConsumidaMontagemMaterial(materialId, montagens, itensMontagem);
 }
+
+export function montadasDoModelo(modeloId, montagens, vendas) {
+  const montadas = montagens.filter((m) => m.modelo_id === modeloId).reduce((s, m) => s + m.quantidade, 0);
+  const vendidas = vendas.filter((v) => v.modelo_id === modeloId).reduce((s, v) => s + (v.quantidade_montada ?? 0), 0);
+  return montadas - vendidas;
+}
+
+export function quantasDaPraMontar(modeloId, itensModelo, estoquePorMaterial) {
+  const itens = itensModelo.filter((i) => i.modelo_id === modeloId);
+  if (!itens.length) return null;
+  return Math.max(0, Math.min(...itens.map((i) => Math.floor((estoquePorMaterial.get(i.material_id) ?? 0) / i.quantidade))));
+}
+
+export const DIAS_PARA_ATRASAR_VENDA = 7;
+
+export function estadoVendaPlaca(venda, hoje) {
+  if (venda.recebido_em) return 'paga';
+  return venda.data_venda < somarDias(hoje, -DIAS_PARA_ATRASAR_VENDA) ? 'atrasada' : 'pendente';
+}
+
+export const valorVendaPlaca = (venda) => venda.preco_vendido_centavos * venda.quantidade;
 
 export function custoItensAvaria(itens, lotes) {
   if (!itens.length) return null;
@@ -76,9 +111,9 @@ export function resumoLucroReal(vendas) {
   return [...porModelo.values()].map((r) => ({ ...r, lucro_medio_centavos: Math.round(r.lucro_total_centavos / r.quantidade) }));
 }
 
-export function materiaisComEstoqueNegativo(materiais, lotes, vendas, itensModelo, avarias = [], itensAvaria = []) {
+export function materiaisComEstoqueNegativo(materiais, lotes, vendas, itensModelo, avarias = [], itensAvaria = [], montagens = [], itensMontagem = []) {
   return materiais
-    .map((m) => ({ ...m, estoque_atual: estoqueMaterial(m.id, lotes, vendas, itensModelo, avarias, itensAvaria) }))
+    .map((m) => ({ ...m, estoque_atual: estoqueMaterial(m.id, lotes, vendas, itensModelo, avarias, itensAvaria, montagens, itensMontagem) }))
     .filter((m) => m.estoque_atual < 0);
 }
 

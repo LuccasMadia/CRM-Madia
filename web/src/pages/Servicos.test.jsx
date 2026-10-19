@@ -27,6 +27,11 @@ const rotas = {
   'GET /projetos?servico=site_sistema': [site],
   'GET /projetos?servico=google_meu_negocio': [gmnPendente, gmnConfigurado],
   'GET /clientes': [],
+  'GET /servicos/resumo': {
+    site_sistema: { a_receber_centavos: 0 },
+    google_meu_negocio: { a_receber_centavos: 20000 },
+    placas_nfc: { a_receber_centavos: 8000, montadas: 3 },
+  },
 };
 
 const abrir = (rota = '/servicos') => renderizar(<Servicos />, { rota, padrao: '/servicos' });
@@ -44,7 +49,7 @@ describe('Servicos', () => {
   });
 
   it('a aba vem do endereço e trocar de aba atualiza o endereço', async () => {
-    mockApi({ ...rotas, 'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } } });
+    mockApi({ ...rotas, 'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] }, a_receber: { total_centavos: 0, vendas: [] }, montadas: [], mes: { vendidas: 0, lucro_centavos: 0 } } });
     abrir('/servicos?aba=gmn');
     expect(screen.getByRole('tab', { name: /Google Meu Negócio/ })).toHaveAttribute('aria-selected', 'true');
     await screen.findByRole('link', { name: 'Bruno' });
@@ -88,16 +93,21 @@ describe('Servicos', () => {
     mockApi(rotas);
     abrir();
     expect(await screen.findByText('1 em andamento')).toBeInTheDocument();
-    expect(screen.getByText('1 pendente')).toBeInTheDocument();
-    expect(screen.getByText('1 a entregar')).toBeInTheDocument();
+    expect(await screen.findByText(/^1 pendente · R\$\s*200,00 a receber$/)).toBeInTheDocument();
+    expect(screen.getByText(/^R\$\s*80,00 a receber · 3 montadas$/)).toBeInTheDocument();
   });
 
   it('usa plural nos números', async () => {
-    mockApi({ ...rotas, 'GET /projetos': [gmnPendente, { ...gmnPendente, id: 10 }] });
+    const semReceber = { a_receber_centavos: 0 };
+    mockApi({
+      ...rotas,
+      'GET /projetos': [gmnPendente, { ...gmnPendente, id: 10 }],
+      'GET /servicos/resumo': { site_sistema: semReceber, google_meu_negocio: semReceber, placas_nfc: { ...semReceber, montadas: 1 } },
+    });
     abrir();
     expect(await screen.findByText('2 pendentes')).toBeInTheDocument();
     expect(screen.getByText('0 em andamento')).toBeInTheDocument();
-    expect(screen.getByText('0 a entregar')).toBeInTheDocument();
+    expect(await screen.findByText('1 montada')).toBeInTheDocument();
   });
 
   it('se a contagem falhar, os cards aparecem sem número', async () => {

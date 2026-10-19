@@ -28,3 +28,7 @@ export function semanasDoMes(ano, mes) {
 
 // Dia (AAAA-MM-DD) no fuso local de um instante ISO — publicado_em vem em UTC.
 export const diaLocal = (iso) => new Date(iso).toLocaleDateString('sv-SE');
+
+export function diasDesde(iso, hoje = hojeISO()) {
+  return Math.round((Date.parse(`${hoje}T00:00:00Z`) - Date.parse(`${iso}T00:00:00Z`)) / 86400000);
+}
