@@ -12,7 +12,7 @@ const VAZIO = { titulo: '', tipo: 'post', estado: 'rascunho', data_planejada: ''
 
 const opcoes = (rotulos) => Object.entries(rotulos).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>);
 
-export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir }) {
+export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir, onMidiasMudaram }) {
   const { dados: projetos } = useCarregar(() => (projetoFixo ? Promise.resolve([]) : api('/projetos')), [projetoFixo]);
   const { valores, campo } = useFormulario(
     Object.fromEntries(Object.entries(VAZIO).map(([k, padrao]) => [k, inicial[k] == null ? padrao : String(inicial[k])])),
@@ -43,7 +43,7 @@ export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir })
       <Campo rotulo="Data planejada (opcional)" nome="data_planejada" erros={erros} type="date" {...campo('data_planejada')} />
       <Campo rotulo="Legenda" nome="legenda" erros={erros}><textarea rows={5} {...campo('legenda')} /></Campo>
       {atual.id
-        ? <MidiasConteudo conteudo={atual} onMudou={setAtual} />
+        ? <MidiasConteudo conteudo={atual} onMudou={(c) => { setAtual(c); onMidiasMudaram?.(c); }} />
         : <p className="kanban__meta">Salve o rascunho para adicionar mídias.</p>}
       <Aviso erro={erro} />
       <div className="form--linha">

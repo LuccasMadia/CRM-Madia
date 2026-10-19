@@ -26,7 +26,7 @@ describe('AbaConteudos', () => {
     const { chamadas } = mockApi({
       'GET /conteudos?projeto_id=5': [],
       'GET /instagram/midias?projeto_id=5': [],
-      'POST /conteudos': { id: 1 },
+      'POST /conteudos': { id: 1, titulo: 'Case no Insta', tipo: 'post', estado: 'rascunho', midias: [] },
     });
     render(<AbaConteudos projetoId={5} />);
     const user = userEvent.setup();
@@ -34,7 +34,7 @@ describe('AbaConteudos', () => {
     expect(screen.queryByLabelText('Projeto (opcional)')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Título'), 'Case no Insta');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByRole('button', { name: '+ Planejar' });
+    expect(await screen.findByLabelText('Adicionar mídias')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/conteudos').corpo).toMatchObject({ titulo: 'Case no Insta', projeto_id: 5 });
   });
 });

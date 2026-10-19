@@ -53,8 +53,14 @@ export function Conteudo() {
   }
 
   async function salvar(dados) {
-    await salvarConteudo(editando.id, dados);
-    setEditando(null);
+    const criando = !editando.id;
+    const salvo = await salvarConteudo(editando.id, dados);
+    setEditando(criando ? salvo : null);
+    recarregarPlanejados();
+  }
+
+  function midiasMudaram(atualizado) {
+    setEditando(atualizado);
     recarregarPlanejados();
   }
 
@@ -136,7 +142,7 @@ export function Conteudo() {
 
       {editando && (
         <Modal titulo={editando.id ? 'Editar planejado' : 'Novo planejado'} onFechar={() => setEditando(null)}>
-          <FormConteudo inicial={editando} onSalvar={salvar} onExcluir={editando.id ? excluir : undefined} />
+          <FormConteudo key={editando.id ?? 'novo'} inicial={editando} onSalvar={salvar} onMidiasMudaram={midiasMudaram} onExcluir={editando.id ? excluir : undefined} />
         </Modal>
       )}
     </section>

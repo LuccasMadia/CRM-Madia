@@ -14,8 +14,14 @@ export function AbaConteudos({ projetoId }) {
   const [editando, setEditando] = useState(null);
 
   async function salvar(dados) {
-    await salvarConteudo(editando.id, dados);
-    setEditando(null);
+    const criando = !editando.id;
+    const salvo = await salvarConteudo(editando.id, dados);
+    setEditando(criando ? salvo : null);
+    planejados.recarregar();
+  }
+
+  function midiasMudaram(atualizado) {
+    setEditando(atualizado);
     planejados.recarregar();
   }
 
@@ -66,7 +72,7 @@ export function AbaConteudos({ projetoId }) {
 
       {editando && (
         <Modal titulo={editando.id ? 'Editar planejado' : 'Novo planejado'} onFechar={() => setEditando(null)}>
-          <FormConteudo inicial={editando} projetoFixo={projetoId} onSalvar={salvar} onExcluir={editando.id ? excluir : undefined} />
+          <FormConteudo key={editando.id ?? 'novo'} inicial={editando} projetoFixo={projetoId} onSalvar={salvar} onMidiasMudaram={midiasMudaram}onExcluir={editando.id ? excluir : undefined} />
         </Modal>
       )}
     </div>

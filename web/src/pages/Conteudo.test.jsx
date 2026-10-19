@@ -140,15 +140,33 @@ describe('Conteudo', () => {
     expect(screen.getByLabelText('Título')).toHaveValue('Reels sexta');
   });
 
-  it('cria um planejado novo', async () => {
-    const { chamadas } = mockApi(rotas({ 'POST /conteudos': { id: 10 } }));
+  it('cria um planejado novo e mantém o modal aberto com o campo de mídias', async () => {
+    const { chamadas } = mockApi(rotas({ 'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho', midias: [] } }));
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
     await user.type(screen.getByLabelText('Título'), 'Novo reels');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByRole('button', { name: '+ Planejar' });
+    expect(await screen.findByLabelText('Adicionar mídias')).toBeInTheDocument();
+    expect(screen.queryByText('Salve o rascunho para adicionar mídias.')).not.toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/conteudos').corpo).toMatchObject({ titulo: 'Novo reels', tipo: 'post' });
+  });
+
+  it('subir mídia recarrega o grid e os rascunhos', async () => {
+    const { chamadas } = mockApi(rotas({
+      'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho', midias: [] },
+      'POST /conteudos/10/midias': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho', midias: [{ id: 1, url: '/uploads/x.jpg', tipo: 'imagem', ordem: 0 }] },
+    }));
+    abrir();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
+    await user.type(screen.getByLabelText('Título'), 'Novo reels');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    const input = await screen.findByLabelText('Adicionar mídias');
+    const antes = chamadas.filter((c) => c.caminho === '/instagram/grid').length;
+    await user.upload(input, new File(['x'], 'x.png', { type: 'image/png' }));
+    await screen.findByRole('img', { name: 'Mídia 1' });
+    expect(chamadas.filter((c) => c.caminho === '/instagram/grid').length).toBeGreaterThan(antes);
   });
 
   it('desconectado, clicar num post já sincronizado mostra os números', async () => {
