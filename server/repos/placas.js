@@ -1,5 +1,5 @@
 import { criarRepo, linha } from './crud.js';
-import { precoPlacas, montadasDoModelo } from '../domain/placas.js';
+import { precoPlacas, montadasDoModelo, estadoVendaPlaca, valorVendaPlaca } from '../domain/placas.js';
 
 export const CAMPOS_MATERIAL = ['nome', 'ativo'];
 export function repoPlacasMateriais(db) {
@@ -141,6 +141,29 @@ export function idsVendasDeProjeto(db) {
 export function montadasDisponiveis(db, modeloId, { ignorarVendaId = null } = {}) {
   const vendas = repoPlacasVendas(db).listar().filter((v) => v.id !== ignorarVendaId);
   return montadasDoModelo(modeloId, repoPlacasMontagens(db).listar(), vendas);
+}
+
+// Vendas de placa no formato das parcelas, para somar no Início e no Financeiro.
+// As que vieram de projeto ficam de fora: o dinheiro delas entra pelas parcelas do projeto.
+export function vendasPlacasComoParcelas(db, hoje) {
+  return db.prepare(`
+    SELECT v.*, m.nome AS modelo_nome, c.nome AS cliente_nome FROM placas_vendas v
+    JOIN placas_modelos m ON m.id = v.modelo_id LEFT JOIN clientes c ON c.id = v.cliente_id
+    WHERE v.id NOT IN (SELECT venda_id FROM projetos_servicos WHERE venda_id IS NOT NULL)
+    ORDER BY v.data_venda, v.id
+  `).all().map(linha).map((v) => ({
+    tipo: 'venda_placa',
+    id: v.id,
+    valor_centavos: valorVendaPlaca(v),
+    vencimento: v.data_venda,
+    pago_em: v.recebido_em,
+    estado: estadoVendaPlaca(v, hoje),
+    servico: 'placas_nfc',
+    cliente_id: v.cliente_id,
+    cliente_nome: v.cliente_nome ?? v.comprador_nome,
+    projeto_titulo: `${v.modelo_nome} × ${v.quantidade}`,
+    descricao: 'Venda de placas',
+  }));
 }
 
 export function precoSugeridoPlacas(db, { modelo, quantidade, clienteId = null, projetoId = null }) {

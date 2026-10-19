@@ -4,6 +4,8 @@ import { gerarTodasMensalidades } from '../repos/mensalidades.js';
 import { aReceberNoMes, estadoParcela } from '../domain/financeiro.js';
 import { montarProximos, agruparTarefasPorProjeto, montarTarefasDivulgacao } from '../domain/painel.js';
 import { montarFunil, recebidoPorMes, agruparOrigens, faturamentoPorServico } from '../domain/graficos.js';
+import { vendasPlacasComoParcelas, repoPlacasMontagens, repoPlacasVendas, repoPlacasModelos } from '../repos/placas.js';
+import { montadasDoModelo } from '../domain/placas.js';
 
 export function rotasPainel({ db, hoje }) {
   const r = Router();
@@ -16,7 +18,11 @@ export function rotasPainel({ db, hoje }) {
       `SELECT pa.*, p.titulo AS projeto_titulo, p.servico, p.cliente_id FROM parcelas pa
        JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NULL AND p.ficticio = 0`,
     );
-    const atrasadas = parcelasAbertas.filter((p) => estadoParcela(p, dia) === 'atrasada');
+    const vendasAbertas = vendasPlacasComoParcelas(db, dia).filter((v) => !v.pago_em);
+    const atrasadas = [
+      ...parcelasAbertas.filter((p) => estadoParcela(p, dia) === 'atrasada'),
+      ...vendasAbertas.filter((v) => v.estado === 'atrasada'),
+    ];
     const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa = 'proposta' AND ficticio = 0 AND servico = 'site_sistema'");
     const entregas = todas(
       `SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id
@@ -32,7 +38,7 @@ export function rotasPainel({ db, hoje }) {
 
     res.json({
       cartoes: {
-        a_receber_mes_centavos: aReceberNoMes(parcelasAbertas, dia),
+        a_receber_mes_centavos: aReceberNoMes([...parcelasAbertas, ...vendasAbertas], dia),
         atrasadas: {
           quantidade: atrasadas.length,
           total_centavos: atrasadas.reduce((s, p) => s + p.valor_centavos, 0),
@@ -45,7 +51,7 @@ export function rotasPainel({ db, hoje }) {
       },
       para_entregar: {
         gmn: paraEntregar.filter((i) => i.servico === 'google_meu_negocio').length,
-        placas: paraEntregar.filter((i) => i.servico === 'placas_nfc').length,
+        placas: vendasAbertas.length,
         itens: paraEntregar,
       },
       tarefas_por_projeto: agruparTarefasPorProjeto([
@@ -84,12 +90,29 @@ export function rotasPainel({ db, hoje }) {
     const pagas = todas(
       `SELECT pa.valor_centavos, pa.pago_em, p.servico FROM parcelas pa
        JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NOT NULL AND p.ficticio = 0`,
-    );
+    ).concat(vendasPlacasComoParcelas(db, dia).filter((v) => v.pago_em));
     res.json({
       funil: montarFunil(todas('SELECT etapa, servico FROM projetos WHERE ficticio = 0')),
       recebido_por_mes: recebidoPorMes(pagas, dia),
       origens: agruparOrigens(todas('SELECT origem FROM clientes')),
       por_servico: faturamentoPorServico(pagas, dia),
+    });
+  });
+
+  r.get('/servicos/resumo', (req, res) => {
+    gerarTodasMensalidades(db, hoje());
+    const abertas = todas(
+      `SELECT pa.valor_centavos, p.servico FROM parcelas pa
+       JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NULL AND p.ficticio = 0`,
+    ).concat(vendasPlacasComoParcelas(db, hoje()).filter((v) => !v.pago_em));
+    const aReceber = (servico) => abertas.filter((p) => p.servico === servico).reduce((s, p) => s + p.valor_centavos, 0);
+    const montagens = repoPlacasMontagens(db).listar();
+    const vendas = repoPlacasVendas(db).listar();
+    const montadas = repoPlacasModelos(db).listar().reduce((s, m) => s + Math.max(0, montadasDoModelo(m.id, montagens, vendas)), 0);
+    res.json({
+      site_sistema: { a_receber_centavos: aReceber('site_sistema') },
+      google_meu_negocio: { a_receber_centavos: aReceber('google_meu_negocio') },
+      placas_nfc: { a_receber_centavos: aReceber('placas_nfc'), montadas },
     });
   });
 
