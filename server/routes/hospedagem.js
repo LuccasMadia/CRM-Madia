@@ -33,7 +33,7 @@ export function rotasHospedagem({ db, hoje, fetch }) {
 
   const prazoDias = () => Number(obterConfig(db, 'corte_prazo_dias')) || PRAZO_PADRAO_DIAS;
   const estado = () => ({ conectado: Boolean(obterConfig(db, 'vercel_token')), prazo_dias: prazoDias() });
-  const disparar = (req) => req.app.locals.monitorSites?.checarTodos().catch(() => {});
+  const disparar = (req) => req.app.locals.monitorSites?.checarAgora().catch(() => {});
 
   function clienteVercel() {
     const token = obterConfig(db, 'vercel_token');
@@ -58,7 +58,8 @@ export function rotasHospedagem({ db, hoje, fetch }) {
     });
   const formato = (projeto) => {
     const hospedagem = hospedagens.obter(projeto.id);
-    return { hospedagem, pausas: hospedagens.listarPausas(projeto.id), cobranca: cobrancaDe(projeto, hospedagem) };
+    const comFlag = hospedagem ? { ...hospedagem, pausado_por_crm: hospedagens.pausadoPeloCrm(projeto.id) } : hospedagem;
+    return { hospedagem: comFlag, pausas: hospedagens.listarPausas(projeto.id), cobranca: cobrancaDe(projeto, hospedagem) };
   };
 
   r.get('/vercel/estado', (req, res) => res.json(estado()));
@@ -107,6 +108,14 @@ export function rotasHospedagem({ db, hoje, fetch }) {
       vercel_projeto_id: { tipo: 'texto' },
       vercel_projeto_nome: { tipo: 'texto' },
     });
+    const existente = hospedagens.obter(projeto.id);
+    // Pausado: o CRM precisa continuar sabendo qual projeto da Vercel religar.
+    if (
+      existente?.status === 'pausado' &&
+      (dados.tipo === 'sem_hospedagem' || (dados.vercel_projeto_id ?? null) !== existente.vercel_projeto_id)
+    ) {
+      throw new ErroHttp(409, 'Coloque o site no ar antes de trocar a hospedagem.');
+    }
     if (dados.tipo === 'sem_hospedagem') {
       hospedagens.salvarCadastro(projeto.id, { tipo: 'sem_hospedagem', url: null, vercel_projeto_id: null, vercel_projeto_nome: null });
     } else {
@@ -202,7 +211,7 @@ export function rotasHospedagem({ db, hoje, fetch }) {
   });
 
   r.get('/hospedagem/status', (req, res) => {
-    res.json(hospedagens.listarTodas().map((h) => ({ projeto_id: h.projeto_id, tipo: h.tipo, status: h.status, status_desde: h.status_desde })));
+    res.json(hospedagens.listarTodas().map((h) => ({ projeto_id: h.projeto_id, tipo: h.tipo, status: h.status, status_desde: h.status_desde, pausado_por_crm: hospedagens.pausadoPeloCrm(h.projeto_id) })));
   });
 
   return r;

@@ -12,7 +12,7 @@ let projeto;
 function montar(rotas = {}, hoje = '2026-11-20') {
   falso = fetchFalso({ [`GET ${V}/v10/projects?limit=100`]: PROJETOS_VERCEL, ...rotas });
   ctx = criarContexto({ hoje, fetch: falso.fetch });
-  ctx.app.locals.monitorSites = { checarTodos: async () => {} };
+  ctx.app.locals.monitorSites = { checarAgora: async () => {} };
 }
 async function criarProjeto(dados = {}) {
   const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
@@ -96,7 +96,7 @@ describe('cadastro da hospedagem', () => {
 
   it('prefixa https:// e dispara o monitor', async () => {
     let chamou = 0;
-    ctx.app.locals.monitorSites = { checarTodos: async () => { chamou++; } };
+    ctx.app.locals.monitorSites = { checarAgora: async () => { chamou++; } };
     const res = await cadastrar({ tipo: 'vercel', url: 'rangodobicho.com.br' }).expect(200);
     expect(res.body.hospedagem.url).toBe('https://rangodobicho.com.br');
     expect(chamou).toBe(1);
@@ -128,7 +128,7 @@ describe('cadastro da hospedagem', () => {
   it('status para a lista de sites', async () => {
     await cadastroVercel();
     const res = await ctx.http.get('/api/hospedagem/status').expect(200);
-    expect(res.body).toEqual([{ projeto_id: projeto.id, tipo: 'vercel', status: 'desconhecido', status_desde: null }]);
+    expect(res.body).toEqual([{ projeto_id: projeto.id, tipo: 'vercel', status: 'desconhecido', status_desde: null, pausado_por_crm: false }]);
   });
 });
 
@@ -152,6 +152,37 @@ describe('pausar e religar', () => {
     expect(volta.body.hospedagem).toMatchObject({ status: 'desconhecido', status_desde: null });
     expect(volta.body.pausas.map((p) => p.acao)).toEqual(['religou', 'pausou']);
     await religar().expect(409);
+  });
+
+  it('pausado_por_crm distingue a pausa do CRM da feita na Vercel', async () => {
+    montar({ [pausarUrl]: {} });
+    projeto = await criarProjeto();
+    await conectar();
+    await cadastroVercel();
+    const antes = await ctx.http.get(`/api/projetos/${projeto.id}/hospedagem`).expect(200);
+    expect(antes.body.hospedagem.pausado_por_crm).toBe(false);
+    await pausar().expect(200);
+    const feita = await ctx.http.get(`/api/projetos/${projeto.id}/hospedagem`).expect(200);
+    expect(feita.body.hospedagem.pausado_por_crm).toBe(true);
+    expect((await ctx.http.get('/api/hospedagem/status')).body[0].pausado_por_crm).toBe(true);
+    // pausa detectada pelo monitor (sem registro de 'pausou')
+    ctx.db.prepare('DELETE FROM hospedagem_pausas').run();
+    expect((await ctx.http.get(`/api/projetos/${projeto.id}/hospedagem`)).body.hospedagem.pausado_por_crm).toBe(false);
+    expect((await ctx.http.get('/api/hospedagem/status')).body[0].pausado_por_crm).toBe(false);
+  });
+
+  it('pausado: nao deixa trocar para sem_hospedagem nem mudar o projeto da Vercel', async () => {
+    montar({ [pausarUrl]: {} });
+    projeto = await criarProjeto();
+    await conectar();
+    await cadastroVercel();
+    await pausar().expect(200);
+    const msg = 'Coloque o site no ar antes de trocar a hospedagem.';
+    expect((await cadastrar({ tipo: 'sem_hospedagem' }).expect(409)).body.erro).toBe(msg);
+    expect((await cadastrar({ tipo: 'vercel', url: 'rango.com.br', vercel_projeto_id: 'prj_2' }).expect(409)).body.erro).toBe(msg);
+    expect((await cadastrar({ tipo: 'vercel', url: 'rango.com.br' }).expect(409)).body.erro).toBe(msg);
+    await cadastrar({ tipo: 'vercel', url: 'novo.com.br', vercel_projeto_id: 'prj_1' }).expect(200);
+    expect(ctx.db.prepare('SELECT vercel_projeto_id, status FROM hospedagens').get()).toMatchObject({ vercel_projeto_id: 'prj_1', status: 'pausado' });
   });
 
   it('Vercel recusa: 502 com a mensagem e nada muda', async () => {
