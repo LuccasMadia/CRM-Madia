@@ -48,6 +48,21 @@ export function repoHospedagens(db) {
       .all()
       .map(linha);
 
+  // Pausados sem a nossa marca: a última ação registrada não é 'pausou' (o corte foi feito fora do CRM).
+  const listarPausadosForaDoCrm = () =>
+    db
+      .prepare(
+        `SELECT h.* FROM hospedagens h
+         WHERE h.status = 'pausado' AND h.vercel_projeto_id IS NOT NULL
+           AND COALESCE((SELECT p.acao FROM hospedagem_pausas p WHERE p.projeto_id = h.projeto_id ORDER BY p.id DESC LIMIT 1), '') <> 'pausou'
+         ORDER BY h.projeto_id`,
+      )
+      .all()
+      .map(linha);
+
+  const pausadoPeloCrm = (projetoId) =>
+    db.prepare('SELECT acao FROM hospedagem_pausas WHERE projeto_id = ? ORDER BY id DESC LIMIT 1').get(projetoId)?.acao === 'pausou';
+
   const listarTodas = () => db.prepare('SELECT * FROM hospedagens ORDER BY projeto_id').all().map(linha);
 
   function registrarPausa(projetoId, acao, em) {
@@ -60,5 +75,5 @@ export function repoHospedagens(db) {
       .all(projetoId)
       .map(linha);
 
-  return { obter, salvarCadastro, atualizar, listarMonitorados, listarTodas, registrarPausa, listarPausas };
+  return { obter, salvarCadastro, atualizar, listarMonitorados, listarPausadosForaDoCrm, pausadoPeloCrm, listarTodas, registrarPausa, listarPausas };
 }

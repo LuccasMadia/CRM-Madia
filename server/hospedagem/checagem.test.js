@@ -19,7 +19,7 @@ describe('checarSite', () => {
       const fetch = async () => {
         throw new DOMException('x', nome);
       };
-      expect(await checarSite({ url, fetch })).toEqual({ ok: false, motivo: 'Sem resposta em 10 s' });
+      expect(await checarSite({ url, fetch })).toEqual({ ok: false, motivo: 'Sem resposta em 10 s', rede: true });
     }
     const fetch = async () => {
       throw new DOMException('x', 'TimeoutError');
@@ -31,7 +31,21 @@ describe('checarSite', () => {
     const fetch = async () => {
       throw new TypeError('fetch failed');
     };
-    expect(await checarSite({ url, fetch })).toEqual({ ok: false, motivo: 'Não conectou (fetch failed)' });
+    expect(await checarSite({ url, fetch })).toEqual({ ok: false, motivo: 'Não conectou (fetch failed)', rede: true });
+  });
+
+  it('usa o código da causa no motivo de rede', async () => {
+    const fetch = async () => {
+      throw new TypeError('fetch failed', { cause: Object.assign(new Error('x'), { code: 'ENOTFOUND' }) });
+    };
+    expect(await checarSite({ url, fetch })).toEqual({ ok: false, motivo: 'Não conectou (ENOTFOUND)', rede: true });
+  });
+
+  it('cancela o corpo da resposta para liberar o socket', async () => {
+    let cancelado = false;
+    const corpo = new ReadableStream({ cancel: () => { cancelado = true; } });
+    await checarSite({ url, fetch: async () => new Response(corpo, { status: 200 }) });
+    expect(cancelado).toBe(true);
   });
 
   it('segue redirecionamentos e usa timeout', async () => {
