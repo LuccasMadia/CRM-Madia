@@ -74,6 +74,12 @@ export function repoPlacasVendas(db) {
           AND id NOT IN (SELECT venda_id FROM projetos_servicos WHERE projeto_id = ? AND venda_id IS NOT NULL)
       `).get(clienteId, excluirProjetoId ?? -1).n;
     },
+    listarDoCliente(clienteId) {
+      return db.prepare(`
+        SELECT v.*, m.nome AS modelo_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
+        WHERE v.cliente_id = ? ORDER BY v.data_venda DESC, v.id DESC
+      `).all(clienteId).map(linha);
+    },
     listarAvulsasDoCliente(clienteId) {
       return db.prepare(`
         SELECT v.*, m.nome AS modelo_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
