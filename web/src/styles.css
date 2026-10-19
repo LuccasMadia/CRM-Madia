@@ -355,3 +355,9 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .form-cliente__foto-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
 .form-cliente__arquivo { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
+.status-site { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--texto-suave); vertical-align: middle; }
+.status-site--no_ar { background: var(--ok); }
+.status-site--fora_do_ar { background: var(--perigo); }
+.status-site--pausado { background: #f59e0b; }
+.status-linha { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; }
