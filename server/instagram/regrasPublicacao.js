@@ -18,10 +18,11 @@ export function validarParaPublicar(conteudo, midias) {
   const imagens = midias.filter((midia) => midia.tipo === 'imagem');
   const videos = midias.filter((midia) => midia.tipo === 'video');
 
-  if (conteudo.tipo === 'reels' && videos.length !== 1) {
+  // Reels e post: uma única mídia, e do tipo certo (nada de imagem sobrando no reels, nem vídeo no post).
+  if (conteudo.tipo === 'reels' && !(midias.length === 1 && videos.length === 1)) {
     erros.push('Reels precisa de exatamente 1 vídeo.');
   }
-  if (conteudo.tipo === 'post' && imagens.length !== 1) {
+  if (conteudo.tipo === 'post' && !(midias.length === 1 && imagens.length === 1)) {
     erros.push('Post precisa de exatamente 1 imagem.');
   }
   if (conteudo.tipo === 'carrossel') {

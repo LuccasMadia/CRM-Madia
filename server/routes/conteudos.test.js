@@ -104,6 +104,15 @@ describe('conteudos', () => {
     expect(ok.body.midias[0]).toMatchObject({ tipo: 'video', largura: null });
   });
 
+  it('rejeita imagem em reels e não deixa arquivo no disco', async () => {
+    const reels = (await criar({ titulo: 'R', tipo: 'reels' })).body;
+    const res = await enviarMidias(reels.id, [await png()]).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'midias', mensagem: 'Reels aceita só um vídeo.' }]);
+    expect(arquivosEmUploads()).toEqual([]);
+    const misturado = await enviarMidias(reels.id, [mp4(), await png()]).expect(400);
+    expect(misturado.body.erros).toEqual([{ campo: 'midias', mensagem: 'Reels aceita só um vídeo.' }]);
+  });
+
   it('imagem ilegível devolve 400 e limpa o que já tinha sido preparado', async () => {
     const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
     await enviarMidias(c.id, [await png(), ilegivel()]).expect(400);

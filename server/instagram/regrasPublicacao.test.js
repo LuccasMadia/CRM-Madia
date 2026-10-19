@@ -12,6 +12,9 @@ describe('validarParaPublicar', () => {
       expect(validarParaPublicar({ tipo: 'reels', legenda: 'oi' }, [])).toEqual(['Reels precisa de exatamente 1 vídeo.']);
       expect(validarParaPublicar({ tipo: 'reels', legenda: 'oi' }, [imagem()])).toEqual(['Reels precisa de exatamente 1 vídeo.']);
     });
+    it('recusa vídeo acompanhado de imagem', () => {
+      expect(validarParaPublicar({ tipo: 'reels', legenda: 'oi' }, [video(), imagem()])).toEqual(['Reels precisa de exatamente 1 vídeo.']);
+    });
     it('aceita 1 vídeo', () => {
       expect(validarParaPublicar({ tipo: 'reels', legenda: 'oi' }, [video()])).toEqual([]);
     });
@@ -21,6 +24,10 @@ describe('validarParaPublicar', () => {
     it('exige exatamente 1 imagem', () => {
       expect(validarParaPublicar({ tipo: 'post', legenda: 'oi' }, [])).toEqual(['Post precisa de exatamente 1 imagem.']);
       expect(validarParaPublicar({ tipo: 'post', legenda: 'oi' }, [imagem(), imagem()])).toEqual(['Post precisa de exatamente 1 imagem.']);
+    });
+    it('recusa imagem acompanhada de vídeo, ou só vídeo', () => {
+      expect(validarParaPublicar({ tipo: 'post', legenda: 'oi' }, [imagem(), video()])).toEqual(['Post precisa de exatamente 1 imagem.']);
+      expect(validarParaPublicar({ tipo: 'post', legenda: 'oi' }, [video()])).toEqual(['Post precisa de exatamente 1 imagem.']);
     });
     it('aceita 1 imagem', () => {
       expect(validarParaPublicar({ tipo: 'post', legenda: 'oi' }, [imagem()])).toEqual([]);

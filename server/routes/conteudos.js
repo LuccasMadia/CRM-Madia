@@ -24,6 +24,7 @@ const CAMPOS = [...Object.keys(REGRAS_CONTEUDO), 'ordem'];
 const SELECT = 'SELECT c.*, p.titulo AS projeto_titulo FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id';
 const TAMANHO_MAXIMO_MIDIA = 300 * 1024 * 1024;
 const MENSAGEM_POST_VIDEO = 'Post aceita só imagem.';
+const MENSAGEM_REELS_IMAGEM = 'Reels aceita só um vídeo.';
 
 const TODOS_ESTADOS = [...ESTADOS_CONTEUDO, ...ESTADOS_PUBLICACAO];
 const REGEX_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
@@ -187,6 +188,9 @@ export function rotasConteudos({ db, dataDir, publicador }) {
     if (enviados.some((f) => f.mimetype.startsWith('video/')) && !aceitaVideo(conteudo.tipo)) {
       const mensagem = conteudo.tipo === 'post' ? MENSAGEM_POST_VIDEO : MENSAGEM_CARROSSEL_VIDEO;
       recusar(new ErroValidacao([{ campo: 'midias', mensagem }]));
+    }
+    if (conteudo.tipo === 'reels' && enviados.some((f) => !f.mimetype.startsWith('video/'))) {
+      recusar(new ErroValidacao([{ campo: 'midias', mensagem: MENSAGEM_REELS_IMAGEM }]));
     }
 
     const preparadas = [];
