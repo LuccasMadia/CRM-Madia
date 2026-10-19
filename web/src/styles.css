@@ -237,7 +237,8 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .grid-ig__icone { position: absolute; top: 6px; right: 8px; font-size: 0.8rem; color: #fff; text-shadow: 0 1px 3px rgb(0 0 0 / 0.8); }
 .grid-ig__setas { position: absolute; top: 2px; right: 2px; display: flex; }
 .grid-ig__setas .btn { padding: 2px 6px; background: rgb(0 0 0 / 0.55); }
-.painel-midia { position: sticky; top: 16px; display: grid; gap: 10px; }
+.painel-midia { position: sticky; top: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
+.painel-midia select { width: 100%; min-width: 0; }
 .painel-midia__capa { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--raio-controle); }
 .painel-midia__legenda summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .painel-midia__legenda p { white-space: pre-wrap; font-size: 0.85rem; color: var(--texto-suave); }
