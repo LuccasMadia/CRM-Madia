@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Conteudo } from './Conteudo.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -23,6 +23,7 @@ const SEGUIDORES = [{ dia: '2026-10-01', seguidores: 1242 }, { dia: '2026-10-16'
 
 function rotas(extra = {}) {
   return {
+    'GET /conteudos/avisos': { atrasados: [], falhas: [] },
     'GET /instagram/estado': ESTADO,
     'GET /instagram/grid': { prontos: PRONTOS, midias: MIDIAS },
     'GET /instagram/seguidores': SEGUIDORES,
@@ -225,6 +226,21 @@ describe('Conteudo — ?abrir', () => {
     renderizar(<Conteudo />, { rota: '/conteudo?abrir=9', padrao: '/conteudo' });
     expect(await screen.findByRole('dialog', { name: 'Editar planejado' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Ideia bastidores')).toBeInTheDocument();
+  });
+});
+
+describe('Conteudo — avisos acompanham o modal', () => {
+  it('excluir pelo modal busca os avisos de novo', async () => {
+    const { chamadas } = mockApi(rotas({
+      'GET /conteudos/9': { id: 9, titulo: 'Ideia bastidores', tipo: 'post', estado: 'rascunho' },
+      'DELETE /conteudos/9': resposta(204),
+    }));
+    renderizar(<Conteudo />, { rota: '/conteudo?abrir=9', padrao: '/conteudo' });
+    await screen.findByRole('dialog', { name: 'Editar planejado' });
+    const buscas = () => chamadas.filter((c) => c.metodo === 'GET' && c.caminho === '/conteudos/avisos').length;
+    const antes = buscas();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(buscas()).toBe(antes + 1));
   });
 });
 

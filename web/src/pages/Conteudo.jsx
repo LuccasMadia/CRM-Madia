@@ -40,7 +40,9 @@ export function Conteudo() {
     }, { replace: true });
   }, [idParaAbrir, setParams]);
 
+  const [versaoAvisos, setVersaoAvisos] = useState(0);
   const recarregarPlanejados = () => {
+    setVersaoAvisos((v) => v + 1);
     grid.recarregar();
     rascunhos.recarregar();
   };
@@ -113,7 +115,7 @@ export function Conteudo() {
           <button type="button" className="btn btn--primario" onClick={() => setEditando({})}>+ Planejar</button>
         </div>
       </header>
-      <AvisosPublicacao onAbrir={setEditando} onMudou={recarregarPlanejados} />
+      <AvisosPublicacao versao={versaoAvisos} onAbrir={setEditando} onMudou={recarregarPlanejados} />
       <Aviso erro={estado.erro ?? grid.erro ?? acao.erro} />
       {estado.dados?.ultimo_erro && (
         <p className="aviso aviso--erro" role="alert">

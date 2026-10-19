@@ -2,16 +2,18 @@ import { Link } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useEnvio } from '../hooks/useEnvio.js';
+import { Aviso } from './Aviso.jsx';
 
 const dataHora = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
 // Faixa de posts agendados que não saíram e de publicações que falharam; some quando não há nada a avisar.
-export function AvisosPublicacao({ onAbrir, onMudou }) {
-  const avisos = useCarregar(() => api('/conteudos/avisos'), []);
+export function AvisosPublicacao({ onAbrir, onMudou, versao = 0 }) {
+  const avisos = useCarregar(() => api('/conteudos/avisos'), [versao]);
   const { erro, enviando, executar } = useEnvio();
 
   const atrasados = avisos.dados?.atrasados ?? [];
   const falhas = avisos.dados?.falhas ?? [];
+  if (avisos.erro) return <Aviso erro={avisos.erro} />;
   if (!atrasados.length && !falhas.length && !erro) return null;
 
   function agir(chamada) {

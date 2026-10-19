@@ -16,6 +16,12 @@ describe('AvisosPublicacao', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('falha ao carregar os avisos mostra o erro', async () => {
+    mockApi({ 'GET /conteudos/avisos': resposta(500, { erro: 'Falhou' }) });
+    renderizar(<AvisosPublicacao />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falhou');
+  });
+
   it('atrasado mostra título e ações; voltar para rascunho chama DELETE e recarrega', async () => {
     let avisos = { atrasados: [ATRASADO], falhas: [] };
     const { chamadas } = mockApi({
