@@ -4,7 +4,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
-import { Confirmacao } from '../../components/Confirmacao.jsx';
+import { AcoesCobranca } from '../../components/AcoesCobranca.jsx';
 import { TextoCobranca } from '../../components/TextoCobranca.jsx';
 import { BolinhaStatus, textoStatus, dataHoraCurta } from '../../lib/hospedagem.js';
 
@@ -69,7 +69,6 @@ export function AbaHospedagem({ projeto }) {
   const projetosVercel = useCarregar(() => api('/vercel/projetos'), []);
   const estado = useCarregar(() => api('/vercel/estado'), []);
   const [atual, setAtual] = useState(null);
-  const [confirmar, setConfirmar] = useState(null); // 'pausar' | 'religar'
   const acao = useEnvio();
 
   const dados = atual ?? carregado.dados;
@@ -81,7 +80,6 @@ export function AbaHospedagem({ projeto }) {
   const podeTirar = hospedagem?.tipo === 'vercel' && !pausado && !projeto.ficticio;
   const podeColocar = hospedagem?.tipo === 'vercel' && pausado;
   const prazoDias = estado.dados?.prazo_dias ?? 7;
-  const fasesAviso = ['atrasada'];
 
   const executarPost = async (caminho) => setAtual(await api(`${base}/${caminho}`, { method: 'POST' }));
   const avisei = () => acao.executar(() => executarPost('avisei'));
@@ -111,17 +109,21 @@ export function AbaHospedagem({ projeto }) {
           {cobranca && (
             <>
               <TextoCobranca cobranca={cobranca} prazoDias={prazoDias} />
-              {fasesAviso.includes(cobranca.fase) && (
-                <div><button type="button" className="btn" disabled={acao.enviando} onClick={avisei}>Avisei o cliente</button></div>
-              )}
             </>
           )}
           <Aviso erro={acao.erro} />
 
-          <div className="form--linha">
-            {podeTirar && <button type="button" className="btn btn--perigo" onClick={() => setConfirmar('pausar')}>Tirar do ar</button>}
-            {podeColocar && <button type="button" className="btn btn--primario" onClick={() => setConfirmar('religar')}>Colocar no ar</button>}
-          </div>
+          <AcoesCobranca
+            titulo={projeto.titulo}
+            url={hospedagem.url}
+            fase={cobranca?.fase}
+            podeTirar={podeTirar}
+            podeColocar={podeColocar}
+            enviando={acao.enviando}
+            onAvisei={avisei}
+            onPausar={() => executarPost('pausar')}
+            onReligar={() => executarPost('religar')}
+          />
 
           {pausas.length > 0 && (
             <>
@@ -136,24 +138,6 @@ export function AbaHospedagem({ projeto }) {
         </section>
       )}
 
-      {confirmar === 'pausar' && (
-        <Confirmacao
-          titulo={`Tirar ${projeto.titulo} do ar?`}
-          mensagem={`O site ${hospedagem.url} vai ficar fora do ar até você colocar de novo.`}
-          rotuloConfirmar="Tirar do ar"
-          onConfirmar={() => executarPost('pausar')}
-          onFechar={() => setConfirmar(null)}
-        />
-      )}
-      {confirmar === 'religar' && (
-        <Confirmacao
-          titulo={`Colocar ${projeto.titulo} no ar?`}
-          mensagem={`O site ${hospedagem.url} volta a ficar disponível para o público.`}
-          rotuloConfirmar="Colocar no ar"
-          onConfirmar={() => executarPost('religar')}
-          onFechar={() => setConfirmar(null)}
-        />
-      )}
     </>
   );
 }

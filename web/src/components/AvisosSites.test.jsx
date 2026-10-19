@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AvisosSites } from './AvisosSites.jsx';
-import { mockApi } from '../test/mockApi.js';
+import { mockApi, resposta } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 
 const VAZIO = { fora_do_ar: [], cobrancas: [] };
 const FORA = { projeto_id: 7, titulo: 'Site Rango', cliente_nome: 'Rango', url: 'https://rango.com.br', desde: '2026-10-19T17:32:00.000Z', motivo: 'Erro 503' };
-const COBRANCA = { projeto_id: 7, titulo: 'Site Rango', cliente_nome: 'Rango', fase: 'atrasada', atrasada_desde: '2026-10-10', valor_centavos: 15000, avisado_em: null, prazo_ate: null };
+const COBRANCA = { projeto_id: 7, titulo: 'Site Rango', cliente_nome: 'Rango', url: 'https://rango.com.br', fase: 'atrasada', atrasada_desde: '2026-10-10', valor_centavos: 15000, avisado_em: null, prazo_ate: null };
 
 describe('AvisosSites', () => {
   it('nada a avisar não renderiza nada', async () => {
@@ -58,11 +58,28 @@ describe('AvisosSites', () => {
     const usuario = userEvent.setup();
     await usuario.click(screen.getByRole('button', { name: 'Tirar do ar' }));
     const dialogo = await screen.findByRole('dialog', { name: 'Tirar Site Rango do ar?' });
+    expect(within(dialogo).getByText(/O site https:\/\/rango\.com\.br vai ficar fora do ar/)).toBeInTheDocument();
     await usuario.click(within(dialogo).getByRole('button', { name: 'Tirar do ar' }));
     await waitFor(() => expect(chamadas.some((c) => c.metodo === 'POST' && c.caminho === '/projetos/7/hospedagem/pausar')).toBe(true));
     expect(await screen.findByText(/O site já está fora do ar/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tirar do ar' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Abrir' })).toHaveAttribute('href', '/projetos/7');
+  });
+
+  it('erro da Vercel ao tirar do ar aparece no diálogo, que continua aberto', async () => {
+    const msg = 'Token da Vercel inválido ou sem permissão. Cole um novo em Configurações → Vercel.';
+    mockApi({
+      'GET /hospedagem/avisos': { ...VAZIO, cobrancas: [{ ...COBRANCA, fase: 'prazo_vencido', avisado_em: '2026-10-10', prazo_ate: '2026-10-17' }] },
+      'GET /vercel/estado': { conectado: true, prazo_dias: 7 },
+      'POST /projetos/7/hospedagem/pausar': resposta(502, { erro: msg }),
+    });
+    renderizar(<AvisosSites />);
+    const usuario = userEvent.setup();
+    await usuario.click(await screen.findByRole('button', { name: 'Tirar do ar' }));
+    const dialogo = await screen.findByRole('dialog', { name: 'Tirar Site Rango do ar?' });
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Tirar do ar' }));
+    expect(await within(dialogo).findByText(msg)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Tirar Site Rango do ar?' })).toBeInTheDocument();
   });
 
   it('pago e pausado: Colocar no ar com confirmação', async () => {
@@ -80,6 +97,7 @@ describe('AvisosSites', () => {
     const usuario = userEvent.setup();
     await usuario.click(screen.getByRole('button', { name: 'Colocar no ar' }));
     const dialogo = await screen.findByRole('dialog', { name: 'Colocar Site Rango no ar?' });
+    expect(within(dialogo).getByText(/O site https:\/\/rango\.com\.br volta a ficar disponível/)).toBeInTheDocument();
     await usuario.click(within(dialogo).getByRole('button', { name: 'Colocar no ar' }));
     await waitFor(() => expect(chamadas.some((c) => c.caminho === '/projetos/7/hospedagem/religar')).toBe(true));
     await waitFor(() => expect(container).toBeEmptyDOMElement());

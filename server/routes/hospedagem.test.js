@@ -220,7 +220,7 @@ describe('avisos e cobrança', () => {
     await comMensalidadeAtrasada();
     const a = await avisos();
     expect(a.cobrancas).toHaveLength(1);
-    expect(a.cobrancas[0]).toMatchObject({ projeto_id: projeto.id, titulo: 'Site', cliente_nome: 'Ana', fase: 'atrasada', valor_centavos: 5000 });
+    expect(a.cobrancas[0]).toMatchObject({ projeto_id: projeto.id, titulo: 'Site', cliente_nome: 'Ana', url: 'https://rango.com.br', fase: 'atrasada', valor_centavos: 5000 });
     const av = await ctx.http.post(`/api/projetos/${projeto.id}/hospedagem/avisei`).expect(200);
     expect(av.body.hospedagem.cliente_avisado_em).toBe('2026-11-20');
     expect(av.body.cobranca.fase).toBe('avisado');

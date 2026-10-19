@@ -196,7 +196,7 @@ export function rotasHospedagem({ db, hoje, fetch }) {
         hospedagens.atualizar(projeto.id, { cliente_avisado_em: null });
         situacao = cobrancaDe(projeto, hospedagens.obter(projeto.id));
       }
-      if (situacao) cobrancas.push({ projeto_id: projeto.id, titulo: projeto.titulo, cliente_nome: projeto.cliente_nome, ...situacao });
+      if (situacao) cobrancas.push({ projeto_id: projeto.id, titulo: projeto.titulo, cliente_nome: projeto.cliente_nome, url: h.url, ...situacao });
     }
     res.json({ fora_do_ar, cobrancas });
   });
