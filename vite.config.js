@@ -28,6 +28,17 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg}'],
+        // Navegações sempre tentam a rede: com a sessão do Cloudflare Access expirada,
+        // a recarga precisa chegar ao login em vez de receber o index.html do cache.
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            // Só guarda páginas de verdade (200), nunca o redirecionamento para o login.
+            options: { cacheName: 'paginas', networkTimeoutSeconds: 3, cacheableResponse: { statuses: [200] } },
+          },
+        ],
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/publico\//, /^\/cdn-cgi\//],
       },
       devOptions: {
