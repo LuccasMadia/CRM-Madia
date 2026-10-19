@@ -7,7 +7,7 @@ export class ErroApi extends Error {
 }
 
 export async function api(caminho, { method = 'GET', body } = {}) {
-  const opcoes = { method, headers: { 'X-CRM': '1' } };
+  const opcoes = { method, headers: { 'X-CRM': '1' }, redirect: 'manual' };
   if (body instanceof FormData) {
     opcoes.body = body;
   } else if (body !== undefined) {
@@ -19,6 +19,11 @@ export async function api(caminho, { method = 'GET', body } = {}) {
     resposta = await fetch(`/api${caminho}`, opcoes);
   } catch {
     throw new ErroApi(0, { erro: 'Não foi possível falar com o servidor do CRM. Ele está rodando (npm start)?' });
+  }
+  // Com redirect manual, o Cloudflare Access (sessão expirada) devolve um redirect opaco para a tela de login.
+  if (resposta.type === 'opaqueredirect') {
+    window.location.reload();
+    throw new ErroApi(401, { erro: 'Sua sessão expirou. Recarregando para entrar de novo…' });
   }
   if (resposta.status === 204) return null;
   const tipo = resposta.headers.get('content-type') ?? '';

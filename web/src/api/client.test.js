@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { api } from './client.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { api, ErroApi } from './client.js';
 
 describe('api', () => {
   it('envia o cabeçalho X-CRM exigido pelo servidor, inclusive em uploads', async () => {
@@ -8,5 +8,34 @@ describe('api', () => {
     await api('/clientes', { method: 'POST', body: { nome: 'Ana' } });
     await api('/projetos/1/portfolio/imagens', { method: 'POST', body: new FormData() });
     for (const [, opcoes] of fetchFalso.mock.calls) expect(opcoes.headers['X-CRM']).toBe('1');
+  });
+
+  describe('sessão do Cloudflare Access expirada', () => {
+    const locationOriginal = window.location;
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', { value: locationOriginal, configurable: true });
+      vi.unstubAllGlobals();
+    });
+
+    it('pede redirect manual para detectar o redirecionamento do login', async () => {
+      const fetchFalso = vi.fn(async () => new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      vi.stubGlobal('fetch', fetchFalso);
+      await api('/clientes');
+      expect(fetchFalso.mock.calls[0][1].redirect).toBe('manual');
+    });
+
+    it('recarrega a página e lança erro 401 quando a resposta é opaqueredirect', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ type: 'opaqueredirect', status: 0, ok: false, headers: new Headers() })));
+      const reload = vi.fn();
+      Object.defineProperty(window, 'location', { value: { ...window.location, reload }, configurable: true });
+
+      const erro = await api('/clientes').catch((e) => e);
+
+      expect(erro).toBeInstanceOf(ErroApi);
+      expect(erro.status).toBe(401);
+      expect(erro.message).toBe('Sua sessão expirou. Recarregando para entrar de novo…');
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
   });
 });
