@@ -95,6 +95,12 @@ const DESENHOS = {
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
     </>
   ),
+  lapis: (
+    <>
+      <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-4-4L4 16z" />
+      <path d="M13.5 6.5l4 4" />
+    </>
+  ),
   alerta: (
     <>
       <path d="M12 3.5 2.5 20h19z" />

@@ -8,7 +8,7 @@ import { ErroHttp, naoEncontrado } from '../http/erros.js';
 
 export const REGRAS_CLIENTE = {
   nome: { tipo: 'texto', obrigatorio: true },
-  empresa: { tipo: 'texto' },
+  responsavel: { tipo: 'texto' },
   email: { tipo: 'texto' },
   telefone: { tipo: 'texto' },
   instagram: { tipo: 'texto' },

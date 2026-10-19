@@ -129,6 +129,28 @@ describe('migration 017_categorias_nichos_mensalidade', () => {
   });
 });
 
+describe('migration 020_cliente_pela_empresa', () => {
+  it('a empresa vira o nome do cliente e o nome antigo vira o responsável', () => {
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys = ON;');
+    migrate(db, { ate: '019_etapas_funil_sites.sql' });
+    const t = '2026-10-01T00:00:00.000Z';
+    const cliente = db.prepare('INSERT INTO clientes (id, nome, empresa, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?)');
+    cliente.run(1, 'Adriane', ' Canecas da Dri ', t, t);
+    cliente.run(2, 'Rango do Bicho', null, t, t);
+    cliente.run(3, 'Thiago', '  ', t, t);
+
+    migrate(db);
+
+    expect(db.prepare('SELECT id, nome, responsavel FROM clientes ORDER BY id').all().map((r) => ({ ...r }))).toEqual([
+      { id: 1, nome: 'Canecas da Dri', responsavel: 'Adriane' },
+      { id: 2, nome: 'Rango do Bicho', responsavel: null },
+      { id: 3, nome: 'Thiago', responsavel: null },
+    ]);
+    expect(db.prepare('PRAGMA table_info(clientes)').all().map((c) => c.name)).not.toContain('empresa');
+  });
+});
+
 describe('migration 019_etapas_funil_sites', () => {
   it('troca as etapas antigas pelas novas sem apagar parcelas e tarefas', () => {
     const db = new DatabaseSync(':memory:');

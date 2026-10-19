@@ -1,5 +1,5 @@
 export const clienteExemplo = {
-  id: 1, nome: 'Ana', empresa: 'Padaria da Ana', email: null, telefone: '11 99999-0000', instagram: null, origem: null, notas: null,
+  id: 1, nome: 'Padaria da Ana', responsavel: 'Ana', email: null, telefone: '11 99999-0000', instagram: null, origem: null, notas: null,
   atualizado_em: 'T', total_faturado_centavos: 150050, projetos: [],
 };
 export const site = { id: 4, titulo: 'Site', etapa: 'andamento', servico: 'site_sistema', valor_total_centavos: 300000, servicos: [] };

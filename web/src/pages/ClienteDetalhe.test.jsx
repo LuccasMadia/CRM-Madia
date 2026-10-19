@@ -12,8 +12,8 @@ describe('ClienteDetalhe', () => {
   it('mostra o topo com contato e total faturado e abre na aba Sites e Sistemas', async () => {
     mockApi(rotasPerfil());
     abrir();
-    expect(await screen.findByRole('heading', { name: 'Ana' })).toBeInTheDocument();
-    expect(screen.getByText(/Padaria da Ana · 11 99999-0000/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Padaria da Ana' })).toBeInTheDocument();
+    expect(screen.getByText(/Ana · 11 99999-0000/)).toBeInTheDocument();
     expect(screen.getByText(/1\.500,50/)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Sites e Sistemas (1)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Google Meu Negócio (1)' })).toBeInTheDocument();
@@ -40,15 +40,16 @@ describe('ClienteDetalhe', () => {
   });
 
   it('Editar dados salva e recarrega', async () => {
-    const { chamadas } = mockApi(rotasPerfil({ 'PUT /clientes/1': { ...clienteExemplo, nome: 'Ana Souza' } }));
+    const { chamadas } = mockApi(rotasPerfil({ 'PUT /clientes/1': { ...clienteExemplo, responsavel: 'Ana Souza' } }));
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Editar dados' }));
-    const nome = screen.getByLabelText('Nome');
-    await user.clear(nome);
-    await user.type(nome, 'Ana Souza');
+    expect(screen.getByLabelText('Empresa')).toHaveValue('Padaria da Ana');
+    const responsavel = screen.getByLabelText('Responsável');
+    await user.clear(responsavel);
+    await user.type(responsavel, 'Ana Souza');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(chamadas.find((c) => c.metodo === 'PUT').corpo.nome).toBe('Ana Souza');
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toMatchObject({ nome: 'Padaria da Ana', responsavel: 'Ana Souza' });
   });
 
   it('mostra a mensagem quando o servidor recusa a exclusão', async () => {

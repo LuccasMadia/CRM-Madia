@@ -33,7 +33,7 @@ export function ClienteDetalhe() {
   if (!cliente || !projetos) return <p>Carregando…</p>;
 
   const doServico = (servico) => projetos.filter((p) => p.servico === servico);
-  const contato = [cliente.empresa, cliente.telefone, cliente.email, cliente.instagram].filter(Boolean).join(' · ');
+  const contato = [cliente.responsavel, cliente.telefone, cliente.email, cliente.instagram].filter(Boolean).join(' · ');
 
   async function salvar(dados) {
     await api(`/clientes/${id}`, { method: 'PUT', body: dados });
@@ -59,7 +59,7 @@ export function ClienteDetalhe() {
       <header className="pagina__topo">
         <div>
           <p className="sobretitulo"><Link to="/clientes">Clientes</Link></p>
-          <h1>{cliente.nome}</h1>
+          <h1>{cliente.nome || 'Sem empresa'}</h1>
           {contato && <p className="vazio">{contato}</p>}
           <p>Total faturado: <strong>{formatarDinheiro(cliente.total_faturado_centavos)}</strong></p>
         </div>

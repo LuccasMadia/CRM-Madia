@@ -4,7 +4,7 @@ import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 
 const VAZIO = {
-  nome: '', empresa: '', email: '', telefone: '', instagram: '', origem: '', notas: '',
+  nome: '', responsavel: '', email: '', telefone: '', instagram: '', origem: '', notas: '',
 };
 const ORIGENS = ['Indicação', 'Instagram', 'Site', 'Outro'];
 
@@ -21,8 +21,8 @@ export function FormCliente({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) 
 
   return (
     <form onSubmit={enviar} className="form" noValidate>
-      <Campo rotulo="Nome" nome="nome" erros={erros} {...campo('nome')} />
-      <Campo rotulo="Empresa" nome="empresa" erros={erros} {...campo('empresa')} />
+      <Campo rotulo="Empresa" nome="nome" erros={erros} {...campo('nome')} />
+      <Campo rotulo="Responsável" nome="responsavel" erros={erros} {...campo('responsavel')} />
       <Campo rotulo="Email" nome="email" erros={erros} type="email" {...campo('email')} />
       <Campo rotulo="Telefone / WhatsApp" nome="telefone" erros={erros} {...campo('telefone')} />
       <Campo rotulo="Instagram" nome="instagram" erros={erros} {...campo('instagram')} />

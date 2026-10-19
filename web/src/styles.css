@@ -338,3 +338,6 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .divulgacao__linha { justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--borda); }
 .divulgacao__linha:last-child { border-bottom: 0; }
 .divulgacao__etiquetas { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn--icone { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-color: transparent; background: transparent; color: var(--texto-suave); }
+.btn--icone:hover { background: var(--superficie-2); border-color: transparent; color: var(--texto); }
+.tabela__acoes { width: 1%; text-align: right; }

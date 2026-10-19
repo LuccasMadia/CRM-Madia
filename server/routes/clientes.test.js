@@ -6,21 +6,26 @@ beforeEach(() => {
   ctx = criarContexto();
 });
 
-async function criarCliente(dados = { nome: 'Ana Souza', empresa: 'Doces da Ana' }) {
+async function criarCliente(dados = { nome: 'Doces da Ana', responsavel: 'Ana Souza' }) {
   return (await ctx.http.post('/api/clientes').send(dados).expect(201)).body;
 }
 
 describe('/api/clientes', () => {
-  it('cria e busca clientes por nome, empresa ou email', async () => {
+  it('cria e busca clientes pela empresa, pelo responsável ou pelo email', async () => {
     await criarCliente();
-    await criarCliente({ nome: 'Bruno', email: 'bruno@x.com' });
+    await criarCliente({ nome: 'Bruno Lanches', email: 'bruno@x.com' });
     expect((await ctx.http.get('/api/clientes').expect(200)).body).toHaveLength(2);
-    const busca = await ctx.http.get('/api/clientes?busca=doces').expect(200);
-    expect(busca.body.map((c) => c.nome)).toEqual(['Ana Souza']);
+    const porEmpresa = await ctx.http.get('/api/clientes?busca=doces').expect(200);
+    expect(porEmpresa.body.map((c) => c.nome)).toEqual(['Doces da Ana']);
+    const porResponsavel = await ctx.http.get('/api/clientes?busca=souza').expect(200);
+    expect(porResponsavel.body.map((c) => c.responsavel)).toEqual(['Ana Souza']);
+    await criarCliente({ nome: 'Carla Bolos', instagram: '@carlabolos' });
+    const porInstagram = await ctx.http.get('/api/clientes?busca=carlab').expect(200);
+    expect(porInstagram.body.map((c) => c.nome)).toEqual(['Carla Bolos']);
   });
 
-  it('exige nome', async () => {
-    const res = await ctx.http.post('/api/clientes').send({ empresa: 'X' }).expect(400);
+  it('exige o nome da empresa', async () => {
+    const res = await ctx.http.post('/api/clientes').send({ responsavel: 'X' }).expect(400);
     expect(res.body.erros).toEqual([{ campo: 'nome', mensagem: 'Obrigatório' }]);
   });
 
@@ -48,7 +53,7 @@ describe('/api/clientes', () => {
   it('atualiza parcialmente', async () => {
     const cliente = await criarCliente();
     const res = await ctx.http.put(`/api/clientes/${cliente.id}`).send({ telefone: '11 99999-0000' }).expect(200);
-    expect(res.body).toMatchObject({ nome: 'Ana Souza', telefone: '11 99999-0000' });
+    expect(res.body).toMatchObject({ nome: 'Doces da Ana', responsavel: 'Ana Souza', telefone: '11 99999-0000' });
   });
 
   it('não exclui cliente com projetos (409) e exclui cliente sem projetos', async () => {

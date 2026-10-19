@@ -1,6 +1,7 @@
 import { criarRepo, linha, emTransacao } from './crud.js';
 
-export const CAMPOS_CLIENTE = ['nome', 'empresa', 'email', 'telefone', 'instagram', 'origem', 'notas'];
+// `nome` é o nome da empresa; a pessoa de contato fica em `responsavel`.
+export const CAMPOS_CLIENTE = ['nome', 'responsavel', 'email', 'telefone', 'instagram', 'origem', 'notas'];
 
 export function repoClientes(db) {
   const base = criarRepo(db, 'clientes', CAMPOS_CLIENTE);
@@ -9,8 +10,8 @@ export function repoClientes(db) {
     buscar(termo = '') {
       const padrao = `%${termo.trim()}%`;
       return db
-        .prepare('SELECT * FROM clientes WHERE nome LIKE ? OR empresa LIKE ? OR email LIKE ? ORDER BY nome COLLATE NOCASE')
-        .all(padrao, padrao, padrao)
+        .prepare('SELECT * FROM clientes WHERE nome LIKE ? OR responsavel LIKE ? OR instagram LIKE ? OR email LIKE ? ORDER BY nome COLLATE NOCASE')
+        .all(padrao, padrao, padrao, padrao)
         .map(linha);
     },
     totalFaturado(id) {
