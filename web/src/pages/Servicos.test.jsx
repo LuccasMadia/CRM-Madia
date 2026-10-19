@@ -30,20 +30,20 @@ const rotas = {
   'GET /servicos/resumo': {
     site_sistema: { a_receber_centavos: 0 },
     google_meu_negocio: { a_receber_centavos: 20000 },
-    placas_nfc: { a_receber_centavos: 8000, montadas: 3 },
+    placas_nfc: { a_receber_centavos: 8000, vendas_a_receber: 2, montadas: 3 },
   },
 };
 
 const abrir = (rota = '/servicos') => renderizar(<Servicos />, { rota, padrao: '/servicos' });
 
 describe('Servicos', () => {
-  it('abre em Sites e Sistemas, com um card por serviço', async () => {
+  it('abre em Sites e Sistemas, com uma aba por serviço', async () => {
     mockApi(rotas);
     abrir();
     expect(screen.getByRole('heading', { name: 'Serviços' })).toBeInTheDocument();
     const cards = screen.getAllByRole('tab');
-    expect(cards.map((c) => c.querySelector('.card-servico__nome').textContent)).toEqual(['Sites e Sistemas', 'Google Meu Negócio', 'Placas NFC']);
-    expect(cards.every((c) => c.classList.contains('card-servico') && c.querySelector('svg'))).toBe(true);
+    expect(cards.map((c) => c.querySelector('.abas__nome').textContent)).toEqual(['Sites e Sistemas', 'Google Meu Negócio', 'Placas NFC']);
+    expect(cards.every((c) => c.classList.contains('abas__aba') && c.querySelector('svg'))).toBe(true);
     expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
   });
@@ -89,25 +89,26 @@ describe('Servicos', () => {
     expect(await screen.findByText('Nenhum Google Meu Negócio encontrado.')).toBeInTheDocument();
   });
 
-  it('cada card mostra o número do que está pendente', async () => {
+  it('cada aba mostra só a contagem do que está pendente, sem dinheiro', async () => {
     mockApi(rotas);
     abrir();
-    expect(await screen.findByText('1 em andamento')).toBeInTheDocument();
-    expect(await screen.findByText(/^1 pendente · R\$\s*200,00 a receber$/)).toBeInTheDocument();
-    expect(screen.getByText(/^R\$\s*80,00 a receber · 3 montadas$/)).toBeInTheDocument();
+    expect(await screen.findByLabelText('1 em andamento')).toHaveTextContent(/^1$/);
+    expect(await screen.findByLabelText('1 pendente')).toHaveTextContent(/^1$/);
+    expect(await screen.findByLabelText('2 vendas a receber')).toHaveTextContent(/^2$/);
+    expect(screen.getByRole('tablist')).not.toHaveTextContent('R$');
   });
 
-  it('usa plural nos números', async () => {
+  it('sem pendências a aba não mostra contador', async () => {
     const semReceber = { a_receber_centavos: 0 };
     mockApi({
       ...rotas,
       'GET /projetos': [gmnPendente, { ...gmnPendente, id: 10 }],
-      'GET /servicos/resumo': { site_sistema: semReceber, google_meu_negocio: semReceber, placas_nfc: { ...semReceber, montadas: 1 } },
+      'GET /servicos/resumo': { site_sistema: semReceber, google_meu_negocio: semReceber, placas_nfc: { ...semReceber, vendas_a_receber: 0, montadas: 1 } },
     });
     abrir();
-    expect(await screen.findByText('2 pendentes')).toBeInTheDocument();
-    expect(screen.getByText('0 em andamento')).toBeInTheDocument();
-    expect(await screen.findByText('1 montada')).toBeInTheDocument();
+    expect(await screen.findByLabelText('2 pendentes')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Sites e Sistemas/ }).querySelector('.contador')).toBeNull();
+    expect(screen.getByRole('tab', { name: /Placas NFC/ }).querySelector('.contador')).toBeNull();
   });
 
   it('se a contagem falhar, os cards aparecem sem número', async () => {
@@ -116,6 +117,6 @@ describe('Servicos', () => {
     abrir();
     expect(await screen.findByRole('link', { name: 'Site Ana' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Placas NFC/ })).toBeInTheDocument();
-    expect(screen.queryByText(/em andamento/)).toBeNull();
+    expect(screen.getByRole('tab', { name: /Sites e Sistemas/ }).querySelector('.contador')).toBeNull();
   });
 });

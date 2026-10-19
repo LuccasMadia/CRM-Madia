@@ -3,7 +3,7 @@ import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Aviso } from '../../components/Aviso.jsx';
-import { Numero } from '../../components/Numero.jsx';
+import { FaixaNumeros } from '../../components/FaixaNumeros.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO, diasDesde } from '../../lib/datas.js';
 
@@ -12,12 +12,12 @@ const entregueNoMes = (p) => p.etapa === 'entregue' && p.data_entrega?.slice(0, 
 // Números de cada serviço, além do "A receber" que todos têm.
 const NUMEROS = {
   site_sistema: [
-    ['Em andamento', 'projetos', (p) => p.etapa === 'andamento'],
-    ['Entregues no mês', 'site', entregueNoMes],
+    ['Em andamento', (p) => p.etapa === 'andamento'],
+    ['Entregues no mês', entregueNoMes],
   ],
   google_meu_negocio: [
-    ['Pendentes', 'gmn', (p) => p.etapa !== 'entregue' && p.etapa !== 'perdido'],
-    ['Configurados no mês', 'gmn', entregueNoMes],
+    ['Pendentes', (p) => p.etapa !== 'entregue' && p.etapa !== 'perdido'],
+    ['Configurados no mês', entregueNoMes],
   ],
 };
 
@@ -47,17 +47,18 @@ export function PainelReceber({ servico }) {
   return (
     <div className="painel-receber">
       <Aviso erro={erro ?? envio.erro} />
-      <div className="cartoes">
-        <Numero rotulo="A receber" icone="financeiro">{parcelas ? formatarDinheiro(total) : '—'}</Numero>
-        {NUMEROS[servico].map(([rotulo, icone, conta]) => (
-          <Numero key={rotulo} rotulo={rotulo} icone={icone}>{projetos ? projetos.filter(conta).length : '—'}</Numero>
-        ))}
-      </div>
-      {parcelas && (
+      <FaixaNumeros
+        itens={[
+          parcelas && !abertas.length
+            ? { rotulo: 'A receber', valor: '✓ Tudo recebido', destaque: 'ok' }
+            : { rotulo: 'A receber', valor: parcelas ? formatarDinheiro(total) : '—', destaque: 'primaria' },
+          ...NUMEROS[servico].map(([rotulo, conta]) => ({ rotulo, valor: projetos ? projetos.filter(conta).length : '—' })),
+        ]}
+      />
+      {abertas.length > 0 && (
         <section className="cartao" aria-labelledby={`titulo-receber-${servico}`}>
           <h2 id={`titulo-receber-${servico}`}>A receber</h2>
-          {abertas.length ? (
-            <table className="tabela">
+          <table className="tabela">
               <thead><tr><th>Cliente</th><th>Projeto</th><th>Parcela</th><th>Vencimento</th><th className="num">Valor</th><th></th></tr></thead>
               <tbody>
                 {abertas.map((p) => (
@@ -73,8 +74,7 @@ export function PainelReceber({ servico }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          ) : <p className="vazio">Tudo recebido.</p>}
+          </table>
         </section>
       )}
     </div>

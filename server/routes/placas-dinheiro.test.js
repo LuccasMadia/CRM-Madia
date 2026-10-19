@@ -106,7 +106,7 @@ describe('/api/servicos/resumo', () => {
     expect(body).toEqual({
       site_sistema: { a_receber_centavos: 50000 },
       google_meu_negocio: { a_receber_centavos: 0 },
-      placas_nfc: { a_receber_centavos: 8000, montadas: 3 },
+      placas_nfc: { a_receber_centavos: 8000, vendas_a_receber: 1, montadas: 3 },
     });
   });
 });

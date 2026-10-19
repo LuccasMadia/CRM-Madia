@@ -2,36 +2,30 @@ import { useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Icone } from '../components/Icone.jsx';
-import { formatarDinheiro } from '../lib/dinheiro.js';
 import { SitesSistemas } from './servicos/SitesSistemas.jsx';
 import { GoogleMeuNegocio } from './servicos/GoogleMeuNegocio.jsx';
 import { PlacasNfc } from './servicos/PlacasNfc.jsx';
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
-// Cada card mostra o que ainda pede atenção naquele serviço.
+// Cada aba conta o que ainda pede atenção naquele serviço; o dinheiro fica na faixa de números de cada um.
 const SERVICOS = [
   {
-    aba: 'sites', nome: 'Sites e Sistemas', icone: 'site', servico: 'site_sistema',
-    contar: (p) => p.etapa === 'andamento', numero: (n) => `${n} em andamento`,
+    aba: 'sites', nome: 'Sites e Sistemas', icone: 'site',
+    contar: ({ projetos }) => projetos?.filter((p) => p.servico === 'site_sistema' && p.etapa === 'andamento').length,
+    rotulo: (n) => `${n} em andamento`,
   },
   {
-    aba: 'gmn', nome: 'Google Meu Negócio', icone: 'gmn', servico: 'google_meu_negocio',
-    contar: (p) => p.etapa !== 'entregue', numero: (n) => plural(n, 'pendente', 'pendentes'),
+    aba: 'gmn', nome: 'Google Meu Negócio', icone: 'gmn',
+    contar: ({ projetos }) => projetos?.filter((p) => p.servico === 'google_meu_negocio' && p.etapa !== 'entregue').length,
+    rotulo: (n) => plural(n, 'pendente', 'pendentes'),
   },
   {
-    aba: 'placas', nome: 'Placas NFC', icone: 'nfc', servico: 'placas_nfc',
-    // Placas: o que importa é o dinheiro a receber e o que já está montado.
-    numero: (_, r) => [r.a_receber_centavos ? `${formatarDinheiro(r.a_receber_centavos)} a receber` : null, plural(r.montadas, 'montada', 'montadas')]
-      .filter(Boolean).join(' · '),
+    aba: 'placas', nome: 'Placas NFC', icone: 'nfc',
+    contar: ({ resumo }) => resumo?.placas_nfc?.vendas_a_receber,
+    rotulo: (n) => plural(n, 'venda a receber', 'vendas a receber'),
   },
 ];
-
-function textoDoCard(s, projetos, resumoServico) {
-  if (!s.contar) return resumoServico ? s.numero(0, resumoServico) : null;
-  const principal = s.numero(projetos.filter((p) => p.servico === s.servico && s.contar(p)).length);
-  return resumoServico?.a_receber_centavos ? `${principal} · ${formatarDinheiro(resumoServico.a_receber_centavos)} a receber` : principal;
-}
 
 export function Servicos() {
   const [params, setParams] = useSearchParams();
@@ -44,19 +38,20 @@ export function Servicos() {
       <header className="pagina__topo">
         <h1>Serviços</h1>
       </header>
-      <div role="tablist" className="cards-servico">
-        {SERVICOS.map((s) => (
-          <button
-            key={s.aba} role="tab" type="button" className="card-servico" aria-selected={aba === s.aba}
-            onClick={() => setParams({ aba: s.aba })}
-          >
-            <span className="card-servico__icone"><Icone nome={s.icone} tamanho={22} /></span>
-            <span className="card-servico__nome">{s.nome}</span>
-            <span className="card-servico__numero">
-              {projetos && textoDoCard(s, projetos, resumo?.[s.servico])}
-            </span>
-          </button>
-        ))}
+      <div role="tablist" className="abas abas--servicos">
+        {SERVICOS.map((s) => {
+          const n = s.contar({ projetos, resumo });
+          return (
+            <button
+              key={s.aba} role="tab" type="button" className="abas__aba" aria-selected={aba === s.aba}
+              onClick={() => setParams({ aba: s.aba })}
+            >
+              <Icone nome={s.icone} tamanho={18} />
+              <span className="abas__nome">{s.nome}</span>
+              {n > 0 && <span className="contador" aria-label={s.rotulo(n)}>{n}</span>}
+            </button>
+          );
+        })}
       </div>
       <div role="tabpanel">
         {aba === 'sites' && <SitesSistemas />}

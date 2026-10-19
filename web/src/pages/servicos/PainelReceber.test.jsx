@@ -25,6 +25,7 @@ describe('PainelReceber — Sites e Sistemas', () => {
     mockApi({ 'GET /projetos?servico=site_sistema': projetos, 'GET /parcelas?servico=site_sistema': parcelas });
     renderizar(<PainelReceber servico="site_sistema" />);
     expect(await screen.findByText('R$ 1.000,00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 1.000,00').closest('.faixa-numeros')).not.toBeNull();
     expect(screen.getByText('Em andamento').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Entregues no mês').nextSibling).toHaveTextContent('1');
     const lista = screen.getByRole('region', { name: 'A receber' });
@@ -60,6 +61,7 @@ describe('PainelReceber — Google Meu Negócio', () => {
     expect(await screen.findByText('Pendentes')).toBeInTheDocument();
     expect(screen.getByText('Pendentes').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Configurados no mês').nextSibling).toHaveTextContent('1');
-    expect(screen.getByText('Tudo recebido.')).toBeInTheDocument();
+    expect(screen.getByText('A receber').nextSibling).toHaveTextContent('Tudo recebido');
+    expect(screen.queryByRole('region', { name: 'A receber' })).toBeNull();
   });
 });

@@ -112,7 +112,11 @@ export function rotasPainel({ db, hoje }) {
     res.json({
       site_sistema: { a_receber_centavos: aReceber('site_sistema') },
       google_meu_negocio: { a_receber_centavos: aReceber('google_meu_negocio') },
-      placas_nfc: { a_receber_centavos: aReceber('placas_nfc'), montadas },
+      placas_nfc: {
+        a_receber_centavos: aReceber('placas_nfc'),
+        vendas_a_receber: abertas.filter((p) => p.servico === 'placas_nfc').length,
+        montadas,
+      },
     });
   });
 

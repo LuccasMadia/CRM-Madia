@@ -26,9 +26,9 @@ export function PlacasNfc() {
   const [aba, setAba] = useState(ABAS.some(([chave]) => chave === pedida) ? pedida : 'resumo');
   return (
     <div>
-      <div role="tablist" className="abas">
+      <div role="tablist" className="pilulas pilulas--secoes" aria-label="Seções de Placas NFC">
         {ABAS.map(([chave, rotulo]) => (
-          <button key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave} onClick={() => setAba(chave)}>
+          <button key={chave} role="tab" type="button" className="pilula" aria-selected={aba === chave} onClick={() => setAba(chave)}>
             {rotulo}
           </button>
         ))}

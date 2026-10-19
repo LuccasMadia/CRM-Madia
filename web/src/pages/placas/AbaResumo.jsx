@@ -4,7 +4,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
-import { Numero } from '../../components/Numero.jsx';
+import { FaixaNumeros } from '../../components/FaixaNumeros.jsx';
 import { FormPlacaMontagem } from '../../components/FormPlacaMontagem.jsx';
 import { AvisoEstoqueMontagem } from './AbaMontagem.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
@@ -96,12 +96,16 @@ export function AbaResumo() {
       <AvisoEstoqueMontagem avisos={avisosEstoque} />
       {resumo && (
         <>
-          <div className="cartoes">
-            <Numero rotulo="A receber" icone="financeiro">{formatarDinheiro(resumo.a_receber.total_centavos)}</Numero>
-            <Numero rotulo="Montadas prontas" icone="nfc">{resumo.montadas.reduce((s, m) => s + Math.max(0, m.montadas), 0)}</Numero>
-            <Numero rotulo="Vendidas no mês" icone="projetos">{resumo.mes.vendidas}</Numero>
-            <Numero rotulo="Lucro no mês" icone="financeiro">{formatarDinheiro(resumo.mes.lucro_centavos)}</Numero>
-          </div>
+          <FaixaNumeros
+            itens={[
+              resumo.a_receber.vendas.length
+                ? { rotulo: 'A receber', valor: formatarDinheiro(resumo.a_receber.total_centavos), destaque: 'primaria' }
+                : { rotulo: 'A receber', valor: '✓ Tudo recebido', destaque: 'ok' },
+              { rotulo: 'Montadas prontas', valor: resumo.montadas.reduce((s, m) => s + Math.max(0, m.montadas), 0) },
+              { rotulo: 'Vendidas no mês', valor: resumo.mes.vendidas },
+              { rotulo: 'Lucro no mês', valor: formatarDinheiro(resumo.mes.lucro_centavos) },
+            ]}
+          />
           <div className="painel-placas">
             <VendasAReceber aReceber={resumo.a_receber} onRecebi={receber} />
             <Montadas montadas={resumo.montadas} onMontar={() => setMontando(true)} />

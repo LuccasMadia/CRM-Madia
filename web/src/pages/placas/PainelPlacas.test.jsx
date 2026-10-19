@@ -29,6 +29,8 @@ describe('Resumo de Placas — painel', () => {
     expect(within(montadas).getByText('Placa 10x10 EN')).toBeInTheDocument();
     expect(within(montadas).getByText('os materiais dão para mais 3')).toBeInTheDocument();
     expect(screen.getByText('Montadas prontas').nextSibling).toHaveTextContent('2');
+    expect(screen.getByText('Montadas prontas').closest('.faixa-numeros')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Resumo' })).toHaveClass('pilula');
     expect(screen.getByText('Vendidas no mês').nextSibling).toHaveTextContent('4');
   });
 
