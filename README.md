@@ -15,8 +15,25 @@ npm test
 O Express serve também o front compilado (`dist/`), então só o processo `crm-madia-api` precisa rodar:
 
 ```bash
-npm run build && pm2 restart crm-madia-api
+npm install && npm run build && pm2 restart crm-madia-api
 ```
+
+O pm2 roda sem `watch`: qualquer mudança de código ou migration só vale depois do `pm2 restart crm-madia-api`.
+
+**Primeira vez depois da atualização da publicação no Instagram** (migration `021_publicacao_instagram.sql`), faça uma vez só, nesta ordem:
+
+1. Pare a API e faça backup do banco e das mídias em `data/backup-antes-021-<data>` (ex.: `data/backup-antes-021-2026-10-19`). No PowerShell:
+
+   ```powershell
+   pm2 stop crm-madia-api
+   $destino = "data/backup-antes-021-$(Get-Date -Format yyyy-MM-dd)"
+   New-Item -ItemType Directory -Force $destino
+   Copy-Item data/crm.db $destino
+   Copy-Item -Recurse data/uploads $destino
+   ```
+
+2. Atualize e reinicie: `npm install && npm run build && pm2 restart crm-madia-api` (a migration roda ao subir).
+3. Remova o processo antigo do front, que não é mais usado (o Express já serve o `dist/`): `pm2 delete crm-madia-web` e depois `pm2 save`.
 
 O desenvolvimento continua com `npm run dev` (ou `npm start`). Para expor o CRM em `crm.luccasmadia.com.br`, siga o passo a passo em [docs/tunel-cloudflare.md](docs/tunel-cloudflare.md).
 
