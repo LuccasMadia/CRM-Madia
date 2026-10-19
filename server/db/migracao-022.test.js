@@ -11,7 +11,7 @@ function antes() {
   return db;
 }
 
-describe('migration 021_publicacao_instagram', () => {
+describe('migration 022_publicacao_instagram', () => {
   it('move a arte para conteudo_midias e preserva ids e midia_id', () => {
     const db = antes();
     db.prepare('INSERT INTO instagram_midias (id, tipo, publicado_em, atualizado_em) VALUES (?, ?, ?, ?)').run('m1', 'post', t, t);

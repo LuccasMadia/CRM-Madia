@@ -20,13 +20,13 @@ npm install && npm run build && pm2 restart crm-madia-api
 
 O pm2 roda sem `watch`: qualquer mudança de código ou migration só vale depois do `pm2 restart crm-madia-api`.
 
-**Primeira vez depois da atualização da publicação no Instagram** (migration `021_publicacao_instagram.sql`), faça uma vez só, nesta ordem:
+**Primeira vez depois da atualização da publicação no Instagram** (migration `022_publicacao_instagram.sql`), faça uma vez só, nesta ordem:
 
-1. Pare a API e faça backup do banco e das mídias em `data/backup-antes-021-<data>` (ex.: `data/backup-antes-021-2026-10-19`). No PowerShell:
+1. Pare a API e faça backup do banco e das mídias em `data/backup-antes-022-<data>` (ex.: `data/backup-antes-022-2026-10-19`). No PowerShell:
 
    ```powershell
    pm2 stop crm-madia-api
-   $destino = "data/backup-antes-021-$(Get-Date -Format yyyy-MM-dd)"
+   $destino = "data/backup-antes-022-$(Get-Date -Format yyyy-MM-dd)"
    New-Item -ItemType Directory -Force $destino
    Copy-Item data/crm.db $destino
    Copy-Item -Recurse data/uploads $destino
