@@ -193,6 +193,31 @@ describe('publicador — erros', () => {
     expect(posts().some((r) => r.url.pathname === '/178/media_publish')).toBe(false);
   });
 
+  it('media_publish com 500: pode ter saído, então falhou com a mensagem de interrupção e sem novo POST', async () => {
+    const id = criarConteudo();
+    const { pub, posts } = publicador(rotas({
+      ...finalizado(),
+      'POST /178/media_publish': { status: 500, corpo: { error: { code: 2, message: 'Service unavailable' } } },
+    }));
+    await pub.iniciar(id);
+    expect(posts().filter((r) => r.url.pathname === '/178/media_publish')).toHaveLength(1);
+    expect(posts()).toHaveLength(2);
+    expect(conteudo(id)).toMatchObject({ estado: 'falhou', publicacao_erro: MSG_INTERROMPIDA, publicacao_token: null });
+  });
+
+  it('media_publish com erro de rede: mesma mensagem de interrupção e sem novo POST', async () => {
+    const id = criarConteudo();
+    const { pub, posts } = publicador(rotas({
+      ...finalizado(),
+      'POST /178/media_publish': () => {
+        throw new TypeError('fetch failed');
+      },
+    }));
+    await pub.iniciar(id);
+    expect(posts()).toHaveLength(2);
+    expect(conteudo(id)).toMatchObject({ estado: 'falhou', publicacao_erro: MSG_INTERROMPIDA });
+  });
+
   it('status EXPIRED sem mensagem usa o próprio status', async () => {
     const id = criarConteudo();
     const { pub } = publicador(rotas({ '/C1': { status_code: 'EXPIRED' } }));

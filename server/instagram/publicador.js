@@ -64,17 +64,21 @@ export function criarPublicador({
     if (!token) return falhar(conteudoId, MSG_SEM_TOKEN);
 
     let mediaId;
+    let enviado = false;
     try {
       const ig = criarClienteInstagram({ token, fetch });
       const { id: usuarioId } = await ig.perfil();
       const containerId = conteudo.publicacao_container_id ?? (await criarConteineres(ig, usuarioId, conteudo));
       await aguardarProcessamento(ig, containerId);
       atualizar(conteudoId, { publicacao_enviado_em: carimbo() });
+      enviado = true;
       mediaId = await ig.publicarContainer(usuarioId, containerId);
       atualizar(conteudoId, { estado: 'publicado', publicacao_midia_id: mediaId, publicacao_token: null });
     } catch (erro) {
+      // Depois de mandar publicar, um erro (rede, 5xx) não garante que o post não saiu:
+      // nunca convida a tentar de novo às cegas, para não publicar duas vezes.
       try {
-        falhar(conteudoId, erro?.message || 'Erro desconhecido ao publicar.');
+        falhar(conteudoId, enviado ? MSG_INTERROMPIDA : erro?.message || 'Erro desconhecido ao publicar.');
       } catch (erroBanco) {
         log(erroBanco);
       }
