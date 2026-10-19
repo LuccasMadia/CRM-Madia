@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { screen, within, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { act, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Conteudo } from './Conteudo.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -131,6 +131,44 @@ describe('Conteudo', () => {
     abrir();
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Mover Reels sexta para depois' }));
     expect(chamadas.find((c) => c.caminho === '/conteudos/ordem').corpo).toEqual({ ids: [8, 7] });
+  });
+
+  it('enquanto algum post está publicando, atualiza grid e avisos a cada 10 s e para quando termina', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      let estadoPost = 'publicando';
+      const { chamadas } = mockApi(rotas({
+        'GET /instagram/grid': () => ({ prontos: [{ ...PRONTOS[0], estado: estadoPost }], midias: MIDIAS }),
+      }));
+      const contar = (caminho) => chamadas.filter((c) => c.metodo === 'GET' && c.caminho === caminho).length;
+      abrir();
+      expect(await screen.findByText('Publicando…')).toBeInTheDocument();
+      expect(contar('/instagram/grid')).toBe(1);
+      const avisosAntes = contar('/conteudos/avisos');
+
+      estadoPost = 'publicado';
+      await act(async () => vi.advanceTimersByTime(10_000));
+      await waitFor(() => expect(contar('/instagram/grid')).toBe(2));
+      expect(contar('/conteudos/avisos')).toBe(avisosAntes + 1);
+      await waitFor(() => expect(screen.queryByText('Publicando…')).not.toBeInTheDocument());
+
+      await act(async () => vi.advanceTimersByTime(30_000));
+      expect(contar('/instagram/grid')).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('com um agendado no grid, mover envia só os ids dos prontos', async () => {
+    const agendado = { id: 6, titulo: 'Agendado domingo', tipo: 'post', estado: 'agendado', agendado_para: '2026-10-25T12:00:00.000Z', capa_url: null };
+    const { chamadas } = mockApi(rotas({
+      'GET /instagram/grid': { prontos: [agendado, ...PRONTOS], midias: MIDIAS },
+      'PUT /conteudos/ordem': null,
+    }));
+    abrir();
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Mover Carrossel terça para antes' }));
+    await waitFor(() => expect(chamadas.find((c) => c.caminho === '/conteudos/ordem')?.corpo).toEqual({ ids: [8, 7] }));
+    expect(screen.queryByRole('button', { name: /Mover Agendado domingo/ })).not.toBeInTheDocument();
   });
 
   it('clicar num pronto abre o formulário de edição', async () => {

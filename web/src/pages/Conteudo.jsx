@@ -47,6 +47,21 @@ export function Conteudo() {
     rascunhos.recarregar();
   };
 
+  // Publicação iniciada fora do modal aberto (agendador, avisos, outra aba): enquanto
+  // algum post estiver saindo, busca grid e avisos de novo a cada 10 s.
+  const algumPublicando = (grid.dados?.prontos ?? []).some((p) => p.estado === 'publicando');
+  const recarregarGrid = grid.recarregar;
+  useEffect(() => {
+    if (!algumPublicando) return undefined;
+    const timer = setInterval(() => {
+      recarregarGrid();
+      setVersaoAvisos((v) => v + 1);
+    }, 10_000);
+    return () => clearInterval(timer);
+    // recarregarGrid só chama um setState estável; não precisa reiniciar o timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [algumPublicando]);
+
   function atualizarAgora() {
     acao.executar(async () => {
       try {
@@ -60,7 +75,8 @@ export function Conteudo() {
   }
 
   function mover(indice, delta) {
-    const ids = grid.dados.prontos.map((p) => p.id);
+    // A API reordena só a fila de prontos; agendados e publicando ficam de fora.
+    const ids = grid.dados.prontos.filter((p) => p.estado === 'pronto').map((p) => p.id);
     [ids[indice], ids[indice + delta]] = [ids[indice + delta], ids[indice]];
     acao.executar(async () => {
       await api('/conteudos/ordem', { method: 'PUT', body: { ids } });

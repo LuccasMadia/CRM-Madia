@@ -16,6 +16,27 @@ describe('GridInstagram', () => {
     expect(screen.getByText('Publicando…')).toBeInTheDocument();
   });
 
+  it('só os prontos têm setas, com o índice contado entre os prontos', async () => {
+    const onMover = vi.fn();
+    render(
+      <GridInstagram
+        prontos={[
+          item({ id: 1, titulo: 'Agendado', estado: 'agendado', agendado_para: new Date(2026, 9, 20).toISOString() }),
+          item({ id: 2, titulo: 'A', estado: 'pronto' }),
+          item({ id: 3, titulo: 'B', estado: 'pronto' }),
+        ]}
+        midias={[]}
+        onEditar={vi.fn()}
+        onMover={onMover}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Mover Agendado/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mover A para antes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mover B para depois' })).not.toBeInTheDocument();
+    screen.getByRole('button', { name: 'Mover B para antes' }).click();
+    expect(onMover).toHaveBeenCalledWith(1, -1);
+  });
+
   it('pronto continua mostrando tipo', () => {
     grid([item({ estado: 'pronto' })]);
     expect(screen.getByText('Post')).toBeInTheDocument();
