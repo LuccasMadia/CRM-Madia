@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA,
+  ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA, ROTULO_ESTADO_CONTEUDO,
   TIPOS_SERVICO, ROTULO_TIPO_SERVICO, ROTULO_SERVICO, SERVICOS, ABA_DO_SERVICO,
 } from './rotulos.js';
 
@@ -30,6 +30,14 @@ describe('rótulos de serviço', () => {
     for (const s of SERVICOS) {
       expect(ROTULO_SERVICO[s]).toBeTruthy();
       expect(ABA_DO_SERVICO[s]).toBeTruthy();
+    }
+  });
+});
+
+describe("ROTULO_ESTADO_CONTEUDO", () => {
+  it("tem rotulo para os estados de publicacao", () => {
+    for (const e of ["rascunho", "pronto", "agendado", "publicando", "publicado", "falhou", "atrasado"]) {
+      expect(ROTULO_ESTADO_CONTEUDO[e]).toBeTruthy();
     }
   });
 });

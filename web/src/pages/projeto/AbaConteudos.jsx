@@ -5,7 +5,7 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormConteudo } from '../../components/FormConteudo.jsx';
 import { diaLocal, formatarData } from '../../lib/datas.js';
-import { salvarConteudo } from '../../lib/conteudos.js';
+import { CLASSE_ESTADO_CONTEUDO, salvarConteudo } from '../../lib/conteudos.js';
 import { ROTULO_ESTADO_CONTEUDO, ROTULO_TIPO } from '../../lib/rotulos.js';
 
 export function AbaConteudos({ projetoId }) {
@@ -13,13 +13,15 @@ export function AbaConteudos({ projetoId }) {
   const publicados = useCarregar(() => api(`/instagram/midias?projeto_id=${projetoId}`), [projetoId]);
   const [editando, setEditando] = useState(null);
 
-  async function salvar(dados, arte) {
-    const aoCriar = (novo) => {
-      setEditando(novo);
-      planejados.recarregar();
-    };
-    await salvarConteudo(editando.id, dados, arte, { aoCriar });
-    setEditando(null);
+  async function salvar(dados) {
+    const criando = !editando.id;
+    const salvo = await salvarConteudo(editando.id, dados);
+    setEditando(criando ? salvo : null);
+    planejados.recarregar();
+  }
+
+  function midiasMudaram(atualizado) {
+    setEditando(atualizado);
     planejados.recarregar();
   }
 
@@ -44,7 +46,7 @@ export function AbaConteudos({ projetoId }) {
               <tr key={c.id}>
                 <td><button type="button" className="kanban__titulo" onClick={() => setEditando(c)}>{c.titulo}</button></td>
                 <td>{ROTULO_TIPO[c.tipo]}</td>
-                <td><span className={`etiqueta etiqueta--${c.estado}`}>{ROTULO_ESTADO_CONTEUDO[c.estado]}</span></td>
+                <td><span className={`etiqueta etiqueta--${CLASSE_ESTADO_CONTEUDO[c.estado]}`}>{ROTULO_ESTADO_CONTEUDO[c.estado]}</span></td>
                 <td>{formatarData(c.data_planejada)}</td>
               </tr>
             ))}
@@ -70,7 +72,7 @@ export function AbaConteudos({ projetoId }) {
 
       {editando && (
         <Modal titulo={editando.id ? 'Editar planejado' : 'Novo planejado'} onFechar={() => setEditando(null)}>
-          <FormConteudo inicial={editando} projetoFixo={projetoId} onSalvar={salvar} onExcluir={editando.id ? excluir : undefined} />
+          <FormConteudo key={editando.id ?? 'novo'} inicial={editando} projetoFixo={projetoId} onSalvar={salvar} onMidiasMudaram={midiasMudaram} onExcluir={editando.id ? excluir : undefined} />
         </Modal>
       )}
     </div>

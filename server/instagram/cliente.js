@@ -8,30 +8,73 @@ const METRICAS = { reach: 'alcance', views: 'visualizacoes', saved: 'salvamentos
 const DIA_MS = 24 * 60 * 60 * 1000;
 
 export class ErroInstagram extends Error {
-  constructor(mensagem, { status = 0, tokenInvalido = false } = {}) {
+  constructor(mensagem, { status = 0, code = null, subcode = null, tokenInvalido = false, semPermissao = false } = {}) {
     super(mensagem);
     this.status = status;
+    // code/error_subcode da Graph API, para quem precisa traduzir o erro (ex.: publicador).
+    this.code = code;
+    this.subcode = subcode;
     this.tokenInvalido = tokenInvalido;
+    this.semPermissao = semPermissao;
   }
 }
 
+const MSG_SEM_PERMISSAO =
+  'O token não tem permissão para publicar. Em Configurações → Instagram, gere um token novo com a permissão de publicação e cole de novo.';
+
 export function criarClienteInstagram({ token, fetch = globalThis.fetch, agora = () => new Date() }) {
-  async function obter(caminhoOuUrl, parametros = {}) {
-    const url = new URL(caminhoOuUrl, BASE);
-    for (const [chave, valor] of Object.entries(parametros)) url.searchParams.set(chave, valor);
-    url.searchParams.set('access_token', token);
+  // Envia a requisição e trata resposta/erro; compartilhado por GET e POST.
+  async function requisitar(url, init) {
     let resposta;
     try {
-      resposta = await fetch(url);
+      resposta = await fetch(url, init);
     } catch {
       throw new ErroInstagram('Não foi possível falar com o Instagram. Verifique a internet.');
     }
     const corpo = await resposta.json().catch(() => ({}));
     if (!resposta.ok || corpo.error) {
-      const tokenInvalido = corpo.error?.code === 190 || resposta.status === 401;
-      throw new ErroInstagram(corpo.error?.message ?? `Instagram respondeu ${resposta.status}`, { status: resposta.status, tokenInvalido });
+      const erro = corpo.error;
+      const tokenInvalido = erro?.code === 190 || resposta.status === 401;
+      const semPermissao = !tokenInvalido && (erro?.code === 10 || erro?.code === 200 || /permiss/i.test(erro?.message ?? ''));
+      const mensagem = semPermissao ? MSG_SEM_PERMISSAO : (erro?.message ?? `Instagram respondeu ${resposta.status}`);
+      throw new ErroInstagram(mensagem, {
+        status: resposta.status,
+        code: erro?.code ?? null,
+        subcode: erro?.error_subcode ?? null,
+        tokenInvalido,
+        semPermissao,
+      });
     }
     return corpo;
+  }
+
+  async function obter(caminhoOuUrl, parametros = {}) {
+    const url = new URL(caminhoOuUrl, BASE);
+    for (const [chave, valor] of Object.entries(parametros)) url.searchParams.set(chave, valor);
+    url.searchParams.set('access_token', token);
+    return requisitar(url);
+  }
+
+  function enviar(caminho, parametros = {}) {
+    const corpo = new URLSearchParams({ ...parametros, access_token: token });
+    return requisitar(new URL(caminho, BASE), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: corpo.toString(),
+    });
+  }
+
+  async function criarContainer(usuarioId, parametros) {
+    return (await enviar(`/${usuarioId}/media`, parametros)).id;
+  }
+
+  async function statusContainer(id) {
+    const r = await obter(`/${id}`, { fields: 'status_code,status' });
+    return { status: r.status_code, mensagem: r.status ?? null };
+  }
+
+  async function publicarContainer(usuarioId, creationId) {
+    return (await enviar(`/${usuarioId}/media_publish`, { creation_id: creationId })).id;
   }
 
   async function perfil() {
@@ -97,5 +140,5 @@ export function criarClienteInstagram({ token, fetch = globalThis.fetch, agora =
     return { token: r.access_token, expiraEm: new Date(agora().getTime() + r.expires_in * 1000).toISOString() };
   }
 
-  return { perfil, midias, midia, insights, historicoSeguidores, renovarToken };
+  return { perfil, midias, midia, insights, historicoSeguidores, renovarToken, criarContainer, statusContainer, publicarContainer };
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import { AvisosPublicacao } from '../components/AvisosPublicacao.jsx';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useEnvio } from '../hooks/useEnvio.js';
@@ -25,11 +27,40 @@ export function Conteudo() {
   const seguidores = useCarregar(() => api('/instagram/seguidores'), []);
   const rascunhos = useCarregar(() => api('/conteudos?estado=rascunho'), []);
   const acao = useEnvio();
+  const [params, setParams] = useSearchParams();
+  const idParaAbrir = params.get('abrir');
 
+  // Link "Reagendar" da Início: /conteudo?abrir=<id> abre o rascunho direto.
+  useEffect(() => {
+    if (!idParaAbrir) return;
+    api(`/conteudos/${idParaAbrir}`).then(setEditando, () => {});
+    setParams((p) => {
+      p.delete('abrir');
+      return p;
+    }, { replace: true });
+  }, [idParaAbrir, setParams]);
+
+  const [versaoAvisos, setVersaoAvisos] = useState(0);
   const recarregarPlanejados = () => {
+    setVersaoAvisos((v) => v + 1);
     grid.recarregar();
     rascunhos.recarregar();
   };
+
+  // Publicação iniciada fora do modal aberto (agendador, avisos, outra aba): enquanto
+  // algum post estiver saindo, busca grid e avisos de novo a cada 10 s.
+  const algumPublicando = (grid.dados?.prontos ?? []).some((p) => p.estado === 'publicando');
+  const recarregarGrid = grid.recarregar;
+  useEffect(() => {
+    if (!algumPublicando) return undefined;
+    const timer = setInterval(() => {
+      recarregarGrid();
+      setVersaoAvisos((v) => v + 1);
+    }, 10_000);
+    return () => clearInterval(timer);
+    // recarregarGrid só chama um setState estável; não precisa reiniciar o timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [algumPublicando]);
 
   function atualizarAgora() {
     acao.executar(async () => {
@@ -44,7 +75,8 @@ export function Conteudo() {
   }
 
   function mover(indice, delta) {
-    const ids = grid.dados.prontos.map((p) => p.id);
+    // A API reordena só a fila de prontos; agendados e publicando ficam de fora.
+    const ids = grid.dados.prontos.filter((p) => p.estado === 'pronto').map((p) => p.id);
     [ids[indice], ids[indice + delta]] = [ids[indice + delta], ids[indice]];
     acao.executar(async () => {
       await api('/conteudos/ordem', { method: 'PUT', body: { ids } });
@@ -52,13 +84,15 @@ export function Conteudo() {
     });
   }
 
-  async function salvar(dados, arte) {
-    const aoCriar = (novo) => {
-      setEditando(novo);
-      recarregarPlanejados();
-    };
-    await salvarConteudo(editando.id, dados, arte, { aoCriar });
-    setEditando(null);
+  async function salvar(dados) {
+    const criando = !editando.id;
+    const salvo = await salvarConteudo(editando.id, dados);
+    setEditando(criando ? salvo : null);
+    recarregarPlanejados();
+  }
+
+  function midiasMudaram(atualizado) {
+    setEditando(atualizado);
     recarregarPlanejados();
   }
 
@@ -97,6 +131,7 @@ export function Conteudo() {
           <button type="button" className="btn btn--primario" onClick={() => setEditando({})}>+ Planejar</button>
         </div>
       </header>
+      <AvisosPublicacao versao={versaoAvisos} onAbrir={setEditando} onMudou={recarregarPlanejados} />
       <Aviso erro={estado.erro ?? grid.erro ?? acao.erro} />
       {estado.dados?.ultimo_erro && (
         <p className="aviso aviso--erro" role="alert">
@@ -140,7 +175,7 @@ export function Conteudo() {
 
       {editando && (
         <Modal titulo={editando.id ? 'Editar planejado' : 'Novo planejado'} onFechar={() => setEditando(null)}>
-          <FormConteudo inicial={editando} onSalvar={salvar} onExcluir={editando.id ? excluir : undefined} />
+          <FormConteudo key={editando.id ?? 'novo'} inicial={editando} onSalvar={salvar} onMidiasMudaram={midiasMudaram} onExcluir={editando.id ? excluir : undefined} />
         </Modal>
       )}
     </section>

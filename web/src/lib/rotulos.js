@@ -14,7 +14,10 @@ export const ETAPAS_FICTICIO = ['andamento', 'entregue'];
 // "Em andamento" é o que está nas suas mãos: construindo o protótipo ou a versão final.
 export const ETAPAS_EM_ANDAMENTO = ['prototipo', 'andamento'];
 
-export const ROTULO_ESTADO_CONTEUDO = { rascunho: 'Rascunho', pronto: 'Pronto' };
+export const ROTULO_ESTADO_CONTEUDO = {
+  rascunho: 'Rascunho', pronto: 'Pronto', agendado: 'Agendado', publicando: 'Publicando…',
+  publicado: 'Publicado', falhou: 'Falhou', atrasado: 'Atrasado',
+};
 export const ROTULO_TIPO = { post: 'Post', carrossel: 'Carrossel', reels: 'Reels' };
 export const ROTULO_ESTADO_PARCELA = { paga: 'Paga', atrasada: 'Atrasada', pendente: 'Pendente' };
 

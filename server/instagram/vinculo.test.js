@@ -77,6 +77,21 @@ describe('vínculo manual', () => {
     expect(projetoDaMidia('m1')).toBe(9);
   });
 
+  it.each(['agendado', 'atrasado'])('ligar um %s marca como publicado e tira o horário (foi postado à mão)', (estado) => {
+    const c = planejado({ estado });
+    db.prepare("UPDATE conteudos SET agendado_para = '2026-10-20T12:00:00.000Z' WHERE id = ?").run(c);
+    midia();
+    vincular(db, c, 'm1');
+    expect(conteudo(c)).toMatchObject({ midia_id: 'm1', estado: 'publicado', agendado_para: null });
+  });
+
+  it('ligar um pronto não muda o estado', () => {
+    const c = planejado();
+    midia();
+    vincular(db, c, 'm1');
+    expect(conteudo(c).estado).toBe('pronto');
+  });
+
   it('recusa ligar mídia já ligada a outro planejado', () => {
     const a = planejado();
     const b = planejado();

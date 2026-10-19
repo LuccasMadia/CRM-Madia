@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { linha } from '../repos/crud.js';
 import { obterConfig, definirConfig } from '../repos/config.js';
 import { repoProjetos } from '../repos/projetos.js';
+import { repoConteudoMidias } from '../repos/conteudoMidias.js';
 import { validar } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { somarDias } from '../domain/datas.js';
@@ -20,6 +21,7 @@ const comCapa = (m) => ({ ...m, capa_url: m.capa ? `/uploads/${m.capa}` : null }
 
 export function rotasInstagram({ db, hoje, fetch, sincronizarInstagram }) {
   const projetos = repoProjetos(db);
+  const conteudoMidias = repoConteudoMidias(db);
   const r = Router();
 
   const estado = () => ({
@@ -73,9 +75,11 @@ export function rotasInstagram({ db, hoje, fetch, sincronizarInstagram }) {
   r.get('/instagram/grid', (req, res) => {
     const prontos = db
       .prepare(`SELECT c.*, p.titulo AS projeto_titulo FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id
-        WHERE c.estado = 'pronto' AND c.midia_id IS NULL ORDER BY c.ordem, c.id`)
+        WHERE c.estado IN ('pronto', 'agendado', 'publicando') AND c.midia_id IS NULL
+        ORDER BY (c.estado = 'pronto'), (c.agendado_para IS NOT NULL), c.agendado_para, c.ordem, c.id`)
       .all()
-      .map(linha);
+      .map(linha)
+      .map(conteudoMidias.comMidias);
     const midias = db.prepare(`${SELECT_MIDIA} WHERE m.removido = 0 ORDER BY m.publicado_em DESC`).all().map(linha).map(comCapa);
     res.json({ prontos, midias });
   });

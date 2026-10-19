@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   root: 'web',
+  build: { outDir: '../dist', emptyOutDir: true },
   plugins: [
     react(),
     VitePWA({
@@ -26,8 +27,21 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg}'],
-        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        // Sem html no precache: senão o index.html servido do cache responde "/" e o
+        // start_url mesmo com a sessão do Access expirada, e o login nunca aparece.
+        globPatterns: ['**/*.{js,css,png,svg}'],
+        // Navegações sempre tentam a rede: com a sessão do Cloudflare Access expirada,
+        // a recarga precisa chegar ao login em vez de receber o index.html do cache.
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            // Só guarda páginas de verdade (200), nunca o redirecionamento para o login.
+            options: { cacheName: 'paginas', networkTimeoutSeconds: 3, cacheableResponse: { statuses: [200] } },
+          },
+        ],
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/publico\//, /^\/cdn-cgi\//],
       },
       devOptions: {
         enabled: true,

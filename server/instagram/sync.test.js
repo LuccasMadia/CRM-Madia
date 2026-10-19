@@ -222,3 +222,12 @@ describe('sincronizar — robustez', () => {
     expect(obterConfig(db, 'instagram_token')).toBe('tok');
   });
 });
+
+describe('sincronizar — publicados pelo CRM', () => {
+  it('liga o conteúdo publicado à mídia que a sync trouxe', async () => {
+    db.exec(`INSERT INTO conteudos (tipo, titulo, estado, publicacao_midia_id, criado_em, atualizado_em)
+      VALUES ('reels', 'Publicado', 'publicado', 'm1', '2026-10-20T00:00:00.000Z', 'x')`);
+    await rodar(rotasPadrao()).promessa;
+    expect(db.prepare("SELECT midia_id FROM conteudos WHERE titulo = 'Publicado'").get().midia_id).toBe('m1');
+  });
+});

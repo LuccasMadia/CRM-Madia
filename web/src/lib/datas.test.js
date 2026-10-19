@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { formatarData, semanasDoMes, nomeMes } from './datas.js';
+import { formatarData, semanasDoMes, nomeMes, localParaIso, isoParaLocal } from './datas.js';
 
 describe('datas (web)', () => {
+  it('localParaIso e isoParaLocal fazem ida e volta', () => {
+    const iso = localParaIso('2026-10-20T18:00');
+    expect(iso).toBe(new Date('2026-10-20T18:00').toISOString());
+    expect(isoParaLocal(iso)).toBe('2026-10-20T18:00');
+  });
+
   it('formatarData', () => {
     expect(formatarData('2026-09-23')).toBe('23/09/2026');
     expect(formatarData(null)).toBe('—');

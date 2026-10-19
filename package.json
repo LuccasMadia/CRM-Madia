@@ -9,6 +9,7 @@
   "scripts": {
     "start": "concurrently -k -n api,web -c blue,magenta \"node server/index.js\" \"vite\"",
     "dev": "concurrently -k -n api,web -c blue,magenta \"node --watch server/index.js\" \"vite\"",
+    "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -20,7 +21,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",

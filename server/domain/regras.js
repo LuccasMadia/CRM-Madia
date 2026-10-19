@@ -2,6 +2,7 @@
 export const ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue', 'perdido'];
 export const TIPOS_CONTEUDO = ['post', 'carrossel', 'reels'];
 export const ESTADOS_CONTEUDO = ['rascunho', 'pronto'];
+export const ESTADOS_PUBLICACAO = ['agendado', 'publicando', 'publicado', 'falhou', 'atrasado'];
 
 function preencherData(atual, mudancas, { campo, valor, campoData }, hoje) {
   const resultado = { ...mudancas };

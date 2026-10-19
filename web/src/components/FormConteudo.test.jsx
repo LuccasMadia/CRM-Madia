@@ -5,7 +5,7 @@ import { FormConteudo } from './FormConteudo.jsx';
 import { mockApi } from '../test/mockApi.js';
 
 describe('FormConteudo', () => {
-  it('envia estado e arte, sem canal, status nem link', async () => {
+  it('envia estado, sem canal, status nem link, e sem segundo argumento de arte', async () => {
     mockApi({ 'GET /projetos': [] });
     const onSalvar = vi.fn();
     render(<FormConteudo onSalvar={onSalvar} />);
@@ -13,26 +13,62 @@ describe('FormConteudo', () => {
     expect(screen.queryByLabelText('Canal')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Status')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Link do post')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Arte')).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Story' })).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Título'), 'Reels sexta');
     await user.selectOptions(screen.getByLabelText('Estado'), 'pronto');
-    const arquivo = new File(['png'], 'arte.png', { type: 'image/png' });
-    await user.upload(screen.getByLabelText('Arte'), arquivo);
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(onSalvar).toHaveBeenCalledWith(
+    expect(onSalvar).toHaveBeenCalledTimes(1);
+    expect(onSalvar.mock.calls[0]).toHaveLength(1);
+    expect(onSalvar.mock.calls[0][0]).toEqual(
       expect.objectContaining({ titulo: 'Reels sexta', tipo: 'post', estado: 'pronto', projeto_id: null }),
-      { arte: arquivo, removerArte: false },
     );
   });
 
-  it('permite remover a arte existente', async () => {
+  it('conteúdo novo pede para salvar antes de adicionar mídias', () => {
+    mockApi({ 'GET /projetos': [] });
+    render(<FormConteudo onSalvar={vi.fn()} />);
+    expect(screen.getByText('Salve o rascunho para adicionar mídias.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Adicionar mídias')).not.toBeInTheDocument();
+  });
+
+  it('conteúdo salvo mostra a publicação; em estado de publicação troca o select pelo rótulo', () => {
+    mockApi({});
+    const { rerender } = render(<FormConteudo projetoFixo={5} inicial={{ id: 1, titulo: 'A', tipo: 'post', estado: 'rascunho', midias: [] }} onSalvar={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Publicar agora no Instagram' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Estado')).toBeInTheDocument();
+    rerender(<FormConteudo key="b" projetoFixo={5} inicial={{ id: 2, titulo: 'B', tipo: 'post', estado: 'agendado', agendado_para: '2999-01-01T12:00:00.000Z', midias: [] }} onSalvar={vi.fn()} />);
+    expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument();
+    expect(screen.getByText('Agendado')).toBeInTheDocument();
+  });
+
+  it('salvar um conteúdo em estado de publicação não envia estado', async () => {
+    mockApi({});
     const onSalvar = vi.fn();
-    render(<FormConteudo projetoFixo={5} inicial={{ id: 1, titulo: 'A', tipo: 'post', estado: 'rascunho', arte: 'x.png' }} onSalvar={onSalvar} />);
-    const user = userEvent.setup();
-    expect(screen.getByRole('img', { name: 'Arte atual' })).toHaveAttribute('src', '/uploads/x.png');
-    await user.click(screen.getByRole('button', { name: 'Remover arte' }));
-    expect(screen.queryByRole('img', { name: 'Arte atual' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(onSalvar.mock.calls[0][1]).toEqual({ arte: null, removerArte: true });
+    render(<FormConteudo projetoFixo={5} inicial={{ id: 2, titulo: 'B', tipo: 'post', estado: 'falhou', midias: [] }} onSalvar={onSalvar} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSalvar.mock.calls[0][0]).not.toHaveProperty('estado');
+  });
+
+  it('mudança de publicação atualiza o formulário e avisa o pai', async () => {
+    const inicial = { id: 1, titulo: 'A', tipo: 'post', estado: 'rascunho', midias: [] };
+    const publicando = { ...inicial, estado: 'publicando' };
+    mockApi({ 'POST /conteudos/1/publicar': publicando });
+    const onMidiasMudaram = vi.fn();
+    render(<FormConteudo projetoFixo={5} inicial={inicial} onSalvar={vi.fn()} onMidiasMudaram={onMidiasMudaram} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Publicar agora no Instagram' }));
+    expect(await screen.findByText('Publicando…', { selector: 'p' })).toBeInTheDocument();
+    expect(onMidiasMudaram).toHaveBeenCalledWith(publicando);
+    expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument();
+  });
+
+  it('conteúdo salvo lista as mídias e atualiza a lista após adicionar', async () => {
+    const inicial = { id: 1, titulo: 'A', tipo: 'carrossel', estado: 'rascunho', midias: [{ id: 1, url: '/uploads/a.jpg', tipo: 'imagem', ordem: 0 }] };
+    const atualizado = { ...inicial, midias: [...inicial.midias, { id: 2, url: '/uploads/b.jpg', tipo: 'imagem', ordem: 1 }] };
+    mockApi({ 'POST /conteudos/1/midias': atualizado });
+    render(<FormConteudo projetoFixo={5} inicial={inicial} onSalvar={vi.fn()} />);
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+    await userEvent.setup().upload(screen.getByLabelText('Adicionar mídias'), new File(['x'], 'b.png', { type: 'image/png' }));
+    expect(await screen.findAllByRole('img')).toHaveLength(2);
   });
 });

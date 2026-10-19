@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { act, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Conteudo } from './Conteudo.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -9,8 +9,8 @@ import { formatarData, hojeISO } from '../lib/datas.js';
 const hoje = hojeISO();
 const ESTADO = { conectado: true, usuario: 'luccasmadia', ultima_sync: '2026-10-16T15:00:00.000Z', ultimo_erro: null, sincronizando: false };
 const PRONTOS = [
-  { id: 7, titulo: 'Reels sexta', tipo: 'reels', estado: 'pronto', data_planejada: hoje, arte: null },
-  { id: 8, titulo: 'Carrossel terça', tipo: 'carrossel', estado: 'pronto', data_planejada: null, arte: 'a.png' },
+  { id: 7, titulo: 'Reels sexta', tipo: 'reels', estado: 'pronto', data_planejada: hoje, capa_url: null },
+  { id: 8, titulo: 'Carrossel terça', tipo: 'carrossel', estado: 'pronto', data_planejada: null, capa_url: '/uploads/a.png' },
 ];
 const MIDIAS = [
   {
@@ -23,6 +23,7 @@ const SEGUIDORES = [{ dia: '2026-10-01', seguidores: 1242 }, { dia: '2026-10-16'
 
 function rotas(extra = {}) {
   return {
+    'GET /conteudos/avisos': { atrasados: [], falhas: [] },
     'GET /instagram/estado': ESTADO,
     'GET /instagram/grid': { prontos: PRONTOS, midias: MIDIAS },
     'GET /instagram/seguidores': SEGUIDORES,
@@ -132,6 +133,44 @@ describe('Conteudo', () => {
     expect(chamadas.find((c) => c.caminho === '/conteudos/ordem').corpo).toEqual({ ids: [8, 7] });
   });
 
+  it('enquanto algum post está publicando, atualiza grid e avisos a cada 10 s e para quando termina', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      let estadoPost = 'publicando';
+      const { chamadas } = mockApi(rotas({
+        'GET /instagram/grid': () => ({ prontos: [{ ...PRONTOS[0], estado: estadoPost }], midias: MIDIAS }),
+      }));
+      const contar = (caminho) => chamadas.filter((c) => c.metodo === 'GET' && c.caminho === caminho).length;
+      abrir();
+      expect(await screen.findByText('Publicando…')).toBeInTheDocument();
+      expect(contar('/instagram/grid')).toBe(1);
+      const avisosAntes = contar('/conteudos/avisos');
+
+      estadoPost = 'publicado';
+      await act(async () => vi.advanceTimersByTime(10_000));
+      await waitFor(() => expect(contar('/instagram/grid')).toBe(2));
+      expect(contar('/conteudos/avisos')).toBe(avisosAntes + 1);
+      await waitFor(() => expect(screen.queryByText('Publicando…')).not.toBeInTheDocument());
+
+      await act(async () => vi.advanceTimersByTime(30_000));
+      expect(contar('/instagram/grid')).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('com um agendado no grid, mover envia só os ids dos prontos', async () => {
+    const agendado = { id: 6, titulo: 'Agendado domingo', tipo: 'post', estado: 'agendado', agendado_para: '2026-10-25T12:00:00.000Z', capa_url: null };
+    const { chamadas } = mockApi(rotas({
+      'GET /instagram/grid': { prontos: [agendado, ...PRONTOS], midias: MIDIAS },
+      'PUT /conteudos/ordem': null,
+    }));
+    abrir();
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Mover Carrossel terça para antes' }));
+    await waitFor(() => expect(chamadas.find((c) => c.caminho === '/conteudos/ordem')?.corpo).toEqual({ ids: [8, 7] }));
+    expect(screen.queryByRole('button', { name: /Mover Agendado domingo/ })).not.toBeInTheDocument();
+  });
+
   it('clicar num pronto abre o formulário de edição', async () => {
     mockApi(rotas());
     abrir();
@@ -140,35 +179,33 @@ describe('Conteudo', () => {
     expect(screen.getByLabelText('Título')).toHaveValue('Reels sexta');
   });
 
-  it('cria um planejado novo', async () => {
-    const { chamadas } = mockApi(rotas({ 'POST /conteudos': { id: 10 } }));
+  it('cria um planejado novo e mantém o modal aberto com o campo de mídias', async () => {
+    const { chamadas } = mockApi(rotas({ 'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho', midias: [] } }));
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
     await user.type(screen.getByLabelText('Título'), 'Novo reels');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByRole('button', { name: '+ Planejar' });
+    expect(await screen.findByLabelText('Adicionar mídias')).toBeInTheDocument();
+    expect(screen.queryByText('Salve o rascunho para adicionar mídias.')).not.toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/conteudos').corpo).toMatchObject({ titulo: 'Novo reels', tipo: 'post' });
   });
 
-  it('se a arte falha ao subir, salvar de novo atualiza o planejado em vez de criar outro', async () => {
+  it('subir mídia recarrega o grid e os rascunhos', async () => {
     const { chamadas } = mockApi(rotas({
-      'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho' },
-      'POST /conteudos/10/arte': resposta(500, { erro: 'Falha no upload' }),
-      'PUT /conteudos/10': { id: 10 },
+      'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho', midias: [] },
+      'POST /conteudos/10/midias': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho', midias: [{ id: 1, url: '/uploads/x.jpg', tipo: 'imagem', ordem: 0 }] },
     }));
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
     await user.type(screen.getByLabelText('Título'), 'Novo reels');
-    await user.upload(screen.getByLabelText('Arte'), new File(['png'], 'arte.png', { type: 'image/png' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText('Falha no upload')).toBeInTheDocument();
-    chamadas.length = 0;
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByRole('button', { name: '+ Planejar' });
-    expect(chamadas.some((c) => c.metodo === 'POST' && c.caminho === '/conteudos')).toBe(false);
-    expect(chamadas.some((c) => c.metodo === 'PUT' && c.caminho === '/conteudos/10')).toBe(true);
+    const input = await screen.findByLabelText('Adicionar mídias');
+    const antes = chamadas.filter((c) => c.caminho === '/instagram/grid').length;
+    await user.upload(input, new File(['x'], 'x.png', { type: 'image/png' }));
+    await screen.findByRole('img', { name: 'Mídia 1' });
+    expect(chamadas.filter((c) => c.caminho === '/instagram/grid').length).toBeGreaterThan(antes);
   });
 
   it('desconectado, clicar num post já sincronizado mostra os números', async () => {
@@ -218,6 +255,30 @@ describe('Conteudo — vínculo ao trocar de post', () => {
     await screen.findByLabelText('Era um destes planejados?');
     await user.click(screen.getByRole('button', { name: 'Ligar' }));
     expect(chamadas.find((c) => c.caminho === '/instagram/midias/m2/vinculo').corpo).toEqual({ conteudo_id: 7 });
+  });
+});
+
+describe('Conteudo — ?abrir', () => {
+  it('abre o rascunho indicado em ?abrir=<id>', async () => {
+    mockApi(rotas({ 'GET /conteudos/9': { id: 9, titulo: 'Ideia bastidores', tipo: 'post', estado: 'rascunho' } }));
+    renderizar(<Conteudo />, { rota: '/conteudo?abrir=9', padrao: '/conteudo' });
+    expect(await screen.findByRole('dialog', { name: 'Editar planejado' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Ideia bastidores')).toBeInTheDocument();
+  });
+});
+
+describe('Conteudo — avisos acompanham o modal', () => {
+  it('excluir pelo modal busca os avisos de novo', async () => {
+    const { chamadas } = mockApi(rotas({
+      'GET /conteudos/9': { id: 9, titulo: 'Ideia bastidores', tipo: 'post', estado: 'rascunho' },
+      'DELETE /conteudos/9': resposta(204),
+    }));
+    renderizar(<Conteudo />, { rota: '/conteudo?abrir=9', padrao: '/conteudo' });
+    await screen.findByRole('dialog', { name: 'Editar planejado' });
+    const buscas = () => chamadas.filter((c) => c.metodo === 'GET' && c.caminho === '/conteudos/avisos').length;
+    const antes = buscas();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(buscas()).toBe(antes + 1));
   });
 });
 

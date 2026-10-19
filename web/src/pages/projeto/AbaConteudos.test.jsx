@@ -22,22 +22,36 @@ describe('AbaConteudos', () => {
     expect(screen.getByText('134 curtidas')).toBeInTheDocument();
   });
 
-  it('cria planejado já ligado ao projeto e envia a arte', async () => {
+  it('rotula os estados de publicação com a etiqueta certa', async () => {
+    mockApi({
+      'GET /conteudos?projeto_id=5': [
+        { id: 1, titulo: 'A', tipo: 'post', estado: 'agendado' },
+        { id: 2, titulo: 'B', tipo: 'post', estado: 'publicando' },
+        { id: 3, titulo: 'C', tipo: 'post', estado: 'falhou' },
+        { id: 4, titulo: 'D', tipo: 'post', estado: 'atrasado' },
+      ],
+      'GET /instagram/midias?projeto_id=5': [],
+    });
+    render(<AbaConteudos projetoId={5} />);
+    expect(await screen.findByText('Agendado')).toHaveClass('etiqueta--agendado');
+    expect(screen.getByText('Publicando…')).toHaveClass('etiqueta--andamento');
+    expect(screen.getByText('Falhou')).toHaveClass('etiqueta--atrasada');
+    expect(screen.getByText('Atrasado')).toHaveClass('etiqueta--atrasada');
+  });
+
+  it('cria planejado já ligado ao projeto', async () => {
     const { chamadas } = mockApi({
       'GET /conteudos?projeto_id=5': [],
       'GET /instagram/midias?projeto_id=5': [],
-      'POST /conteudos': { id: 1 },
-      'POST /conteudos/1/arte': { id: 1 },
+      'POST /conteudos': { id: 1, titulo: 'Case no Insta', tipo: 'post', estado: 'rascunho', midias: [] },
     });
     render(<AbaConteudos projetoId={5} />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
     expect(screen.queryByLabelText('Projeto (opcional)')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Título'), 'Case no Insta');
-    await user.upload(screen.getByLabelText('Arte'), new File(['png'], 'a.png', { type: 'image/png' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByRole('button', { name: '+ Planejar' });
+    expect(await screen.findByLabelText('Adicionar mídias')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/conteudos').corpo).toMatchObject({ titulo: 'Case no Insta', projeto_id: 5 });
-    expect(chamadas.find((c) => c.caminho === '/conteudos/1/arte').corpo).toBeInstanceOf(FormData);
   });
 });
