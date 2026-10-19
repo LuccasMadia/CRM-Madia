@@ -75,10 +75,6 @@ export function rotasConteudos({ db, dataDir, publicador }) {
       }
       condicoes.push('c.estado = ?');
       args.push(req.query.estado);
-    } else {
-      // Sem filtro: só o que o planejamento sempre mostrou (rascunhos e prontos).
-      condicoes.push(`c.estado IN (${ESTADOS_CONTEUDO.map(() => '?').join(', ')})`);
-      args.push(...ESTADOS_CONTEUDO);
     }
     if (req.query.projeto_id) {
       condicoes.push('c.projeto_id = ?');
@@ -126,6 +122,8 @@ export function rotasConteudos({ db, dataDir, publicador }) {
     const atual = exigirEditavelPorId(id);
     const dados = validar(req.body, REGRAS_CONTEUDO, { parcial: true });
     exigirProjeto(dados.projeto_id);
+    // Estados de publicação só mudam pelas rotas de publicar/agendar.
+    if (!ESTADOS_CONTEUDO.includes(atual.estado)) delete dados.estado;
     if (dados.estado === 'pronto' && atual.estado !== 'pronto') dados.ordem = fimDaFila();
     conteudos.atualizar(id, dados);
     res.json(obterCompleto(id));

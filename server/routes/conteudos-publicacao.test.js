@@ -103,11 +103,17 @@ describe('avisos e listas', () => {
     expect(res.body.map((x) => x.id)).toEqual([c.id]);
     await ctx.http.get('/api/conteudos?estado=xyz').expect(400);
   });
-  it('lista padrão não traz publicado', async () => {
+  it('lista padrão inclui agendado', async () => {
     const c = await criarPost();
-    definir(c.id, 'publicado');
+    definir(c.id, 'agendado', ", agendado_para = '2999-01-01T00:00:00.000Z'");
     const res = await ctx.http.get('/api/conteudos').expect(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.map((x) => x.id)).toEqual([c.id]);
+  });
+  it('PUT com estado num agendado ignora o estado e mantém o horário', async () => {
+    const c = await criarPost();
+    await ctx.http.post(`/api/conteudos/${c.id}/agendar`).send({ agendado_para: FUTURO }).expect(200);
+    const res = await ctx.http.put(`/api/conteudos/${c.id}`).send({ legenda: 'nova', estado: 'pronto' }).expect(200);
+    expect(res.body).toMatchObject({ estado: 'agendado', agendado_para: FUTURO, legenda: 'nova' });
   });
   it('PUT em publicando dá 409; em agendado mantém agendado', async () => {
     const c = await criarPost();
