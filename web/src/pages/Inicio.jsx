@@ -116,7 +116,7 @@ export function Inicio() {
 
       <section className="cartao">
         <h2>Para entregar</h2>
-        <p>{`${plural(paraEntregar.gmn, 'GMN pendente', 'GMN pendentes')} · ${plural(paraEntregar.placas, 'venda de placas a entregar', 'vendas de placas a entregar')}`}</p>
+        <p>{`${plural(paraEntregar.gmn, 'GMN pendente', 'GMN pendentes')} · ${plural(paraEntregar.placas, 'venda de placas a receber', 'vendas de placas a receber')}`}</p>
         {paraEntregar.itens.length > 0 && (
           <ul className="lista">
             {paraEntregar.itens.map((item) => (

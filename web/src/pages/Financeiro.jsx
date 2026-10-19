@@ -18,9 +18,12 @@ export function Financeiro() {
   const { dados: mensal } = useCarregar(() => api(`/financeiro/mensal?ano=${ano}`), [ano]);
   const maior = Math.max(1, ...(mensal ?? []).map((m) => m.recebido_centavos));
   const total = (parcelas ?? []).reduce((s, p) => s + p.valor_centavos, 0);
-  const linkDoProjeto = (p) => (p.servico === 'site_sistema'
-    ? `/projetos/${p.projeto_id}`
-    : `/clientes/${p.cliente_id}?aba=${ABA_DO_SERVICO[p.servico]}`);
+  const linkDoProjeto = (p) => {
+    if (p.tipo === 'venda_placa') return '/servicos?aba=placas&placas=vendas';
+    return p.servico === 'site_sistema'
+      ? `/projetos/${p.projeto_id}`
+      : `/clientes/${p.cliente_id}?aba=${ABA_DO_SERVICO[p.servico]}`;
+  };
 
   return (
     <section>
@@ -57,7 +60,7 @@ export function Financeiro() {
             </thead>
             <tbody>
               {parcelas.map((p) => (
-                <tr key={p.id}>
+                <tr key={`${p.tipo}-${p.id}`}>
                   <td>{formatarData(p.vencimento)}</td>
                   <td>{ROTULO_SERVICO[p.servico]}</td>
                   <td><Link to={linkDoProjeto(p)}>{p.projeto_titulo}</Link></td>

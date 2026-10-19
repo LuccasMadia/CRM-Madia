@@ -43,3 +43,19 @@ describe('Financeiro', () => {
     expect(chamadas.some((c) => c.caminho === '/parcelas?servico=google_meu_negocio')).toBe(true);
   });
 });
+
+describe('Financeiro — vendas de placa', () => {
+  it('mostra a venda como linha, com link para Placas › Vendas, sem colidir com parcela de mesmo id', async () => {
+    const venda = {
+      tipo: 'venda_placa', id: 1, projeto_titulo: 'Placa 10x10 × 1', cliente_nome: 'Rango do Bicho', descricao: 'Venda de placas',
+      valor_centavos: 8000, vencimento: '2026-10-02', estado: 'atrasada', servico: 'placas_nfc', cliente_id: 7,
+    };
+    mockApi({
+      'GET /parcelas': [{ ...parcela, tipo: 'parcela' }, venda],
+      [`GET /financeiro/mensal?ano=${ano}`]: meses,
+    });
+    renderizar(<Financeiro />, { rota: '/financeiro', padrao: '/financeiro' });
+    expect(await screen.findByRole('link', { name: 'Placa 10x10 × 1' })).toHaveAttribute('href', '/servicos?aba=placas&placas=vendas');
+    expect(screen.getByRole('link', { name: 'Site Ana' })).toBeInTheDocument();
+  });
+});
