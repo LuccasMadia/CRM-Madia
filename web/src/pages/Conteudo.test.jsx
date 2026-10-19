@@ -9,8 +9,8 @@ import { formatarData, hojeISO } from '../lib/datas.js';
 const hoje = hojeISO();
 const ESTADO = { conectado: true, usuario: 'luccasmadia', ultima_sync: '2026-10-16T15:00:00.000Z', ultimo_erro: null, sincronizando: false };
 const PRONTOS = [
-  { id: 7, titulo: 'Reels sexta', tipo: 'reels', estado: 'pronto', data_planejada: hoje, arte: null },
-  { id: 8, titulo: 'Carrossel terça', tipo: 'carrossel', estado: 'pronto', data_planejada: null, arte: 'a.png' },
+  { id: 7, titulo: 'Reels sexta', tipo: 'reels', estado: 'pronto', data_planejada: hoje, capa_url: null },
+  { id: 8, titulo: 'Carrossel terça', tipo: 'carrossel', estado: 'pronto', data_planejada: null, capa_url: '/uploads/a.png' },
 ];
 const MIDIAS = [
   {
@@ -149,26 +149,6 @@ describe('Conteudo', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     await screen.findByRole('button', { name: '+ Planejar' });
     expect(chamadas.find((c) => c.metodo === 'POST' && c.caminho === '/conteudos').corpo).toMatchObject({ titulo: 'Novo reels', tipo: 'post' });
-  });
-
-  it('se a arte falha ao subir, salvar de novo atualiza o planejado em vez de criar outro', async () => {
-    const { chamadas } = mockApi(rotas({
-      'POST /conteudos': { id: 10, titulo: 'Novo reels', tipo: 'post', estado: 'rascunho' },
-      'POST /conteudos/10/arte': resposta(500, { erro: 'Falha no upload' }),
-      'PUT /conteudos/10': { id: 10 },
-    }));
-    abrir();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: '+ Planejar' }));
-    await user.type(screen.getByLabelText('Título'), 'Novo reels');
-    await user.upload(screen.getByLabelText('Arte'), new File(['png'], 'arte.png', { type: 'image/png' }));
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText('Falha no upload')).toBeInTheDocument();
-    chamadas.length = 0;
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    await screen.findByRole('button', { name: '+ Planejar' });
-    expect(chamadas.some((c) => c.metodo === 'POST' && c.caminho === '/conteudos')).toBe(false);
-    expect(chamadas.some((c) => c.metodo === 'PUT' && c.caminho === '/conteudos/10')).toBe(true);
   });
 
   it('desconectado, clicar num post já sincronizado mostra os números', async () => {

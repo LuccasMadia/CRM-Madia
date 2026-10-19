@@ -52,12 +52,8 @@ export function Conteudo() {
     });
   }
 
-  async function salvar(dados, arte) {
-    const aoCriar = (novo) => {
-      setEditando(novo);
-      recarregarPlanejados();
-    };
-    await salvarConteudo(editando.id, dados, arte, { aoCriar });
+  async function salvar(dados) {
+    await salvarConteudo(editando.id, dados);
     setEditando(null);
     recarregarPlanejados();
   }

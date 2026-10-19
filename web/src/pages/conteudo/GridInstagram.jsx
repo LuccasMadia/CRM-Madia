@@ -7,8 +7,8 @@ function Pronto({ item, indice, total, onEditar, onMover }) {
   return (
     <li className="grid-ig__item grid-ig__item--pronto">
       <button type="button" className="grid-ig__abrir" aria-label={`Editar ${item.titulo}`} onClick={() => onEditar(item)}>
-        {item.arte
-          ? <img src={`/uploads/${item.arte}`} alt={item.titulo} />
+        {item.capa_url
+          ? <img src={item.capa_url} alt={item.titulo} />
           : <span className="grid-ig__titulo">{item.titulo}</span>}
         <span className="grid-ig__rotulo">
           {ROTULO_TIPO[item.tipo]}{item.data_planejada ? ` · ${formatarData(item.data_planejada)}` : ''}

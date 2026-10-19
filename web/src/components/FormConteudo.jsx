@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
+import { MidiasConteudo } from './MidiasConteudo.jsx';
 import { ROTULO_ESTADO_CONTEUDO, ROTULO_TIPO } from '../lib/rotulos.js';
 
 const VAZIO = { titulo: '', tipo: 'post', estado: 'rascunho', data_planejada: '', legenda: '', projeto_id: '' };
@@ -17,37 +18,13 @@ export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir })
     Object.fromEntries(Object.entries(VAZIO).map(([k, padrao]) => [k, inicial[k] == null ? padrao : String(inicial[k])])),
   );
   const { erros, erro, enviando, executar } = useEnvio();
-  const [arte, setArte] = useState(null);
-  const [removerArte, setRemoverArte] = useState(false);
-  const [previa, setPrevia] = useState(null);
-
-  useEffect(() => {
-    if (!arte) {
-      setPrevia(null);
-      return undefined;
-    }
-    let url;
-    try {
-      url = URL.createObjectURL(arte);
-    } catch {
-      return undefined; // sem prévia (ambiente sem suporte a blob URL)
-    }
-    setPrevia(url);
-    return () => URL.revokeObjectURL(url);
-  }, [arte]);
-
-  const arteAtual = previa ?? (inicial.arte && !removerArte ? `/uploads/${inicial.arte}` : null);
+  const [atual, setAtual] = useState(inicial);
 
   function enviar(e) {
     e.preventDefault();
     const { projeto_id: projetoEscolhido, ...resto } = valores;
     const projeto_id = projetoFixo ?? (projetoEscolhido ? Number(projetoEscolhido) : null);
-    executar(() => onSalvar({ ...resto, projeto_id }, { arte, removerArte: !arte && removerArte }));
-  }
-
-  function tirarArte() {
-    setArte(null);
-    setRemoverArte(true);
+    executar(() => onSalvar({ ...resto, projeto_id }));
   }
 
   return (
@@ -65,17 +42,9 @@ export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir })
       )}
       <Campo rotulo="Data planejada (opcional)" nome="data_planejada" erros={erros} type="date" {...campo('data_planejada')} />
       <Campo rotulo="Legenda" nome="legenda" erros={erros}><textarea rows={5} {...campo('legenda')} /></Campo>
-      <div className="campo">
-        <label htmlFor="campo-arte">Arte</label>
-        {arteAtual && <img className="form-conteudo__arte" src={arteAtual} alt="Arte atual" />}
-        <input
-          id="campo-arte"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(e) => setArte(e.target.files?.[0] ?? null)}
-        />
-        {arteAtual && <button type="button" className="btn" onClick={tirarArte}>Remover arte</button>}
-      </div>
+      {atual.id
+        ? <MidiasConteudo conteudo={atual} onMudou={setAtual} />
+        : <p className="kanban__meta">Salve o rascunho para adicionar mídias.</p>}
       <Aviso erro={erro} />
       <div className="form--linha">
         <button className="btn btn--primario" disabled={enviando}>Salvar</button>

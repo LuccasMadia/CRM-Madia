@@ -13,12 +13,8 @@ export function AbaConteudos({ projetoId }) {
   const publicados = useCarregar(() => api(`/instagram/midias?projeto_id=${projetoId}`), [projetoId]);
   const [editando, setEditando] = useState(null);
 
-  async function salvar(dados, arte) {
-    const aoCriar = (novo) => {
-      setEditando(novo);
-      planejados.recarregar();
-    };
-    await salvarConteudo(editando.id, dados, arte, { aoCriar });
+  async function salvar(dados) {
+    await salvarConteudo(editando.id, dados);
     setEditando(null);
     planejados.recarregar();
   }
