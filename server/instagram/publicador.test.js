@@ -163,6 +163,23 @@ describe('publicador — trava e validação', () => {
     expect(() => pub.iniciar(id)).toThrow('Este post já está sendo publicado.');
   });
 
+  it('post já ligado a um post do Instagram → 409 e nada é enviado', () => {
+    db.prepare("INSERT INTO instagram_midias (id, tipo, publicado_em, atualizado_em) VALUES ('M7', 'reels', 'x', 'x')").run();
+    const id = criarConteudo({ estado: 'agendado', extra: { midia_id: 'M7' } });
+    const { pub, falso } = publicador();
+    let erro;
+    try {
+      pub.iniciar(id);
+    } catch (e) {
+      erro = e;
+    }
+    expect(erro).toBeInstanceOf(ErroHttp);
+    expect(erro.status).toBe(409);
+    expect(erro.message).toBe('Este post já está ligado a um post do Instagram.');
+    expect(conteudo(id).estado).toBe('agendado');
+    expect(falso.chamadas).toHaveLength(0);
+  });
+
   it('conteúdo inválido → ErroValidacao com campo publicacao e nada muda', () => {
     const id = criarConteudo({ tipo: 'reels', midias: [{ arquivo: 'foto.jpg', tipo: 'imagem' }] });
     const { pub, falso } = publicador();

@@ -10,13 +10,17 @@ const livresAntesDe = (db, publicadoEm) =>
 export function vincular(db, conteudoId, midiaId) {
   const ocupado = db.prepare('SELECT id FROM conteudos WHERE midia_id = ? AND id <> ?').get(midiaId, conteudoId);
   if (ocupado) throw new ErroValidacao([{ campo: 'conteudo_id', mensagem: 'Este post já está ligado a outro planejado' }]);
-  const conteudo = db.prepare('SELECT projeto_id, midia_id FROM conteudos WHERE id = ?').get(conteudoId);
+  const conteudo = db.prepare('SELECT projeto_id, midia_id, estado FROM conteudos WHERE id = ?').get(conteudoId);
   if (!conteudo) throw new ErroValidacao([{ campo: 'conteudo_id', mensagem: 'Planejado não encontrado' }]);
   if (conteudo.midia_id && conteudo.midia_id !== midiaId) {
     throw new ErroValidacao([{ campo: 'conteudo_id', mensagem: 'Este planejado já está ligado a outro post' }]);
   }
   emTransacao(db, () => {
     db.prepare('UPDATE conteudos SET midia_id = ? WHERE id = ?').run(midiaId, conteudoId);
+    // Agendado/atrasado que aparece no Instagram foi postado à mão: sai da fila do agendador.
+    if (conteudo.estado === 'agendado' || conteudo.estado === 'atrasado') {
+      db.prepare("UPDATE conteudos SET estado = 'publicado', agendado_para = NULL WHERE id = ?").run(conteudoId);
+    }
     if (conteudo.projeto_id != null) {
       db.prepare('UPDATE instagram_midias SET projeto_id = ? WHERE id = ?').run(conteudo.projeto_id, midiaId);
       db.prepare('UPDATE projetos SET postou_instagram = 1 WHERE id = ?').run(conteudo.projeto_id);

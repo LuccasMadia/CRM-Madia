@@ -55,6 +55,18 @@ describe('verificarAgendados', () => {
     expect(publicador.iniciar).not.toHaveBeenCalled();
   });
 
+  it('não publica agendado que já foi ligado a um post do Instagram', () => {
+    const publicador = { iniciar: vi.fn() };
+    const db = preparar(publicador);
+    db.prepare("INSERT INTO instagram_midias (id, tipo, publicado_em, atualizado_em) VALUES ('M7', 'post', 'x', 'x')").run();
+    const id = criarAgendado(db, { agendadoPara: ha(2) });
+    db.prepare("UPDATE conteudos SET midia_id = 'M7' WHERE id = ?").run(id);
+
+    verificarAgendados({ db, agora: AGORA, publicador });
+
+    expect(publicador.iniciar).not.toHaveBeenCalled();
+  });
+
   it('não mexe em agendado no futuro', () => {
     const publicador = { iniciar: vi.fn() };
     const db = preparar(publicador);

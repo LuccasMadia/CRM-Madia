@@ -13,7 +13,10 @@ export function verificarAgendados({
 }) {
   const agoraIso = agora.toISOString();
   const vencidos = db
-    .prepare("SELECT id, agendado_para FROM conteudos WHERE estado = 'agendado' AND agendado_para <= ? ORDER BY agendado_para, id")
+    // Já ligado a um post do Instagram (sync ou ligação manual): foi postado por fora, não publica de novo.
+    .prepare(
+      "SELECT id, agendado_para FROM conteudos WHERE estado = 'agendado' AND midia_id IS NULL AND agendado_para <= ? ORDER BY agendado_para, id",
+    )
     .all(agoraIso);
 
   for (const { id, agendado_para: agendadoPara } of vencidos) {

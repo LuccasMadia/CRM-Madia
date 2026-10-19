@@ -7,6 +7,7 @@ import { validarParaPublicar } from './regrasPublicacao.js';
 import { vincular } from './vinculo.js';
 
 const MSG_OCUPADO = 'Este post já está sendo publicado.';
+const MSG_JA_LIGADO = 'Este post já está ligado a um post do Instagram.';
 const MSG_SEM_TOKEN = 'O Instagram não está conectado. Conecte em Configurações → Instagram.';
 const MSG_DEMOROU = 'O Instagram demorou demais para processar o vídeo. Tente de novo.';
 const MSG_INTERROMPIDA =
@@ -42,13 +43,14 @@ export function criarPublicador({
     const conteudo = buscar(conteudoId);
     if (!conteudo) throw new ErroHttp(404, 'Conteúdo não encontrado');
     if (conteudo.estado === 'publicando' || conteudo.estado === 'publicado') throw new ErroHttp(409, MSG_OCUPADO);
+    if (conteudo.midia_id) throw new ErroHttp(409, MSG_JA_LIGADO);
     const erros = validarParaPublicar(conteudo, midias.listar(conteudoId));
     if (erros.length) throw new ErroValidacao(erros.map((mensagem) => ({ campo: 'publicacao', mensagem })));
 
     const { changes } = db
       .prepare(`UPDATE conteudos SET estado = 'publicando', publicacao_token = ?, publicacao_erro = NULL,
           publicacao_enviado_em = NULL, atualizado_em = ?
-        WHERE id = ? AND estado IN ('rascunho', 'pronto', 'agendado', 'falhou', 'atrasado')`)
+        WHERE id = ? AND midia_id IS NULL AND estado IN ('rascunho', 'pronto', 'agendado', 'falhou', 'atrasado')`)
       .run(randomBytes(24).toString('hex'), carimbo(), conteudoId);
     if (changes !== 1) throw new ErroHttp(409, MSG_OCUPADO);
 
