@@ -117,6 +117,12 @@ export function rotasConteudos({ db, dataDir, publicador }) {
     res.status(204).end();
   });
 
+  r.get('/conteudos/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    exigir(id);
+    res.json(obterCompleto(id));
+  });
+
   r.put('/conteudos/:id', (req, res) => {
     const id = lerId(req.params.id);
     const atual = exigirEditavelPorId(id);

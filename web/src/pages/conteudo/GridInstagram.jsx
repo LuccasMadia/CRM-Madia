@@ -3,6 +3,14 @@ import { ROTULO_TIPO } from '../../lib/rotulos.js';
 
 const ICONE_TIPO = { reels: '▶', carrossel: '❐' };
 
+const dataHoraCurta = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+function rotulo(item) {
+  if (item.estado === 'publicando') return 'Publicando…';
+  if (item.estado === 'agendado' && item.agendado_para) return `Agendado · ${dataHoraCurta(item.agendado_para)}`;
+  return `${ROTULO_TIPO[item.tipo]}${item.data_planejada ? ` · ${formatarData(item.data_planejada)}` : ''}`;
+}
+
 function Pronto({ item, indice, total, onEditar, onMover }) {
   return (
     <li className="grid-ig__item grid-ig__item--pronto">
@@ -10,9 +18,7 @@ function Pronto({ item, indice, total, onEditar, onMover }) {
         {item.capa_url
           ? <img src={item.capa_url} alt={item.titulo} />
           : <span className="grid-ig__titulo">{item.titulo}</span>}
-        <span className="grid-ig__rotulo">
-          {ROTULO_TIPO[item.tipo]}{item.data_planejada ? ` · ${formatarData(item.data_planejada)}` : ''}
-        </span>
+        <span className="grid-ig__rotulo">{rotulo(item)}</span>
       </button>
       <span className="grid-ig__setas">
         {indice > 0 && (

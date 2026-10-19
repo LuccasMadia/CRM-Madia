@@ -70,6 +70,17 @@ describe('agendar', () => {
   });
 });
 
+describe('obter um conteúdo', () => {
+  it('devolve o conteúdo com mídias e 404 se não existe', async () => {
+    const c = await criarPost();
+    definir(c.id, 'falhou', ", publicacao_erro = 'boom'");
+    const res = await ctx.http.get(`/api/conteudos/${c.id}`).expect(200);
+    expect(res.body).toMatchObject({ id: c.id, estado: 'falhou', publicacao_erro: 'boom' });
+    expect(res.body.midias).toHaveLength(1);
+    await ctx.http.get('/api/conteudos/9999').expect(404);
+  });
+});
+
 describe('cancelar agendamento', () => {
   it('volta para rascunho', async () => {
     const c = await criarPost();

@@ -32,6 +32,36 @@ describe('FormConteudo', () => {
     expect(screen.queryByLabelText('Adicionar mídias')).not.toBeInTheDocument();
   });
 
+  it('conteúdo salvo mostra a publicação; em estado de publicação troca o select pelo rótulo', () => {
+    mockApi({});
+    const { rerender } = render(<FormConteudo projetoFixo={5} inicial={{ id: 1, titulo: 'A', tipo: 'post', estado: 'rascunho', midias: [] }} onSalvar={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Publicar agora no Instagram' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Estado')).toBeInTheDocument();
+    rerender(<FormConteudo key="b" projetoFixo={5} inicial={{ id: 2, titulo: 'B', tipo: 'post', estado: 'agendado', agendado_para: '2999-01-01T12:00:00.000Z', midias: [] }} onSalvar={vi.fn()} />);
+    expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument();
+    expect(screen.getByText('Agendado')).toBeInTheDocument();
+  });
+
+  it('salvar um conteúdo em estado de publicação não envia estado', async () => {
+    mockApi({});
+    const onSalvar = vi.fn();
+    render(<FormConteudo projetoFixo={5} inicial={{ id: 2, titulo: 'B', tipo: 'post', estado: 'falhou', midias: [] }} onSalvar={onSalvar} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(onSalvar.mock.calls[0][0]).not.toHaveProperty('estado');
+  });
+
+  it('mudança de publicação atualiza o formulário e avisa o pai', async () => {
+    const inicial = { id: 1, titulo: 'A', tipo: 'post', estado: 'rascunho', midias: [] };
+    const publicando = { ...inicial, estado: 'publicando' };
+    mockApi({ 'POST /conteudos/1/publicar': publicando });
+    const onMidiasMudaram = vi.fn();
+    render(<FormConteudo projetoFixo={5} inicial={inicial} onSalvar={vi.fn()} onMidiasMudaram={onMidiasMudaram} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Publicar agora no Instagram' }));
+    expect(await screen.findByText('Publicando…', { selector: 'p' })).toBeInTheDocument();
+    expect(onMidiasMudaram).toHaveBeenCalledWith(publicando);
+    expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument();
+  });
+
   it('conteúdo salvo lista as mídias e atualiza a lista após adicionar', async () => {
     const inicial = { id: 1, titulo: 'A', tipo: 'carrossel', estado: 'rascunho', midias: [{ id: 1, url: '/uploads/a.jpg', tipo: 'imagem', ordem: 0 }] };
     const atualizado = { ...inicial, midias: [...inicial.midias, { id: 2, url: '/uploads/b.jpg', tipo: 'imagem', ordem: 1 }] };

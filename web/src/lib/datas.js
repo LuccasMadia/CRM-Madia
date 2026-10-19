@@ -29,6 +29,16 @@ export function semanasDoMes(ano, mes) {
 // Dia (AAAA-MM-DD) no fuso local de um instante ISO — publicado_em vem em UTC.
 export const diaLocal = (iso) => new Date(iso).toLocaleDateString('sv-SE');
 
+// Valor de <input type="datetime-local"> (fuso local) -> instante ISO em UTC.
+export const localParaIso = (valor) => new Date(valor).toISOString();
+
+// Instante ISO -> valor de <input type="datetime-local"> (AAAA-MM-DDTHH:mm no fuso local).
+export function isoParaLocal(iso) {
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export function diasDesde(iso, hoje = hojeISO()) {
   return Math.round((Date.parse(`${hoje}T00:00:00Z`) - Date.parse(`${iso}T00:00:00Z`)) / 86400000);
 }

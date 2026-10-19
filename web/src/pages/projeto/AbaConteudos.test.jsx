@@ -22,6 +22,23 @@ describe('AbaConteudos', () => {
     expect(screen.getByText('134 curtidas')).toBeInTheDocument();
   });
 
+  it('rotula os estados de publicação com a etiqueta certa', async () => {
+    mockApi({
+      'GET /conteudos?projeto_id=5': [
+        { id: 1, titulo: 'A', tipo: 'post', estado: 'agendado' },
+        { id: 2, titulo: 'B', tipo: 'post', estado: 'publicando' },
+        { id: 3, titulo: 'C', tipo: 'post', estado: 'falhou' },
+        { id: 4, titulo: 'D', tipo: 'post', estado: 'atrasado' },
+      ],
+      'GET /instagram/midias?projeto_id=5': [],
+    });
+    render(<AbaConteudos projetoId={5} />);
+    expect(await screen.findByText('Agendado')).toHaveClass('etiqueta--agendado');
+    expect(screen.getByText('Publicando…')).toHaveClass('etiqueta--andamento');
+    expect(screen.getByText('Falhou')).toHaveClass('etiqueta--atrasada');
+    expect(screen.getByText('Atrasado')).toHaveClass('etiqueta--atrasada');
+  });
+
   it('cria planejado já ligado ao projeto', async () => {
     const { chamadas } = mockApi({
       'GET /conteudos?projeto_id=5': [],
