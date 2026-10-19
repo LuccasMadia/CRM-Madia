@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import sharp from 'sharp';
 import { criarContexto } from '../test/contexto.js';
 import { openDb, migrate } from '../db/connection.js';
+import { MENSAGEM_CARROSSEL_VIDEO } from '../instagram/regrasPublicacao.js';
 
 let ctx;
 beforeEach(() => {
@@ -11,13 +13,28 @@ beforeEach(() => {
 
 const criar = (corpo) => ctx.http.post('/api/conteudos').send(corpo);
 const titulosProntos = async () => (await ctx.http.get('/api/conteudos?estado=pronto')).body.map((c) => c.titulo);
-const enviarArte = (id) =>
-  ctx.http.post(`/api/conteudos/${id}/arte`).attach('arte', Buffer.from('png'), { filename: 'a.png', contentType: 'image/png' });
+
+const png = () => sharp({ create: { width: 10, height: 10, channels: 3, background: '#ff0000' } }).png().toBuffer();
+const mp4 = () => Buffer.from('video-falso');
+const ilegivel = () => Buffer.from('nao-e-imagem');
+const arquivosEmUploads = () => {
+  const dir = path.join(ctx.dataDir, 'uploads');
+  return existsSync(dir) ? readdirSync(dir) : [];
+};
+// Cada item é um Buffer: PNG real, o vídeo falso ou bytes que o sharp não consegue ler (declarados como PNG).
+const enviarMidias = (id, arquivos) => {
+  const req = ctx.http.post(`/api/conteudos/${id}/midias`);
+  arquivos.forEach((buf, i) => {
+    const video = buf.toString() === 'video-falso';
+    req.attach('midias', buf, video ? { filename: `v${i}.mp4`, contentType: 'video/mp4' } : { filename: `a${i}.png`, contentType: 'image/png' });
+  });
+  return req;
+};
 
 describe('conteudos', () => {
   it('cria rascunho por padrão, sem canal', async () => {
     const res = await criar({ titulo: 'Reels', tipo: 'reels' }).expect(201);
-    expect(res.body).toMatchObject({ estado: 'rascunho', projeto_id: null, projeto_titulo: null, arte: null, midia_id: null });
+    expect(res.body).toMatchObject({ estado: 'rascunho', projeto_id: null, projeto_titulo: null, midia_id: null, midias: [], capa_url: null });
     expect(res.body).not.toHaveProperty('canal');
   });
 
@@ -56,25 +73,106 @@ describe('conteudos', () => {
     expect(await titulosProntos()).toEqual(['B', 'A']);
   });
 
-  it('envia e remove a arte, apagando o arquivo', async () => {
-    const c = (await criar({ titulo: 'A', tipo: 'post' })).body;
-    const res = await enviarArte(c.id).expect(200);
-    const arquivo = path.join(ctx.dataDir, 'uploads', res.body.arte);
-    expect(existsSync(arquivo)).toBe(true);
-    const troca = await enviarArte(c.id).expect(200);
-    expect(existsSync(arquivo)).toBe(false);
-    const novo = path.join(ctx.dataDir, 'uploads', troca.body.arte);
-    const sem = await ctx.http.delete(`/api/conteudos/${c.id}/arte`).expect(200);
-    expect(sem.body.arte).toBeNull();
-    expect(existsSync(novo)).toBe(false);
+  it('envia imagens convertidas para jpg e devolve as mídias em ordem', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    const res = await enviarMidias(c.id, [await png(), await png()]).expect(200);
+    expect(res.body.midias).toHaveLength(2);
+    expect(res.body.midias[0]).toMatchObject({ tipo: 'imagem', ordem: 0, largura: 10, altura: 10 });
+    expect(res.body.midias[0].url).toMatch(/^\/uploads\/.+\.jpg$/);
+    expect(res.body.midias[1].ordem).toBe(1);
+    expect(res.body.capa_url).toBe(res.body.midias[0].url);
+    const lista = (await ctx.http.get('/api/conteudos')).body;
+    expect(lista[0].midias).toHaveLength(2);
+    const mais = await enviarMidias(c.id, [await png()]).expect(200);
+    expect(mais.body.midias.map((m) => m.ordem)).toEqual([0, 1, 2]);
   });
 
-  it('excluir apaga a arte', async () => {
+  it('rejeita vídeo em carrossel e não deixa arquivo no disco', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    const res = await enviarMidias(c.id, [await png(), mp4()]).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'midias', mensagem: MENSAGEM_CARROSSEL_VIDEO }]);
+    expect(arquivosEmUploads()).toEqual([]);
+  });
+
+  it('rejeita vídeo em post e aceita vídeo em reels', async () => {
+    const post = (await criar({ titulo: 'P', tipo: 'post' })).body;
+    const res = await enviarMidias(post.id, [mp4()]).expect(400);
+    expect(res.body.erros).toEqual([{ campo: 'midias', mensagem: 'Post aceita só imagem.' }]);
+    expect(arquivosEmUploads()).toEqual([]);
+    const reels = (await criar({ titulo: 'R', tipo: 'reels' })).body;
+    const ok = await enviarMidias(reels.id, [mp4()]).expect(200);
+    expect(ok.body.midias[0]).toMatchObject({ tipo: 'video', largura: null });
+  });
+
+  it('imagem ilegível devolve 400 e limpa o que já tinha sido preparado', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    await enviarMidias(c.id, [await png(), ilegivel()]).expect(400);
+    expect(arquivosEmUploads()).toEqual([]);
+    expect((await ctx.http.get('/api/conteudos')).body[0].midias).toEqual([]);
+  });
+
+  it('sem arquivo devolve 400', async () => {
     const c = (await criar({ titulo: 'A', tipo: 'post' })).body;
-    const arquivo = path.join(ctx.dataDir, 'uploads', (await enviarArte(c.id)).body.arte);
-    await ctx.http.delete(`/api/conteudos/${c.id}`).expect(204);
+    await ctx.http.post(`/api/conteudos/${c.id}/midias`).expect(400);
+  });
+
+  it('pelo host público o envio é recusado sem gravar nada', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'post' })).body;
+    const res = await enviarMidias(c.id, [await png()]).set('Host', 'crm.luccasmadia.com.br').expect(403);
+    expect(res.body).toEqual({ erro: 'Suba a mídia pelo PC.' });
+    expect(arquivosEmUploads()).toEqual([]);
+  });
+
+  it('remove uma mídia apagando o arquivo', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    const { midias } = (await enviarMidias(c.id, [await png(), await png()])).body;
+    const arquivo = path.join(ctx.dataDir, 'uploads', path.basename(midias[0].url));
+    const res = await ctx.http.delete(`/api/conteudos/${c.id}/midias/${midias[0].id}`).expect(200);
+    expect(res.body.midias.map((m) => m.id)).toEqual([midias[1].id]);
     expect(existsSync(arquivo)).toBe(false);
+    await ctx.http.delete(`/api/conteudos/${c.id}/midias/${midias[0].id}`).expect(404);
+  });
+
+  it('reordena as mídias e recusa ids que não batem', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    const { midias } = (await enviarMidias(c.id, [await png(), await png()])).body;
+    const [m1, m2] = midias.map((m) => m.id);
+    const res = await ctx.http.put(`/api/conteudos/${c.id}/midias/ordem`).send({ ids: [m2, m1] }).expect(200);
+    expect(res.body.midias.map((m) => m.id)).toEqual([m2, m1]);
+    expect(res.body.capa_url).toBe(res.body.midias[0].url);
+    await ctx.http.put(`/api/conteudos/${c.id}/midias/ordem`).send({ ids: [m1] }).expect(400);
+    await ctx.http.put(`/api/conteudos/${c.id}/midias/ordem`).send({ ids: [m1, 999] }).expect(400);
+  });
+
+  it('excluir o conteúdo apaga os arquivos das mídias', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    await enviarMidias(c.id, [await png(), await png()]);
+    expect(arquivosEmUploads()).toHaveLength(2);
+    await ctx.http.delete(`/api/conteudos/${c.id}`).expect(204);
+    expect(arquivosEmUploads()).toEqual([]);
     await ctx.http.delete(`/api/conteudos/${c.id}`).expect(404);
+  });
+
+  it('conteúdo publicando recusa qualquer escrita com 409', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    const { midias } = (await enviarMidias(c.id, [await png()])).body;
+    ctx.db.prepare("UPDATE conteudos SET estado = 'publicando' WHERE id = ?").run(c.id);
+    const base = `/api/conteudos/${c.id}`;
+    await ctx.http.put(base).send({ titulo: 'B' }).expect(409);
+    await ctx.http.delete(base).expect(409);
+    await enviarMidias(c.id, [await png()]).expect(409);
+    await ctx.http.delete(`${base}/midias/${midias[0].id}`).expect(409);
+    const res = await ctx.http.put(`${base}/midias/ordem`).send({ ids: [midias[0].id] }).expect(409);
+    expect(res.body).toEqual({ erro: 'Este post está sendo publicado.' });
+    expect(arquivosEmUploads()).toHaveLength(1);
+  });
+
+  it('o grid devolve as mídias dos prontos', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'post', estado: 'pronto' })).body;
+    await enviarMidias(c.id, [await png()]);
+    const { prontos } = (await ctx.http.get('/api/instagram/grid')).body;
+    expect(prontos[0].midias).toHaveLength(1);
+    expect(prontos[0].capa_url).toBe(prontos[0].midias[0].url);
   });
 
   it('não lista planejados já ligados a um post', async () => {

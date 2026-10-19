@@ -1,12 +1,15 @@
 import { Router } from 'express';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { criarRepo, linha } from '../repos/crud.js';
+import { criarRepo, linha, emTransacao } from '../repos/crud.js';
 import { repoProjetos } from '../repos/projetos.js';
+import { repoConteudoMidias } from '../repos/conteudoMidias.js';
 import { validar, lerId } from '../http/validar.js';
-import { ErroValidacao, naoEncontrado } from '../http/erros.js';
-import { criarUpload, removerArquivos } from '../http/upload.js';
-import { emTransacao } from '../repos/crud.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
+import { criarUpload, removerArquivos, EXTENSOES_MIDIA_POST } from '../http/upload.js';
+import { ehAcessoPublico } from '../http/protecao.js';
+import { aceitaVideo, MENSAGEM_CARROSSEL_VIDEO } from '../instagram/regrasPublicacao.js';
+import { prepararMidia } from '../instagram/midiaArquivo.js';
 import { TIPOS_CONTEUDO, ESTADOS_CONTEUDO } from '../domain/regras.js';
 
 const REGRAS_CONTEUDO = {
@@ -17,19 +20,23 @@ const REGRAS_CONTEUDO = {
   estado: { tipo: 'enum', valores: ESTADOS_CONTEUDO, padrao: 'rascunho' },
   data_planejada: { tipo: 'data' },
 };
-const CAMPOS = [...Object.keys(REGRAS_CONTEUDO), 'ordem', 'arte'];
+const CAMPOS = [...Object.keys(REGRAS_CONTEUDO), 'ordem'];
 const SELECT = 'SELECT c.*, p.titulo AS projeto_titulo FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id';
+const TAMANHO_MAXIMO_MIDIA = 300 * 1024 * 1024;
+const MENSAGEM_POST_VIDEO = 'Post aceita só imagem.';
 
 export function rotasConteudos({ db, dataDir }) {
   const conteudos = criarRepo(db, 'conteudos', CAMPOS);
   const projetos = repoProjetos(db);
-  const upload = criarUpload(dataDir);
+  const midias = repoConteudoMidias(db);
+  const uploadsDir = path.join(dataDir, 'uploads');
+  const upload = criarUpload(dataDir, EXTENSOES_MIDIA_POST, { tamanhoMaximo: TAMANHO_MAXIMO_MIDIA });
   const r = Router();
 
-  const obterCompleto = (id) => linha(db.prepare(`${SELECT} WHERE c.id = ?`).get(id));
+  const obterCompleto = (id) => midias.comMidias(linha(db.prepare(`${SELECT} WHERE c.id = ?`).get(id)));
   const fimDaFila = () =>
     db.prepare("SELECT COALESCE(MAX(ordem) + 1, 0) AS n FROM conteudos WHERE estado = 'pronto' AND midia_id IS NULL").get().n;
-  const apagarArte = (arte) => arte && rmSync(path.join(dataDir, 'uploads', arte), { force: true });
+  const apagarArquivos = (arquivos) => arquivos.forEach((a) => rmSync(path.join(uploadsDir, a), { force: true }));
 
   function exigirProjeto(projetoId) {
     if (projetoId != null && !projetos.obter(projetoId)) {
@@ -40,6 +47,20 @@ export function rotasConteudos({ db, dataDir }) {
     const atual = conteudos.obter(id);
     if (!atual) throw naoEncontrado('Conteúdo');
     return atual;
+  }
+  function exigirEditavel(conteudo) {
+    if (conteudo.estado === 'publicando') throw new ErroHttp(409, 'Este post está sendo publicado.');
+  }
+  function exigirEditavelPorId(id) {
+    const atual = exigir(id);
+    exigirEditavel(atual);
+    return atual;
+  }
+  // Roda antes do multer: o que for recusado aqui não chega a gravar nada em disco.
+  function prepararEnvio(req, res, next) {
+    if (ehAcessoPublico(req)) throw new ErroHttp(403, 'Suba a mídia pelo PC.');
+    req.conteudo = exigirEditavelPorId(lerId(req.params.id));
+    next();
   }
 
   r.get('/conteudos', (req, res) => {
@@ -56,7 +77,8 @@ export function rotasConteudos({ db, dataDir }) {
     const lista = db
       .prepare(`${SELECT} WHERE ${condicoes.join(' AND ')} ORDER BY c.estado DESC, c.ordem, c.id`)
       .all(...args)
-      .map(linha);
+      .map(linha)
+      .map(midias.comMidias);
     res.json(lista);
   });
 
@@ -81,7 +103,7 @@ export function rotasConteudos({ db, dataDir }) {
 
   r.put('/conteudos/:id', (req, res) => {
     const id = lerId(req.params.id);
-    const atual = exigir(id);
+    const atual = exigirEditavelPorId(id);
     const dados = validar(req.body, REGRAS_CONTEUDO, { parcial: true });
     exigirProjeto(dados.projeto_id);
     if (dados.estado === 'pronto' && atual.estado !== 'pronto') dados.ordem = fimDaFila();
@@ -91,30 +113,53 @@ export function rotasConteudos({ db, dataDir }) {
 
   r.delete('/conteudos/:id', (req, res) => {
     const id = lerId(req.params.id);
-    const atual = exigir(id);
+    exigirEditavelPorId(id);
+    const arquivos = midias.arquivosDe(id);
     conteudos.remover(id);
-    apagarArte(atual.arte);
+    apagarArquivos(arquivos);
     res.status(204).end();
   });
 
-  r.post('/conteudos/:id/arte', upload.single('arte'), (req, res) => {
-    let atual;
+  r.post('/conteudos/:id/midias', prepararEnvio, upload.array('midias', 10), async (req, res) => {
+    const conteudo = req.conteudo;
+    const enviados = req.files ?? [];
+    const recusar = (erro) => {
+      removerArquivos(enviados);
+      throw erro;
+    };
+    if (enviados.length === 0) recusar(new ErroValidacao([{ campo: 'midias', mensagem: 'Envie ao menos uma mídia' }]));
+    if (enviados.some((f) => f.mimetype.startsWith('video/')) && !aceitaVideo(conteudo.tipo)) {
+      const mensagem = conteudo.tipo === 'post' ? MENSAGEM_POST_VIDEO : MENSAGEM_CARROSSEL_VIDEO;
+      recusar(new ErroValidacao([{ campo: 'midias', mensagem }]));
+    }
+
+    const preparadas = [];
     try {
-      atual = exigir(lerId(req.params.id));
-      if (!req.file) throw new ErroValidacao([{ campo: 'arte', mensagem: 'Envie uma imagem' }]);
+      for (const arquivo of enviados) preparadas.push(await prepararMidia(arquivo, uploadsDir));
     } catch (erro) {
-      removerArquivos(req.file ? [req.file] : []);
+      // prepararMidia já apagou o arquivo que falhou; falta o que não foi processado e o que já foi.
+      removerArquivos(enviados);
+      apagarArquivos(preparadas.map((m) => m.arquivo));
       throw erro;
     }
-    conteudos.atualizar(atual.id, { arte: req.file.filename });
-    apagarArte(atual.arte);
+    emTransacao(db, () => preparadas.forEach((m) => midias.adicionar(conteudo.id, m)));
+    res.json(obterCompleto(conteudo.id));
+  });
+
+  r.put('/conteudos/:id/midias/ordem', (req, res) => {
+    const atual = exigirEditavelPorId(lerId(req.params.id));
+    if (!midias.reordenar(atual.id, req.body?.ids)) {
+      throw new ErroValidacao([{ campo: 'ids', mensagem: 'A lista deve conter exatamente as mídias do conteúdo' }]);
+    }
     res.json(obterCompleto(atual.id));
   });
 
-  r.delete('/conteudos/:id/arte', (req, res) => {
-    const atual = exigir(lerId(req.params.id));
-    conteudos.atualizar(atual.id, { arte: null });
-    apagarArte(atual.arte);
+  r.delete('/conteudos/:id/midias/:midiaId', (req, res) => {
+    const atual = exigirEditavelPorId(lerId(req.params.id));
+    const midia = midias.obter(lerId(req.params.midiaId));
+    if (!midia || midia.conteudo_id !== atual.id) throw naoEncontrado('Mídia');
+    midias.remover(midia.id);
+    apagarArquivos([midia.arquivo]);
     res.json(obterCompleto(atual.id));
   });
 

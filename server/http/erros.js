@@ -19,7 +19,7 @@ export function tratarErros(erro, req, res, next) {
   if (erro instanceof ErroValidacao) return res.status(400).json({ erros: erro.erros });
   if (erro instanceof ErroHttp) return res.status(erro.status).json({ erro: erro.message });
   if (erro?.name === 'MulterError') {
-    const mensagem = erro.code === 'LIMIT_FILE_SIZE' ? 'Imagem maior que 10 MB' : erro.message;
+    const mensagem = erro.code === 'LIMIT_FILE_SIZE' ? 'Arquivo maior que o limite permitido (10 MB para imagens, 300 MB para vídeos).' : erro.message;
     return res.status(400).json({ erro: mensagem });
   }
   if (erro?.type === 'entity.parse.failed') return res.status(400).json({ erro: 'JSON inválido' });
