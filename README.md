@@ -20,24 +20,23 @@ npm install && npm run build && pm2 restart crm-madia-api
 
 O pm2 roda sem `watch`: qualquer mudança de código ou migration só vale depois do `pm2 restart crm-madia-api`.
 
-**Primeira vez depois da atualização da publicação no Instagram** (migration `022_publicacao_instagram.sql`), faça uma vez só, nesta ordem:
+**Atualizar com migration nova**, nesta ordem:
 
-1. Pare a API e faça backup do banco e das mídias em `data/backup-antes-022-<data>` (ex.: `data/backup-antes-022-2026-10-19`). No PowerShell:
+1. Pare a API e faça backup do banco e das mídias em `data/backup-antes-<número>-<data>` (ex.: `data/backup-antes-024-2026-11-02`). Copie os três arquivos do banco: o SQLite guarda as alterações recentes em `crm.db-wal`, então o `crm.db` sozinho pode estar quase vazio. No PowerShell:
 
    ```powershell
    pm2 stop crm-madia-api
-   $destino = "data/backup-antes-022-$(Get-Date -Format yyyy-MM-dd)"
+   $destino = "data/backup-antes-024-$(Get-Date -Format yyyy-MM-dd)"
    New-Item -ItemType Directory -Force $destino
-   Copy-Item data/crm.db $destino
+   Copy-Item data/crm.db, data/crm.db-wal, data/crm.db-shm $destino -ErrorAction SilentlyContinue
    Copy-Item -Recurse data/uploads $destino
    ```
 
 2. Atualize e reinicie: `npm install && npm run build && pm2 restart crm-madia-api` (a migration roda ao subir).
-3. Remova o processo antigo do front, que não é mais usado (o Express já serve o `dist/`): `pm2 delete crm-madia-web` e depois `pm2 save`.
 
 O desenvolvimento continua com `npm run dev` (ou `npm start`). Para expor o CRM em `crm.luccasmadia.com.br`, siga o passo a passo em [docs/tunel-cloudflare.md](docs/tunel-cloudflare.md).
 
-Os dados ficam em `data/` (`crm.db` e `uploads/`), que é ignorada pelo git. Faça backup por **Configurações → Exportar backup** ou copiando a pasta `data/` com o CRM parado.
+Os dados ficam em `data/` (`crm.db` e `uploads/`), que é ignorada pelo git. Faça backup por **Configurações → Exportar backup** ou copiando a pasta `data/` inteira com o CRM parado (incluindo `crm.db-wal` e `crm.db-shm`).
 
 ## Portfólio
 
