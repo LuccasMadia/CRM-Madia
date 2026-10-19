@@ -69,7 +69,8 @@ export function ConexaoInstagram() {
         <ol>
           <li>Em developers.facebook.com, crie um app do tipo “Empresa” e adicione o produto <strong>Instagram</strong> → “API com login do Instagram”.</li>
           <li>Em “Funções do app → Testadores do Instagram”, adicione sua conta e aceite o convite no Instagram (Configurações → Apps e sites).</li>
-          <li>Na configuração da API, em “Gerar tokens de acesso”, clique em “Adicionar conta”, entre com o Instagram e copie o token.</li>
+          <li>Na configuração da API, em “Permissões”, confirme que estão incluídas <code>instagram_business_basic</code> e <code>instagram_business_content_publish</code> (a segunda é a que permite publicar pelo CRM).</li>
+          <li>Em “Gerar tokens de acesso”, clique em “Adicionar conta”, entre com o Instagram, autorize a publicação quando ele pedir e copie o token.</li>
           <li>Cole o token aqui e clique em Conectar. O CRM renova o acesso sozinho antes de vencer.</li>
         </ol>
       </details>

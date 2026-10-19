@@ -34,7 +34,8 @@ A conta precisa ser **Profissional** (Criador ou Empresa). Para conectar, uma ve
 
 1. Em developers.facebook.com, crie um app do tipo "Empresa" e adicione o produto **Instagram** → "API com login do Instagram".
 2. Em "Funções do app → Testadores do Instagram", adicione sua conta e aceite o convite no Instagram (Configurações → Apps e sites).
-3. Na configuração da API, em "Gerar tokens de acesso", clique em "Adicionar conta", entre com o Instagram e copie o token.
-4. Em **Configurações → Instagram**, cole o token e clique em Conectar.
+3. Na configuração da API, em "Permissões", confirme que estão incluídas `instagram_business_basic` **e** `instagram_business_content_publish` (a segunda permite publicar pelo CRM).
+4. Em "Gerar tokens de acesso", clique em "Adicionar conta", entre com o Instagram, autorize a publicação quando ele pedir e copie o token.
+5. Em **Configurações → Instagram**, cole o token e clique em Conectar.
 
 O CRM sincroniza ao iniciar, a cada 6 horas e pelo botão "Atualizar agora", e renova o acesso sozinho antes dos 60 dias. As capas ficam em `data/uploads/instagram/`.

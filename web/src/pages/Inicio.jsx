@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
+import { AvisosPublicacao } from '../components/AvisosPublicacao.jsx';
 import { Numero } from '../components/Numero.jsx';
 import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
@@ -153,6 +154,7 @@ export function Inicio() {
         </div>
         <p className="vazio">{dataDeHoje()}</p>
       </header>
+      <AvisosPublicacao />
       <div className="cartoes">
         <Numero rotulo="A receber este mês" icone="financeiro">{formatarDinheiro(cartoes.a_receber_mes_centavos)}</Numero>
         <Numero rotulo="Parcelas atrasadas" icone="alerta">

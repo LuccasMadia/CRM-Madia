@@ -219,6 +219,15 @@ describe('Conteudo — vínculo ao trocar de post', () => {
   });
 });
 
+describe('Conteudo — ?abrir', () => {
+  it('abre o rascunho indicado em ?abrir=<id>', async () => {
+    mockApi(rotas({ 'GET /conteudos/9': { id: 9, titulo: 'Ideia bastidores', tipo: 'post', estado: 'rascunho' } }));
+    renderizar(<Conteudo />, { rota: '/conteudo?abrir=9', padrao: '/conteudo' });
+    expect(await screen.findByRole('dialog', { name: 'Editar planejado' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Ideia bastidores')).toBeInTheDocument();
+  });
+});
+
 describe('Conteudo — reconectar', () => {
   it('erro de sync traz link para Configurações', async () => {
     mockApi(rotas({ 'GET /instagram/estado': { ...ESTADO, ultimo_erro: 'O acesso ao Instagram expirou. Reconecte em Configurações.' } }));

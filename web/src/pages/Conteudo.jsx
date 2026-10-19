@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import { AvisosPublicacao } from '../components/AvisosPublicacao.jsx';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useEnvio } from '../hooks/useEnvio.js';
@@ -25,6 +27,18 @@ export function Conteudo() {
   const seguidores = useCarregar(() => api('/instagram/seguidores'), []);
   const rascunhos = useCarregar(() => api('/conteudos?estado=rascunho'), []);
   const acao = useEnvio();
+  const [params, setParams] = useSearchParams();
+  const idParaAbrir = params.get('abrir');
+
+  // Link "Reagendar" da Início: /conteudo?abrir=<id> abre o rascunho direto.
+  useEffect(() => {
+    if (!idParaAbrir) return;
+    api(`/conteudos/${idParaAbrir}`).then(setEditando, () => {});
+    setParams((p) => {
+      p.delete('abrir');
+      return p;
+    }, { replace: true });
+  }, [idParaAbrir, setParams]);
 
   const recarregarPlanejados = () => {
     grid.recarregar();
@@ -99,6 +113,7 @@ export function Conteudo() {
           <button type="button" className="btn btn--primario" onClick={() => setEditando({})}>+ Planejar</button>
         </div>
       </header>
+      <AvisosPublicacao onAbrir={setEditando} onMudou={recarregarPlanejados} />
       <Aviso erro={estado.erro ?? grid.erro ?? acao.erro} />
       {estado.dados?.ultimo_erro && (
         <p className="aviso aviso--erro" role="alert">
