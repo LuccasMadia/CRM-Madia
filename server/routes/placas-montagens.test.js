@@ -192,6 +192,8 @@ describe('vendas de placas geradas por projeto', () => {
     const [venda] = (await ctx.http.get('/api/placas/vendas')).body;
     expect(venda).toMatchObject({ recebido_em: '2026-10-18', quantidade_montada: 1, via_projeto: true, estado: 'paga' });
     expect((await ctx.http.get('/api/placas/resumo')).body.a_receber.vendas).toEqual([]);
+    const doCliente = (await ctx.http.get(`/api/clientes/${cliente.id}/placas`).expect(200)).body.vendas;
+    expect(doCliente[0].via_projeto).toBe(true);
   });
 });
 

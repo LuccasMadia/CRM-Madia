@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetos } from '../repos/projetos.js';
-import { repoPlacasVendas } from '../repos/placas.js';
+import { repoPlacasVendas, idsVendasDeProjeto } from '../repos/placas.js';
 import { estadoVendaPlaca, valorVendaPlaca } from '../domain/placas.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, naoEncontrado } from '../http/erros.js';
@@ -42,10 +42,11 @@ export function rotasClientes({ db, hoje }) {
   r.get('/:id/placas', (req, res) => {
     const cliente = clientes.obter(lerId(req.params.id));
     if (!cliente) throw naoEncontrado('Cliente');
+    const deProjeto = idsVendasDeProjeto(db);
     res.json({
       vendas_avulsas: vendasPlacas.listarAvulsasDoCliente(cliente.id),
       vendas: vendasPlacas.listarDoCliente(cliente.id)
-        .map((v) => ({ ...v, estado: estadoVendaPlaca(v, hoje()), valor_total_centavos: valorVendaPlaca(v) })),
+        .map((v) => ({ ...v, estado: estadoVendaPlaca(v, hoje()), valor_total_centavos: valorVendaPlaca(v), via_projeto: deProjeto.has(v.id) })),
       ja_comprou: vendasPlacas.quantidadeDoCliente(cliente.id),
     });
   });
