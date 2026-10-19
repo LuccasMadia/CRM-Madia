@@ -3,10 +3,11 @@ import { obterConfig, definirConfig } from '../repos/config.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { repoParcelas } from '../repos/parcelas.js';
 import { repoHospedagens } from '../repos/hospedagens.js';
+import { emTransacao } from '../repos/crud.js';
 import { gerarTodasMensalidades } from '../repos/mensalidades.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
-import { criarClienteVercel } from '../hospedagem/vercel.js';
+import { criarClienteVercel, ErroVercel } from '../hospedagem/vercel.js';
 import { situacaoCobranca, PRAZO_PADRAO_DIAS } from '../hospedagem/cobranca.js';
 
 const MSG_SEM_TOKEN = 'Conecte a Vercel em Configurações.';
@@ -39,7 +40,7 @@ export function rotasHospedagem({ db, hoje, fetch }) {
     if (!token) throw new ErroHttp(409, MSG_SEM_TOKEN);
     return criarClienteVercel({ token, fetch });
   }
-  const falhaVercel = (erro) => new ErroHttp(502, erro.message);
+  const falhaVercel = (erro) => (erro instanceof ErroVercel ? new ErroHttp(502, erro.message) : erro);
 
   function obterProjeto(valor) {
     const projeto = projetos.obterComCliente(lerId(valor));
@@ -112,8 +113,9 @@ export function rotasHospedagem({ db, hoje, fetch }) {
       if (!dados.url) throw new ErroValidacao([{ campo: 'url', mensagem: 'Obrigatório' }]);
       const url = normalizarUrl(dados.url);
       if (!url) throw new ErroValidacao([{ campo: 'url', mensagem: 'Endereço inválido' }]);
+      const urlAnterior = hospedagens.obter(projeto.id)?.url ?? null;
       hospedagens.salvarCadastro(projeto.id, { ...dados, url });
-      disparar(req);
+      if (url !== urlAnterior) disparar(req);
     }
     res.json(formato(projeto));
   });
@@ -129,7 +131,6 @@ export function rotasHospedagem({ db, hoje, fetch }) {
 
   // Valida os 409 comuns de pausar/religar e devolve { hospedagem, cliente }.
   function prepararCorte(projeto) {
-    if (projeto.ficticio) throw new ErroHttp(409, 'Site fictício não tem corte.');
     const hospedagem = hospedagens.obter(projeto.id);
     if (hospedagem?.tipo !== 'vercel' || !hospedagem.vercel_projeto_id) {
       throw new ErroHttp(409, 'Escolha o projeto da Vercel na aba Hospedagem.');
@@ -139,6 +140,7 @@ export function rotasHospedagem({ db, hoje, fetch }) {
 
   r.post('/projetos/:id/hospedagem/pausar', async (req, res) => {
     const projeto = obterProjeto(req.params.id);
+    if (projeto.ficticio) throw new ErroHttp(409, 'Site fictício não tem corte.');
     const { hospedagem, cliente } = prepararCorte(projeto);
     if (hospedagem.status === 'pausado') throw new ErroHttp(409, 'O site já está fora do ar.');
     try {
@@ -147,8 +149,10 @@ export function rotasHospedagem({ db, hoje, fetch }) {
       throw falhaVercel(erro);
     }
     const agora = new Date().toISOString();
-    hospedagens.atualizar(projeto.id, { status: 'pausado', status_desde: agora, falhas_seguidas: 0 });
-    hospedagens.registrarPausa(projeto.id, 'pausou', agora);
+    emTransacao(db, () => {
+      hospedagens.atualizar(projeto.id, { status: 'pausado', status_desde: agora, falhas_seguidas: 0 });
+      hospedagens.registrarPausa(projeto.id, 'pausou', agora);
+    });
     res.json(formato(projeto));
   });
 
@@ -161,8 +165,10 @@ export function rotasHospedagem({ db, hoje, fetch }) {
     } catch (erro) {
       throw falhaVercel(erro);
     }
-    hospedagens.atualizar(projeto.id, { status: 'desconhecido', status_desde: null, falhas_seguidas: 0 });
-    hospedagens.registrarPausa(projeto.id, 'religou', new Date().toISOString());
+    emTransacao(db, () => {
+      hospedagens.atualizar(projeto.id, { status: 'desconhecido', status_desde: null, falhas_seguidas: 0 });
+      hospedagens.registrarPausa(projeto.id, 'religou', new Date().toISOString());
+    });
     disparar(req);
     res.json(formato(projeto));
   });

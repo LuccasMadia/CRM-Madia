@@ -42,6 +42,20 @@ describe('conexão com a Vercel', () => {
     expect((await ctx.http.get('/api/vercel/estado')).body.conectado).toBe(false);
   });
 
+  it('sem rede ao conectar -> 502', async () => {
+    ctx = criarContexto({ fetch: async () => { throw new Error('offline'); } });
+    const res = await conectar().expect(502);
+    expect(res.body.erro).toMatch(/Não foi possível falar com a Vercel/);
+    expect((await ctx.http.get('/api/vercel/estado')).body.conectado).toBe(false);
+  });
+
+  it('erro da Vercel ao listar projetos -> 502', async () => {
+    montar({ [`GET ${V}/v10/projects?limit=100`]: { status: 500, corpo: {} } });
+    ctx.db.prepare("INSERT INTO config (chave, valor) VALUES ('vercel_token', 'x')").run();
+    const res = await ctx.http.get('/api/vercel/projetos').expect(502);
+    expect(res.body.erro).toBe('A Vercel respondeu 500.');
+  });
+
   it('desconectar apaga o token', async () => {
     await conectar();
     await ctx.http.delete('/api/vercel/conexao').expect(204);
@@ -85,6 +99,8 @@ describe('cadastro da hospedagem', () => {
     ctx.app.locals.monitorSites = { checarTodos: async () => { chamou++; } };
     const res = await cadastrar({ tipo: 'vercel', url: 'rangodobicho.com.br' }).expect(200);
     expect(res.body.hospedagem.url).toBe('https://rangodobicho.com.br');
+    expect(chamou).toBe(1);
+    await cadastrar({ tipo: 'vercel', url: 'rangodobicho.com.br', vercel_projeto_id: 'prj_1' }).expect(200);
     expect(chamou).toBe(1);
   });
 
@@ -148,6 +164,30 @@ describe('pausar e religar', () => {
     const g = (await ctx.http.get(`/api/projetos/${projeto.id}/hospedagem`)).body;
     expect(g.hospedagem.status).toBe('desconhecido');
     expect(g.pausas).toEqual([]);
+  });
+
+  it('religar: Vercel recusa -> 502 e nada muda', async () => {
+    montar({ [religarUrl]: { status: 404, corpo: {} } });
+    projeto = await criarProjeto();
+    await conectar();
+    await cadastroVercel();
+    ctx.db.prepare("UPDATE hospedagens SET status='pausado' WHERE projeto_id=?").run(projeto.id);
+    const res = await religar().expect(502);
+    expect(res.body.erro).toBe('Projeto não encontrado na Vercel.');
+    const g = (await ctx.http.get(`/api/projetos/${projeto.id}/hospedagem`)).body;
+    expect(g.hospedagem.status).toBe('pausado');
+    expect(g.pausas).toEqual([]);
+  });
+
+  it('religar funciona em site fictício pausado', async () => {
+    montar({ [religarUrl]: {} });
+    projeto = await criarProjeto({ ficticio: true });
+    await conectar();
+    await cadastroVercel();
+    ctx.db.prepare("UPDATE hospedagens SET status='pausado' WHERE projeto_id=?").run(projeto.id);
+    const res = await religar().expect(200);
+    expect(res.body.hospedagem.status).toBe('desconhecido');
+    expect(falso.requisicoes.some((r) => r.url.href === `${V}/v1/projects/prj_1/unpause`)).toBe(true);
   });
 
   it('409 sem token, sem projeto da Vercel e fictício', async () => {
