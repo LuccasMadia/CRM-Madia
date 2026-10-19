@@ -1,7 +1,8 @@
 import { criarRepo, linha, emTransacao } from './crud.js';
 
 // `nome` é o nome da empresa; a pessoa de contato fica em `responsavel`.
-export const CAMPOS_CLIENTE = ['nome', 'responsavel', 'email', 'telefone', 'instagram', 'origem', 'notas'];
+// `foto` só muda pelas rotas de foto; o PUT comum não a aceita.
+export const CAMPOS_CLIENTE = ['nome', 'responsavel', 'email', 'telefone', 'instagram', 'origem', 'notas', 'foto'];
 
 export function repoClientes(db) {
   const base = criarRepo(db, 'clientes', CAMPOS_CLIENTE);

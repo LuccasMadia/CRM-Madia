@@ -22,6 +22,15 @@ describe('Clientes', () => {
     expect(chamadas.at(-1).caminho).toBe('/clientes?busca=doces');
   });
 
+  it('mostra a foto de cada cliente, ou as iniciais quando não tem', async () => {
+    mockApi({ 'GET /clientes?busca=': [{ ...ana, foto: 'ana.jpg' }, { id: 2, nome: 'Barbearia Brothers', responsavel: null }] });
+    renderizar(<Clientes />, { rota: '/clientes', padrao: '/clientes' });
+    const [linhaAna, linhaBrothers] = (await screen.findAllByRole('row')).slice(1);
+    expect(linhaAna.querySelector('img.foto-cliente')).toHaveAttribute('src', '/uploads/ana.jpg');
+    expect(linhaBrothers.querySelector('.foto-cliente')).toHaveTextContent('BB');
+    expect(screen.getByRole('link', { name: 'Doces da Ana' })).toBeInTheDocument();
+  });
+
   it('lápis abre a edição na própria lista, salva e recarrega', async () => {
     let lista = [ana];
     const { chamadas } = mockApi({

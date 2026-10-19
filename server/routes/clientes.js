@@ -1,10 +1,13 @@
 import { Router } from 'express';
+import { rmSync } from 'node:fs';
+import path from 'node:path';
 import { repoClientes } from '../repos/clientes.js';
+import { criarUpload, removerArquivos } from '../http/upload.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { repoPlacasVendas, idsVendasDeProjeto } from '../repos/placas.js';
 import { estadoVendaPlaca, valorVendaPlaca } from '../domain/placas.js';
 import { validar, lerId } from '../http/validar.js';
-import { ErroHttp, naoEncontrado } from '../http/erros.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 
 export const REGRAS_CLIENTE = {
   nome: { tipo: 'texto', obrigatorio: true },
@@ -16,10 +19,12 @@ export const REGRAS_CLIENTE = {
   notas: { tipo: 'texto' },
 };
 
-export function rotasClientes({ db, hoje }) {
+export function rotasClientes({ db, hoje, dataDir }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
   const vendasPlacas = repoPlacasVendas(db);
+  const upload = criarUpload(dataDir);
+  const apagarFoto = (foto) => foto && rmSync(path.join(dataDir, 'uploads', foto), { force: true });
   const r = Router();
 
   r.get('/', (req, res) => res.json(clientes.buscar(req.query.busca ?? '')));
@@ -64,9 +69,34 @@ export function rotasClientes({ db, hoje }) {
     if (clientes.contarProjetos(id) > 0) {
       throw new ErroHttp(409, 'Este cliente tem projetos. Exclua ou mova os projetos antes de excluir o cliente.');
     }
+    const foto = clientes.obter(id)?.foto;
     // QR codes saíram do app; os que sobraram no banco vão junto com o cliente
     if (!clientes.removerComQrcodes(id)) throw naoEncontrado('Cliente');
+    apagarFoto(foto);
     res.status(204).end();
+  });
+
+  r.post('/:id/foto', upload.single('foto'), (req, res) => {
+    let atual;
+    try {
+      atual = clientes.obter(lerId(req.params.id));
+      if (!atual) throw naoEncontrado('Cliente');
+      if (!req.file) throw new ErroValidacao([{ campo: 'foto', mensagem: 'Envie uma imagem' }]);
+    } catch (erro) {
+      removerArquivos(req.file ? [req.file] : []);
+      throw erro;
+    }
+    const atualizado = clientes.atualizar(atual.id, { foto: req.file.filename });
+    apagarFoto(atual.foto);
+    res.json(atualizado);
+  });
+
+  r.delete('/:id/foto', (req, res) => {
+    const atual = clientes.obter(lerId(req.params.id));
+    if (!atual) throw naoEncontrado('Cliente');
+    const atualizado = clientes.atualizar(atual.id, { foto: null });
+    apagarFoto(atual.foto);
+    res.json(atualizado);
   });
 
   return r;

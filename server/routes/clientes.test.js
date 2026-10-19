@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { criarContexto } from '../test/contexto.js';
 
 let ctx;
@@ -102,5 +104,41 @@ describe('GET /api/clientes/:id/placas', () => {
       expect.objectContaining({ quantidade: 2, data_venda: '2026-08-01', modelo_nome: 'Placa 10x10' }),
     ]);
     await ctx.http.get('/api/clientes/999/placas').expect(404);
+  });
+});
+
+describe('/api/clientes/:id/foto', () => {
+  const enviarFoto = (id, tipo = 'image/jpeg', nome = 'rosto.jpg') =>
+    ctx.http.post(`/api/clientes/${id}/foto`).attach('foto', Buffer.from('img'), { filename: nome, contentType: tipo });
+  const arquivo = (nome) => path.join(ctx.dataDir, 'uploads', nome);
+
+  it('guarda a foto, troca apagando a antiga e remove', async () => {
+    const cliente = await criarCliente();
+    expect(cliente.foto).toBeNull();
+    const primeira = (await enviarFoto(cliente.id).expect(200)).body;
+    expect(primeira.foto).toMatch(/\.jpg$/);
+    expect(existsSync(arquivo(primeira.foto))).toBe(true);
+    const segunda = (await enviarFoto(cliente.id, 'image/png', 'logo.png').expect(200)).body;
+    expect(existsSync(arquivo(primeira.foto))).toBe(false);
+    expect((await ctx.http.get(`/api/clientes/${cliente.id}`)).body.foto).toBe(segunda.foto);
+    const sem = (await ctx.http.delete(`/api/clientes/${cliente.id}/foto`).expect(200)).body;
+    expect(sem.foto).toBeNull();
+    expect(existsSync(arquivo(segunda.foto))).toBe(false);
+  });
+
+  it('recusa formato que não é imagem, pedido sem arquivo e cliente inexistente', async () => {
+    const cliente = await criarCliente();
+    await enviarFoto(cliente.id, 'application/pdf', 'doc.pdf').expect(400);
+    await ctx.http.post(`/api/clientes/${cliente.id}/foto`).expect(400);
+    await enviarFoto(999).expect(404);
+  });
+
+  it('a foto não muda pelo PUT comum, e sai junto quando o cliente é excluído', async () => {
+    const cliente = await criarCliente();
+    const { foto } = (await enviarFoto(cliente.id).expect(200)).body;
+    await ctx.http.put(`/api/clientes/${cliente.id}`).send({ foto: 'outra.jpg' }).expect(200);
+    expect((await ctx.http.get(`/api/clientes/${cliente.id}`)).body.foto).toBe(foto);
+    await ctx.http.delete(`/api/clientes/${cliente.id}`).expect(204);
+    expect(existsSync(arquivo(foto))).toBe(false);
   });
 });

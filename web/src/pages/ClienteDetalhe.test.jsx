@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ClienteDetalhe } from './ClienteDetalhe.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -58,5 +58,30 @@ describe('ClienteDetalhe', () => {
     abrir();
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Excluir' }));
     expect(await screen.findByText('Este cliente tem projetos.')).toBeInTheDocument();
+  });
+
+  it('sem foto mostra as iniciais e envia uma foto nova', async () => {
+    const { chamadas } = mockApi(rotasPerfil({ 'POST /clientes/1/foto': { ...clienteExemplo, foto: 'nova.jpg' } }));
+    abrir();
+    await screen.findByRole('heading', { name: 'Padaria da Ana' });
+    expect(document.querySelector('.foto-cliente')).toHaveTextContent('PA');
+    expect(screen.queryByRole('button', { name: 'Remover foto' })).toBeNull();
+    const arquivo = new File(['img'], 'logo.png', { type: 'image/png' });
+    await userEvent.setup().upload(screen.getByLabelText('Enviar foto'), arquivo);
+    await waitFor(() => expect(chamadas.find((c) => c.metodo === 'POST')?.caminho).toBe('/clientes/1/foto'));
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo.get('foto').name).toBe('logo.png');
+  });
+
+  it('com foto mostra a imagem e permite remover', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { chamadas } = mockApi(rotasPerfil({
+      'GET /clientes/1': { ...clienteExemplo, foto: 'abc.jpg' },
+      'DELETE /clientes/1/foto': { ...clienteExemplo, foto: null },
+    }));
+    abrir();
+    expect(await screen.findByRole('img', { name: 'Foto de Padaria da Ana' })).toHaveAttribute('src', '/uploads/abc.jpg');
+    expect(screen.getByLabelText('Trocar foto')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Remover foto' }));
+    await waitFor(() => expect(chamadas.some((c) => c.metodo === 'DELETE' && c.caminho === '/clientes/1/foto')).toBe(true));
   });
 });

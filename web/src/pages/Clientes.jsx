@@ -6,6 +6,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { Icone } from '../components/Icone.jsx';
+import { FotoCliente } from '../components/FotoCliente.jsx';
 
 export function Clientes() {
   const [busca, setBusca] = useState('');
@@ -46,7 +47,12 @@ export function Clientes() {
           <tbody>
             {clientes.map((c) => (
               <tr key={c.id}>
-                <td><Link to={`/clientes/${c.id}`}>{c.nome || 'Sem empresa'}</Link></td>
+                <td>
+                  <span className="cliente-nome">
+                    <FotoCliente cliente={c} tamanho={32} />
+                    <Link to={`/clientes/${c.id}`}>{c.nome || 'Sem empresa'}</Link>
+                  </span>
+                </td>
                 <td>{c.responsavel ?? '—'}</td>
                 <td>{c.instagram ?? '—'}</td>
                 <td>{c.telefone ?? '—'}</td>
