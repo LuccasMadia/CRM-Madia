@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router';
 import { Icone } from './Icone.jsx';
+import { alternarValoresOcultos, useValoresOcultos } from '../lib/privacidade.js';
 
 const NAVEGACAO = [
   { para: '/', rotulo: 'Início', icone: 'inicio' },
@@ -8,6 +9,7 @@ const NAVEGACAO = [
   { para: '/clientes', rotulo: 'Clientes', icone: 'clientes' },
   { para: '/servicos', rotulo: 'Serviços', icone: 'servicos' },
   { para: '/conteudo', rotulo: 'Conteúdo', icone: 'conteudo' },
+  { para: '/portfolio', rotulo: 'Portfólio', icone: 'portfolio' },
   { para: '/financeiro', rotulo: 'Financeiro', icone: 'financeiro' },
   { para: '/configuracoes', rotulo: 'Configurações', icone: 'configuracoes' },
 ];
@@ -32,6 +34,8 @@ function gravarRecolhida(valor) {
 
 export function Sidebar() {
   const [recolhida, setRecolhida] = useState(lerRecolhida);
+  const ocultos = useValoresOcultos();
+  const rotuloValores = ocultos ? 'Mostrar valores' : 'Ocultar valores';
 
   function alternar() {
     setRecolhida((atual) => {
@@ -65,6 +69,17 @@ export function Sidebar() {
           </li>
         ))}
       </ul>
+      <button
+        type="button"
+        className={`sidebar__valores${ocultos ? ' sidebar__valores--ativo' : ''}`}
+        aria-pressed={ocultos}
+        aria-label={rotuloValores}
+        title={`${rotuloValores} (Ctrl+Shift+H)`}
+        onClick={alternarValoresOcultos}
+      >
+        <Icone nome={ocultos ? 'olho-fechado' : 'olho'} />
+        <span className="sidebar__rotulo">{rotuloValores}</span>
+      </button>
     </nav>
   );
 }

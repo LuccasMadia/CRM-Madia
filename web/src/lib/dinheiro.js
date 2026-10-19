@@ -1,6 +1,10 @@
+import { valoresOcultos } from './privacidade.js';
+
 const formato = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-export const formatarDinheiro = (centavos) => formato.format((centavos ?? 0) / 100);
+export const VALOR_OCULTO = 'R$ •••••';
+
+export const formatarDinheiro = (centavos) => (valoresOcultos() ? VALOR_OCULTO : formato.format((centavos ?? 0) / 100));
 
 export function paraCentavos(texto) {
   let s = String(texto ?? '').replace(/R\$/g, '').replace(/\s/g, '');

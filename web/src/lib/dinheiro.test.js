@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import { formatarDinheiro, paraCentavos, centavosParaTexto } from './dinheiro.js';
+import { describe, it, expect, afterEach } from 'vitest';
+import { formatarDinheiro, paraCentavos, centavosParaTexto, VALOR_OCULTO } from './dinheiro.js';
+import { definirValoresOcultos } from './privacidade.js';
 
 describe('dinheiro', () => {
+  afterEach(() => definirValoresOcultos(false));
+
+  it('com os valores ocultos, não mostra o número', () => {
+    definirValoresOcultos(true);
+    expect(formatarDinheiro(123456)).toBe(VALOR_OCULTO);
+    expect(centavosParaTexto(123456)).toBe('1234,56');
+  });
+
   it('formata em reais', () => {
     expect(formatarDinheiro(123456).replace(/\s/g, ' ')).toBe('R$ 1.234,56');
     expect(formatarDinheiro(null).replace(/\s/g, ' ')).toBe('R$ 0,00');
