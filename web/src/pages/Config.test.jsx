@@ -88,6 +88,16 @@ describe('Config', () => {
     expect(put.corpo).toEqual({ preco_servico_google_meu_negocio_centavos: 20000 });
   });
 
+  it('mostra a seção da Vercel logo abaixo do Instagram', async () => {
+    mockApi({
+      'GET /config': { portfolio_repo_path: null },
+      'GET /vercel/estado': { conectado: false, prazo_dias: 7 },
+    });
+    renderizar(<Config />);
+    expect(await screen.findByLabelText('Token da Vercel')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vercel' })).toBeInTheDocument();
+  });
+
   it('mostra as listas de Categorias e Nichos', async () => {
     mockApi({
       'GET /config': { portfolio_repo_path: null, preco_servico_google_meu_negocio_centavos: 0 },
