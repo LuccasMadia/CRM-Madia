@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { ErroHttp, ErroValidacao } from '../http/erros.js';
 import { obterConfig } from '../repos/config.js';
 import { repoConteudoMidias } from '../repos/conteudoMidias.js';
-import { criarClienteInstagram } from './cliente.js';
+import { criarClienteInstagram, ErroInstagram } from './cliente.js';
 import { validarParaPublicar } from './regrasPublicacao.js';
 import { vincular } from './vinculo.js';
 
@@ -12,6 +12,32 @@ const MSG_SEM_TOKEN = 'O Instagram não está conectado. Conecte em Configuraç�
 const MSG_DEMOROU = 'O Instagram demorou demais para processar o vídeo. Tente de novo.';
 const MSG_INTERROMPIDA =
   'A publicação foi interrompida depois de enviada. Confira no Instagram se o post saiu antes de tentar de novo.';
+
+const MSG_LIMITE = 'O Instagram atingiu o limite de publicações por agora. Tente de novo mais tarde.';
+const MSG_DOWNLOAD =
+  'O Instagram não conseguiu baixar a mídia. Confira se o túnel crm.luccasmadia.com.br está no ar e tente de novo.';
+const MSG_PROPORCAO = 'A proporção da mídia não é aceita pelo Instagram.';
+const CODIGOS_LIMITE = [4, 9, 341];
+const SUBCODIGO_LIMITE = 2207042;
+const SUBCODIGO_DOWNLOAD = 2207052;
+const CODIGO_DOWNLOAD = 9004;
+const SUBCODIGO_PROPORCAO = 2207009;
+
+// Erros conhecidos da Graph API viram texto em português; null = não reconhecido.
+function traduzirConhecido({ code = null, subcode = null, mensagem = '' }) {
+  if (CODIGOS_LIMITE.includes(code) || subcode === SUBCODIGO_LIMITE) return MSG_LIMITE;
+  if (subcode === SUBCODIGO_DOWNLOAD || code === CODIGO_DOWNLOAD) return MSG_DOWNLOAD;
+  if (subcode === SUBCODIGO_PROPORCAO || /aspect ratio/i.test(mensagem)) return MSG_PROPORCAO;
+  return null;
+}
+
+// Mensagem gravada em publicacao_erro. Sem permissão, token inválido e falta de internet
+// já chegam com o texto certo do cliente; o resto que veio do Instagram é traduzido.
+function mensagemDoErro(erro) {
+  if (!(erro instanceof ErroInstagram)) return erro?.message || 'Erro desconhecido ao publicar.';
+  if (erro.semPermissao || erro.tokenInvalido || !erro.status) return erro.message;
+  return traduzirConhecido({ code: erro.code, subcode: erro.subcode, mensagem: erro.message }) ?? `O Instagram recusou: ${erro.message}`;
+}
 
 export function criarPublicador({
   db,
@@ -80,7 +106,7 @@ export function criarPublicador({
       // Depois de mandar publicar, um erro (rede, 5xx) não garante que o post não saiu:
       // nunca convida a tentar de novo às cegas, para não publicar duas vezes.
       try {
-        falhar(conteudoId, enviado ? MSG_INTERROMPIDA : erro?.message || 'Erro desconhecido ao publicar.');
+        falhar(conteudoId, enviado ? MSG_INTERROMPIDA : mensagemDoErro(erro));
       } catch (erroBanco) {
         log(erroBanco);
       }
@@ -115,7 +141,11 @@ export function criarPublicador({
     for (;;) {
       const { status, mensagem } = await ig.statusContainer(containerId);
       if (status === 'FINISHED') return;
-      if (status === 'ERROR' || status === 'EXPIRED') throw new Error(`O Instagram recusou a mídia: ${mensagem || status}`);
+      if (status === 'ERROR' || status === 'EXPIRED') {
+        // O texto do status costuma trazer o subcódigo (ex.: "... error code 2207052").
+        const subcode = Number((mensagem ?? '').match(/\b(22\d{5})\b/)?.[1]) || null;
+        throw new Error(traduzirConhecido({ subcode, mensagem: mensagem ?? '' }) ?? `O Instagram recusou a mídia: ${mensagem || status}`);
+      }
       if (agora() - inicio >= limiteMs) throw new Error(MSG_DEMOROU);
       await esperar(intervaloMs);
     }

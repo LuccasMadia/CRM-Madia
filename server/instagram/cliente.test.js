@@ -141,6 +141,14 @@ describe('cliente do Instagram', () => {
       expect((await ig.criarContainer('178', {}).catch((e) => e)).semPermissao).toBe(true);
     });
 
+    it('o erro carrega code e error_subcode da resposta', async () => {
+      const { ig } = cliente({
+        'POST /178/media': { status: 400, corpo: { error: { code: 9007, error_subcode: 2207052, message: 'Media download has failed' } } },
+      });
+      const erro = await ig.criarContainer('178', {}).catch((e) => e);
+      expect(erro).toMatchObject({ status: 400, code: 9007, subcode: 2207052, message: 'Media download has failed' });
+    });
+
     it('código 190 é tokenInvalido e não semPermissao', async () => {
       const { ig } = cliente({ 'POST /178/media': { status: 400, corpo: { error: { code: 190, message: 'expirou' } } } });
       const erro = await ig.criarContainer('178', {}).catch((e) => e);

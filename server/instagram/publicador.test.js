@@ -8,6 +8,10 @@ import { criarPublicador } from './publicador.js';
 const URL_PUBLICA = 'https://crm.luccasmadia.com.br';
 const MSG_INTERROMPIDA =
   'A publicação foi interrompida depois de enviada. Confira no Instagram se o post saiu antes de tentar de novo.';
+const MSG_LIMITE = 'O Instagram atingiu o limite de publicações por agora. Tente de novo mais tarde.';
+const MSG_DOWNLOAD =
+  'O Instagram não conseguiu baixar a mídia. Confira se o túnel crm.luccasmadia.com.br está no ar e tente de novo.';
+const MSG_PROPORCAO = 'A proporção da mídia não é aceita pelo Instagram.';
 let db;
 
 beforeEach(() => {
@@ -125,7 +129,7 @@ describe('publicador — carrossel', () => {
     }));
     await pub.iniciar(id);
     expect(posts()).toHaveLength(2);
-    expect(conteudo(id)).toMatchObject({ estado: 'falhou', publicacao_erro: 'Imagem inválida', publicacao_container_id: null });
+    expect(conteudo(id)).toMatchObject({ estado: 'falhou', publicacao_erro: MSG_DOWNLOAD, publicacao_container_id: null });
   });
 });
 
@@ -269,6 +273,41 @@ describe('publicador — erros', () => {
     await pub.iniciar(id);
     expect(conteudo(id).estado).toBe('falhou');
     expect(conteudo(id).publicacao_erro).toMatch(/^O token não tem permissão para publicar\./);
+  });
+
+  it.each([
+    ['code 4', { code: 4, message: 'Application request limit reached' }, MSG_LIMITE],
+    ['code 9', { code: 9, message: 'Too many calls' }, MSG_LIMITE],
+    ['code 341', { code: 341, message: 'Application limit reached' }, MSG_LIMITE],
+    ['subcode 2207042', { code: 2, error_subcode: 2207042, message: 'Daily limit' }, MSG_LIMITE],
+    ['subcode 2207052', { code: 9007, error_subcode: 2207052, message: 'Media download has failed' }, MSG_DOWNLOAD],
+    ['code 9004', { code: 9004, message: 'Only photo or video can be accepted' }, MSG_DOWNLOAD],
+    ['subcode 2207009', { code: 36003, error_subcode: 2207009, message: 'Invalid' }, MSG_PROPORCAO],
+    ['mensagem de aspect ratio', { code: 36003, message: 'The aspect ratio is not supported.' }, MSG_PROPORCAO],
+    ['outro erro', { code: 100, message: 'Invalid parameter' }, 'O Instagram recusou: Invalid parameter'],
+  ])('erro do Instagram (%s) vira mensagem em português', async (_nome, erroIg, esperado) => {
+    const id = criarConteudo();
+    const { pub } = publicador(rotas({ 'POST /178/media': { status: 400, corpo: { error: erroIg } } }));
+    await pub.iniciar(id);
+    expect(conteudo(id)).toMatchObject({ estado: 'falhou', publicacao_erro: esperado });
+  });
+
+  it('status ERROR com código conhecido no texto também é traduzido', async () => {
+    const id = criarConteudo();
+    const { pub } = publicador(rotas({ '/C1': { status_code: 'ERROR', status: 'Error: Media upload has failed with error code 2207052' } }));
+    await pub.iniciar(id);
+    expect(conteudo(id).publicacao_erro).toBe(MSG_DOWNLOAD);
+  });
+
+  it('sem internet mantém a mensagem do cliente, sem o prefixo de recusa', async () => {
+    const id = criarConteudo();
+    const { pub } = publicador(rotas({
+      '/me': () => {
+        throw new TypeError('fetch failed');
+      },
+    }));
+    await pub.iniciar(id);
+    expect(conteudo(id).publicacao_erro).toBe('Não foi possível falar com o Instagram. Verifique a internet.');
   });
 
   it('sem token conectado → falhou pedindo para conectar', async () => {

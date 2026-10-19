@@ -8,9 +8,12 @@ const METRICAS = { reach: 'alcance', views: 'visualizacoes', saved: 'salvamentos
 const DIA_MS = 24 * 60 * 60 * 1000;
 
 export class ErroInstagram extends Error {
-  constructor(mensagem, { status = 0, tokenInvalido = false, semPermissao = false } = {}) {
+  constructor(mensagem, { status = 0, code = null, subcode = null, tokenInvalido = false, semPermissao = false } = {}) {
     super(mensagem);
     this.status = status;
+    // code/error_subcode da Graph API, para quem precisa traduzir o erro (ex.: publicador).
+    this.code = code;
+    this.subcode = subcode;
     this.tokenInvalido = tokenInvalido;
     this.semPermissao = semPermissao;
   }
@@ -34,7 +37,13 @@ export function criarClienteInstagram({ token, fetch = globalThis.fetch, agora =
       const tokenInvalido = erro?.code === 190 || resposta.status === 401;
       const semPermissao = !tokenInvalido && (erro?.code === 10 || erro?.code === 200 || /permiss/i.test(erro?.message ?? ''));
       const mensagem = semPermissao ? MSG_SEM_PERMISSAO : (erro?.message ?? `Instagram respondeu ${resposta.status}`);
-      throw new ErroInstagram(mensagem, { status: resposta.status, tokenInvalido, semPermissao });
+      throw new ErroInstagram(mensagem, {
+        status: resposta.status,
+        code: erro?.code ?? null,
+        subcode: erro?.error_subcode ?? null,
+        tokenInvalido,
+        semPermissao,
+      });
     }
     return corpo;
   }
