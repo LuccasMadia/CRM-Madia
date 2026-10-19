@@ -4,7 +4,7 @@ import { obterConfig, definirConfig } from '../repos/config.js';
 import { hojeLocal } from '../domain/datas.js';
 import { criarClienteInstagram, ErroInstagram } from './cliente.js';
 import { tipoDaMidia } from './legenda.js';
-import { desvincular, migrarLegado, vincularAutomatico } from './vinculo.js';
+import { desvincular, migrarLegado, vincular, vincularAutomatico } from './vinculo.js';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const RENOVAR_ANTES_MS = 15 * DIA_MS;
@@ -105,10 +105,27 @@ async function executar({ db, dataDir, fetch, agora, sessao, vigente }) {
   }
 
   await baixarCapasPendentes(db, dataDir, fetch, ig, vistas);
+  ligarPublicados(db);
   for (const midia of novas) vincularAutomatico(db, midia);
   migrarLegado(db);
   if (vigente()) definirConfig(db, 'instagram_sync_completa', perfil.id);
   return { novas: novas.length, atualizadas: recebidas.length - novas.length };
+}
+
+// Posts publicados pelo CRM: o id da mídia já é conhecido, então liga direto
+// (antes do vínculo por legenda, que poderia escolher outro planejado).
+function ligarPublicados(db) {
+  const pendentes = db.prepare(`
+    SELECT c.id, c.publicacao_midia_id AS midia FROM conteudos c
+    JOIN instagram_midias m ON m.id = c.publicacao_midia_id
+    WHERE c.midia_id IS NULL AND m.removido = 0`).all();
+  for (const { id, midia } of pendentes) {
+    try {
+      vincular(db, id, midia);
+    } catch {
+      // Mídia já ligada a outro planejado à mão: respeita a escolha do Lucca.
+    }
+  }
 }
 
 // Capas que falharam em syncs anteriores, inclusive de posts fora da janela.
