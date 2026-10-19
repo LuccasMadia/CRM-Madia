@@ -15,6 +15,7 @@ import { rotasPublicacao } from './routes/publicacao.js';
 import { rotasBackup } from './routes/backup.js';
 import { rotasPlacas } from './routes/placas.js';
 import { rotasInstagram } from './routes/instagram.js';
+import { rotasPublico } from './routes/publico.js';
 import { sincronizar } from './instagram/sync.js';
 import { criarExecutorUnico } from './instagram/executor.js';
 import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
@@ -24,6 +25,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   const sincronizarInstagram = criarExecutorUnico(() => sincronizar({ db, dataDir, fetch }));
   const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram };
   app.locals.sincronizarInstagram = sincronizarInstagram;
+  // Única rota sem proteção de host (Cloudflare Access libera /publico/*): precisa vir antes do protegerLocal.
+  app.use('/publico', rotasPublico(ctx));
   app.use(protegerLocal);
   app.use(express.json({ limit: '1mb' }));
 
