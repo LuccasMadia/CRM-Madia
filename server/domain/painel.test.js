@@ -1,40 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { montarProximos, agruparTarefasPorProjeto, montarTarefasDivulgacao } from './painel.js';
-
-describe('montarProximos', () => {
-  const HOJE = '2026-09-23';
-  const entrada = {
-    tarefas: [
-      { id: 1, projeto_id: 10, texto: 'Revisar layout', projeto_titulo: 'Site A', prazo: '2026-09-25' },
-      { id: 2, projeto_id: 10, texto: 'Longe', projeto_titulo: 'Site A', prazo: '2026-10-30' },
-    ],
-    parcelas: [{ id: 3, projeto_id: 10, descricao: 'Entrada', projeto_titulo: 'Site A', vencimento: '2026-09-20', valor_centavos: 5000 }],
-    entregas: [{ id: 10, titulo: 'Site A', cliente_nome: 'Ana', prazo_entrega: '2026-09-30' }],
-    conteudos: [{ id: 4, projeto_id: null, titulo: 'Post case', data_planejada: '2026-09-23' }],
-  };
-
-  it('junta os tipos, filtra até hoje + 7 e ordena por data (atrasados primeiro)', () => {
-    const itens = montarProximos(entrada, HOJE);
-    expect(itens.map((i) => [i.tipo, i.data, i.atrasado])).toEqual([
-      ['parcela', '2026-09-20', true],
-      ['conteudo', '2026-09-23', false],
-      ['tarefa', '2026-09-25', false],
-      ['entrega', '2026-09-30', false],
-    ]);
-    expect(itens[0]).toMatchObject({ titulo: 'Entrada', contexto: 'Site A', valor_centavos: 5000, projeto_id: 10 });
-    expect(itens[3]).toMatchObject({ titulo: 'Site A', contexto: 'Ana', projeto_id: 10 });
-  });
-
-  it('usa "Parcela" quando a parcela não tem descrição', () => {
-    const itens = montarProximos({ parcelas: [{ ...entrada.parcelas[0], descricao: null }] }, HOJE);
-    expect(itens[0].titulo).toBe('Parcela');
-  });
-
-  it('parcela leva servico e cliente_id para o link certo', () => {
-    const [item] = montarProximos({ parcelas: [{ id: 1, projeto_id: 2, descricao: 'Pagamento', projeto_titulo: 'GMN', vencimento: '2026-09-24', valor_centavos: 100, servico: 'google_meu_negocio', cliente_id: 3 }] }, '2026-09-23');
-    expect(item).toMatchObject({ tipo: 'parcela', servico: 'google_meu_negocio', cliente_id: 3 });
-  });
-});
+import { agruparTarefasPorProjeto, montarDivulgacao } from './painel.js';
 
 describe('agruparTarefasPorProjeto', () => {
   it('agrupa por projeto e separa reais de fictícios, preservando ordem de chegada', () => {
@@ -61,24 +26,23 @@ describe('agruparTarefasPorProjeto', () => {
   });
 });
 
-describe('montarTarefasDivulgacao', () => {
-  it('gera um item só para o que falta', () => {
+describe('montarDivulgacao', () => {
+  it('lista só os canais que faltam', () => {
     const linhas = [{ id: 1, titulo: 'Site A', ficticio: 0, postou_instagram: 0, portfolio_publicado: 1 }];
-    expect(montarTarefasDivulgacao(linhas)).toEqual([
-      { id: 'divulgacao-1-Postar no Instagram', texto: 'Postar no Instagram', prazo: null, projeto_id: 1, projeto_titulo: 'Site A', ficticio: 0 },
+    expect(montarDivulgacao(linhas)).toEqual([
+      { projeto_id: 1, projeto_titulo: 'Site A', ficticio: false, falta: ['instagram'] },
     ]);
   });
 
-  it('gera dois itens quando falta tudo', () => {
+  it('lista os dois canais quando falta tudo', () => {
     const linhas = [{ id: 2, titulo: 'Case fictício', ficticio: 1, postou_instagram: 0, portfolio_publicado: 0 }];
-    expect(montarTarefasDivulgacao(linhas)).toEqual([
-      { id: 'divulgacao-2-Postar no Instagram', texto: 'Postar no Instagram', prazo: null, projeto_id: 2, projeto_titulo: 'Case fictício', ficticio: 1 },
-      { id: 'divulgacao-2-Publicar no portfólio', texto: 'Publicar no portfólio', prazo: null, projeto_id: 2, projeto_titulo: 'Case fictício', ficticio: 1 },
+    expect(montarDivulgacao(linhas)).toEqual([
+      { projeto_id: 2, projeto_titulo: 'Case fictício', ficticio: true, falta: ['instagram', 'portfolio'] },
     ]);
   });
 
-  it('não gera nada quando as duas divulgações já foram feitas', () => {
+  it('deixa de fora o projeto já divulgado nos dois canais', () => {
     const linhas = [{ id: 3, titulo: 'Loja X', ficticio: 0, postou_instagram: 1, portfolio_publicado: 1 }];
-    expect(montarTarefasDivulgacao(linhas)).toEqual([]);
+    expect(montarDivulgacao(linhas)).toEqual([]);
   });
 });

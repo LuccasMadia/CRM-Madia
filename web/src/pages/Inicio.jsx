@@ -7,7 +7,7 @@ import { Numero } from '../components/Numero.jsx';
 import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
-import { formatarData } from '../lib/datas.js';
+import { formatarData, hojeISO } from '../lib/datas.js';
 import { ABA_DO_SERVICO, ROTULO_SERVICO } from '../lib/rotulos.js';
 
 // Recharts só é baixado quando a Início abre.
@@ -19,36 +19,86 @@ const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'O
 const rotuloMes = (anoMes) => MESES[Number(anoMes.slice(5, 7)) - 1];
 const dataDeHoje = () => new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-const ROTULO_ITEM = { parcela: 'Parcela', entrega: 'Entrega', conteudo: 'Conteúdo' };
-const ROTULO_ENTREGA = { google_meu_negocio: 'Google Meu Negócio', placas_nfc: 'Placas NFC' };
+const ROTULO_CANAL = { instagram: 'Instagram', portfolio: 'Portfólio' };
 const paginaDoServico = (item) => `/clientes/${item.cliente_id}?aba=${ABA_DO_SERVICO[item.servico]}`;
-function destino(item) {
-  if (item.servico && item.servico !== 'site_sistema') return paginaDoServico(item);
-  return item.projeto_id ? `/projetos/${item.projeto_id}` : '/conteudo';
-}
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
-function ColunaTarefas({ titulo, projetos }) {
+function TarefasPorProjeto({ projetos, vazio }) {
+  const hoje = hojeISO();
+  if (!projetos.length) return <p className="vazio">{vazio}</p>;
+  return (
+    <ul className="lista">
+      {projetos.map((p) => (
+        <li key={p.projeto_id} style={{ display: 'block' }}>
+          <Link to={`/projetos/${p.projeto_id}`}>{p.projeto_titulo}</Link>
+          <ul className="lista tarefas-inicio">
+            {p.tarefas.map((t) => (
+              <li key={t.id}>
+                <span>{t.texto}</span>
+                {t.prazo && (
+                  <span className={t.prazo < hoje ? 'item-atrasado' : 'vazio'}>
+                    {formatarData(t.prazo)}{t.prazo < hoje && ' · atrasada'}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Entregas({ projetos, paraEntregar }) {
+  const gmn = paraEntregar.itens.filter((i) => i.servico === 'google_meu_negocio');
+  const placas = paraEntregar.itens.filter((i) => i.servico === 'placas_nfc');
   return (
     <section className="cartao">
-      <h2>{titulo}</h2>
-      {projetos.length ? (
+      <h2>Entregas a clientes</h2>
+      <h3 className="cartao__titulo inicio__grupo">Sites e sistemas</h3>
+      <TarefasPorProjeto projetos={projetos} vazio="Nenhuma tarefa pendente." />
+      <h3 className="cartao__titulo inicio__grupo">Google Meu Negócio</h3>
+      <ClientesDoServico itens={gmn} vazio="Nenhum GMN pendente." />
+      <h3 className="cartao__titulo inicio__grupo">Placas NFC</h3>
+      <ClientesDoServico itens={placas} vazio={paraEntregar.placas ? null : 'Nenhuma placa pendente.'} />
+      {paraEntregar.placas > 0 && (
+        <p><Link to="/servicos?aba=placas&placas=vendas">{plural(paraEntregar.placas, 'venda de placas a receber', 'vendas de placas a receber')}</Link></p>
+      )}
+    </section>
+  );
+}
+
+function ClientesDoServico({ itens, vazio }) {
+  if (!itens.length) return vazio && <p className="vazio">{vazio}</p>;
+  return (
+    <ul className="lista">
+      {itens.map((item) => (
+        <li key={item.projeto_id}><Link to={paginaDoServico(item)}>{item.cliente_nome}</Link></li>
+      ))}
+    </ul>
+  );
+}
+
+function Divulgacao({ pendentes, ficticios }) {
+  return (
+    <section className="cartao">
+      <h2>Divulgação e portfólio</h2>
+      <h3 className="cartao__titulo inicio__grupo">Falta divulgar</h3>
+      {pendentes.length ? (
         <ul className="lista">
-          {projetos.map((p) => (
-            <li key={p.projeto_id} style={{ display: 'block' }}>
+          {pendentes.map((p) => (
+            <li key={p.projeto_id} className="divulgacao__linha">
               <Link to={`/projetos/${p.projeto_id}`}>{p.projeto_titulo}</Link>
-              <ul className="lista">
-                {p.tarefas.map((t) => (
-                  <li key={t.id}>
-                    <span>{t.texto}</span>
-                    {t.prazo && <span className="vazio">{formatarData(t.prazo)}</span>}
-                  </li>
-                ))}
-              </ul>
+              <span className="divulgacao__etiquetas">
+                {p.falta.map((canal) => <span key={canal} className="etiqueta etiqueta--andamento">{ROTULO_CANAL[canal]}</span>)}
+                {p.ficticio && <span className="etiqueta">fictício</span>}
+              </span>
             </li>
           ))}
         </ul>
-      ) : <p className="vazio">Nenhuma tarefa pendente.</p>}
+      ) : <p className="vazio">Tudo divulgado.</p>}
+      <h3 className="cartao__titulo inicio__grupo">Fictícios em construção</h3>
+      <TarefasPorProjeto projetos={ficticios} vazio="Nenhuma tarefa pendente." />
     </section>
   );
 }
@@ -92,7 +142,7 @@ export function Inicio() {
   const { dados, erro } = useCarregar(() => api('/painel'), []);
   if (erro) return <Aviso erro={erro} />;
   if (!dados) return <p>Carregando…</p>;
-  const { cartoes, tarefas_por_projeto: tarefasPorProjeto, proximos, para_entregar: paraEntregar = { gmn: 0, placas: 0, itens: [] } } = dados;
+  const { cartoes, tarefas_por_projeto: tarefasPorProjeto, divulgacao = [], para_entregar: paraEntregar = { gmn: 0, placas: 0, itens: [] } } = dados;
 
   return (
     <section>
@@ -114,47 +164,12 @@ export function Inicio() {
         </Numero>
       </div>
 
-      <section className="cartao">
-        <h2>Para entregar</h2>
-        <p>{`${plural(paraEntregar.gmn, 'GMN pendente', 'GMN pendentes')} · ${plural(paraEntregar.placas, 'venda de placas a receber', 'vendas de placas a receber')}`}</p>
-        {paraEntregar.itens.length > 0 && (
-          <ul className="lista">
-            {paraEntregar.itens.map((item) => (
-              <li key={item.projeto_id}>
-                <Link to={paginaDoServico(item)}>{`${item.cliente_nome} — ${ROTULO_ENTREGA[item.servico]}`}</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <Graficos />
 
-      <div className="grade-2">
-        <ColunaTarefas titulo="Projetos reais" projetos={tarefasPorProjeto.reais} />
-        <ColunaTarefas titulo="Projetos fictícios" projetos={tarefasPorProjeto.ficticios} />
+      <div className="grade-2 inicio__trabalho">
+        <Entregas projetos={tarefasPorProjeto.reais} paraEntregar={paraEntregar} />
+        <Divulgacao pendentes={divulgacao} ficticios={tarefasPorProjeto.ficticios} />
       </div>
-
-      <section className="cartao">
-        <h2>Próximos 7 dias</h2>
-        {proximos.length ? (
-          <table className="tabela">
-            <tbody>
-              {proximos.map((item) => (
-                <tr key={`${item.tipo}-${item.id}`}>
-                  <td className={item.atrasado ? 'item-atrasado' : undefined}>
-                    {formatarData(item.data)}{item.atrasado && <> · <span>atrasado</span></>}
-                  </td>
-                  <td><span className="etiqueta">{ROTULO_ITEM[item.tipo]}</span></td>
-                  <td><Link to={destino(item)}>{item.titulo}</Link></td>
-                  <td className="vazio">{item.contexto}</td>
-                  <td className="num">{item.valor_centavos ? formatarDinheiro(item.valor_centavos) : ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : <p className="vazio">Nada para os próximos 7 dias.</p>}
-      </section>
     </section>
   );
 }

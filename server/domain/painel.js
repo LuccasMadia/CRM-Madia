@@ -1,29 +1,3 @@
-import { somarDias } from './datas.js';
-
-export function montarProximos({ tarefas = [], parcelas = [], entregas = [], conteudos = [] }, hoje, dias = 7) {
-  const limite = somarDias(hoje, dias);
-  const itens = [
-    ...tarefas.map((t) => ({
-      tipo: 'tarefa', id: t.id, projeto_id: t.projeto_id, titulo: t.texto, contexto: t.projeto_titulo, data: t.prazo,
-    })),
-    ...parcelas.map((p) => ({
-      tipo: 'parcela', id: p.id, projeto_id: p.projeto_id, titulo: p.descricao || 'Parcela',
-      contexto: p.projeto_titulo, data: p.vencimento, valor_centavos: p.valor_centavos,
-      servico: p.servico, cliente_id: p.cliente_id,
-    })),
-    ...entregas.map((e) => ({
-      tipo: 'entrega', id: e.id, projeto_id: e.id, titulo: e.titulo, contexto: e.cliente_nome, data: e.prazo_entrega,
-    })),
-    ...conteudos.map((c) => ({
-      tipo: 'conteudo', id: c.id, projeto_id: c.projeto_id ?? null, titulo: c.titulo, contexto: 'Instagram', data: c.data_planejada,
-    })),
-  ];
-  return itens
-    .filter((i) => i.data && i.data <= limite)
-    .map((i) => ({ ...i, atrasado: i.data < hoje }))
-    .sort((a, b) => a.data.localeCompare(b.data));
-}
-
 export function agruparTarefasPorProjeto(linhas) {
   const grupos = new Map();
   for (const l of linhas) {
@@ -40,18 +14,14 @@ export function agruparTarefasPorProjeto(linhas) {
   };
 }
 
-export function montarTarefasDivulgacao(linhas) {
-  return linhas.flatMap((p) => {
-    const itens = [];
-    if (!p.postou_instagram) itens.push('Postar no Instagram');
-    if (!p.portfolio_publicado) itens.push('Publicar no portfólio');
-    return itens.map((texto) => ({
-      id: `divulgacao-${p.id}-${texto}`,
-      texto,
-      prazo: null,
+// Um item por projeto entregue, com os canais onde ele ainda não foi mostrado.
+export function montarDivulgacao(linhas) {
+  return linhas
+    .map((p) => ({
       projeto_id: p.id,
       projeto_titulo: p.titulo,
-      ficticio: p.ficticio,
-    }));
-  });
+      ficticio: Boolean(p.ficticio),
+      falta: [!p.postou_instagram && 'instagram', !p.portfolio_publicado && 'portfolio'].filter(Boolean),
+    }))
+    .filter((p) => p.falta.length);
 }
