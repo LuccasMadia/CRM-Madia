@@ -104,6 +104,13 @@ describe('conteudos', () => {
     expect(ok.body.midias[0]).toMatchObject({ tipo: 'video', largura: null });
   });
 
+  it('11 arquivos de uma vez devolvem 400 com a mensagem do limite', async () => {
+    const c = (await criar({ titulo: 'A', tipo: 'carrossel' })).body;
+    const imagem = await png();
+    const res = await enviarMidias(c.id, Array.from({ length: 11 }, () => imagem)).expect(400);
+    expect(res.body).toEqual({ erro: 'Envie no máximo 10 mídias por vez.' });
+  });
+
   it('rejeita imagem em reels e não deixa arquivo no disco', async () => {
     const reels = (await criar({ titulo: 'R', tipo: 'reels' })).body;
     const res = await enviarMidias(reels.id, [await png()]).expect(400);
