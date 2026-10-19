@@ -9,6 +9,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { CadastroLista } from './config/CadastroLista.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { ConexaoInstagram } from './config/ConexaoInstagram.jsx';
+import { ConexaoVercel } from './config/ConexaoVercel.jsx';
 
 export function Config() {
   const { dados: config, erro } = useCarregar(() => api('/config'), []);
@@ -17,6 +18,7 @@ export function Config() {
       <header className="pagina__topo"><h1>Configurações</h1></header>
       <Aviso erro={erro} />
       <ConexaoInstagram />
+      <ConexaoVercel />
       {config && <Repositorio inicial={config} />}
       <CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />
       <CadastroLista titulo="Nichos" caminho="/nichos" rotuloNovo="Novo nicho" />

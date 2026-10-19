@@ -123,8 +123,27 @@ describe('SitesSistemas', () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [{ ...antigo, valor_total_centavos: 0 }], 'GET /clientes': [] });
     abrir();
     const linhas = await screen.findAllByRole('row');
-    expect(within(linhas[1]).getByText('—')).toBeInTheDocument();
+    const celulas = within(linhas[1]).getAllByRole('cell');
+    expect(celulas[celulas.length - 1]).toHaveTextContent('—');
     expect(within(linhas[1]).queryByText(/R$/)).toBeNull();
+  });
+
+  it('coluna No ar mostra a bolinha do status e travessão sem hospedagem', async () => {
+    mockApi({
+      'GET /projetos?servico=site_sistema': [antigo, recente],
+      'GET /clientes': [],
+      'GET /hospedagem/status': [
+        { projeto_id: 1, tipo: 'vercel', status: 'fora_do_ar', status_desde: '2026-10-19T17:00:00.000Z' },
+        { projeto_id: 2, tipo: 'sem_hospedagem', status: 'desconhecido', status_desde: null },
+      ],
+    });
+    abrir();
+    const linhas = await screen.findAllByRole('row');
+    expect(screen.getByRole('columnheader', { name: 'No ar' })).toBeInTheDocument();
+    await within(linhas[2]).findByRole('img', { name: 'Fora do ar' });
+    expect(within(linhas[2]).getByText(/^Fora do ar desde \d{2}\/\d{2} \d{2}:\d{2}$/)).toBeInTheDocument();
+    expect(within(linhas[1]).queryByRole('img', { name: /ar$/ })).toBeNull();
+    expect(within(linhas[1]).getAllByText('—').length).toBeGreaterThan(0);
   });
 
   it('clicar em qualquer parte da linha abre o projeto', async () => {

@@ -116,6 +116,24 @@ describe('Projeto', () => {
     expect(put.corpo).not.toHaveProperty('categorias');
   });
 
+  it('a aba Hospedagem aparece para site e abre a tela', async () => {
+    mockApi(rotasBase({
+      'GET /projetos/5/hospedagem': { hospedagem: null, pausas: [], cobranca: null },
+      'GET /vercel/projetos': [],
+      'GET /vercel/estado': { conectado: true, prazo_dias: 7 },
+    }));
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    await userEvent.setup().click(await screen.findByRole('tab', { name: 'Hospedagem' }));
+    expect(await screen.findByLabelText('Endereço do site')).toBeInTheDocument();
+  });
+
+  it('a aba Hospedagem não aparece para GMN', async () => {
+    mockApi(rotasBase({ 'GET /projetos/5': { ...projetoExemplo, titulo: 'GMN Ana', servico: 'google_meu_negocio', categorias: [] } }));
+    renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
+    await screen.findByRole('heading', { name: 'GMN Ana' });
+    expect(screen.queryByRole('tab', { name: 'Hospedagem' })).toBeNull();
+  });
+
   it('a frase da 1ª mensalidade segue o modo escolhido', async () => {
     mockApi(rotasBase());
     renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });

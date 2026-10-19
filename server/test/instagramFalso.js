@@ -9,7 +9,7 @@ export function fetchFalso(rotas) {
     const metodo = (init.method ?? 'GET').toUpperCase();
     const corpoEnviado = init.body === undefined ? null : Object.fromEntries(new URLSearchParams(String(init.body)));
     chamadas.push(url);
-    requisicoes.push({ url, metodo, corpo: corpoEnviado });
+    requisicoes.push({ url, metodo, corpo: corpoEnviado, headers: init.headers ?? {} });
     const caminho = url.hostname === 'graph.instagram.com' ? url.pathname : url.href;
     const chave = `${metodo} ${caminho}` in rotas ? `${metodo} ${caminho}` : caminho;
     let r = rotas[chave];

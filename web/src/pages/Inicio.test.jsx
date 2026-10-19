@@ -44,7 +44,7 @@ describe('Inicio', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-23T12:00:00'));
     try {
-      mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] },
+      mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] },
         'GET /painel': {
           ...PAINEL_VAZIO,
           cartoes: {
@@ -93,7 +93,7 @@ describe('Inicio', () => {
   });
 
   it('mostra mensagens quando não há nada pendente', async () => {
-    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /painel': PAINEL_VAZIO });
+    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] }, 'GET /painel': PAINEL_VAZIO });
     renderizar(<Inicio />);
     expect(await screen.findByText('Nenhum GMN pendente.')).toBeInTheDocument();
     expect(screen.getByText('Nenhuma placa pendente.')).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('Inicio', () => {
   });
 
   it('mostra GMN e placas a entregar em grupos separados', async () => {
-    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] },
+    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] },
       'GET /painel': {
         ...PAINEL_VAZIO,
         para_entregar: {
@@ -124,7 +124,7 @@ describe('Inicio', () => {
   });
 
   it('mostra os 4 gráficos com os dados do painel', async () => {
-    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS });
+    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);
     expect(await screen.findByRole('heading', { name: 'Funil de oportunidades' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Faturamento por serviço' })).toBeInTheDocument();
@@ -137,13 +137,13 @@ describe('Inicio', () => {
   });
 
   it('com tudo zerado mostra "Ainda sem dados" nos 4 gráficos', async () => {
-    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS_VAZIOS });
+    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS_VAZIOS });
     renderizar(<Inicio />);
     expect(await screen.findAllByText('Ainda sem dados')).toHaveLength(4);
   });
 
   it('erro nos gráficos não esconde o resto da Início', async () => {
-    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': resposta(500, { erro: 'Falhou' }) });
+    mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': resposta(500, { erro: 'Falhou' }) });
     renderizar(<Inicio />);
     expect(await screen.findByText('Tudo divulgado.')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toBeInTheDocument();

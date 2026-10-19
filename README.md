@@ -43,6 +43,16 @@ Os dados ficam em `data/` (`crm.db` e `uploads/`), que é ignorada pelo git. Fa�
 
 Em **Configurações**, informe o caminho do clone local do repositório do portfólio. "Publicar" grava apenas `src/data/projects.json` e `public/projects/`; "Commitar e enviar" faz commit só desses caminhos e `git push` (a Vercel publica sozinha).
 
+## Sites no ar e corte por pagamento
+
+O CRM confere a cada 5 minutos se os sites cadastrados estão no ar e avisa no **Início** quando algum cai ou quando uma mensalidade atrasa.
+
+1. Em **Configurações → Vercel**, cole o token da Vercel (vercel.com → Account Settings → Tokens) e, se quiser, ajuste os dias entre avisar o cliente e tirar do ar.
+2. Em cada site (abra o projeto → aba **Hospedagem**), informe o endereço e escolha o projeto da Vercel. Sites instalados no cliente ficam como "Sem hospedagem".
+3. "Tirar do ar" e "Colocar no ar" só acontecem quando você clica e confirma; o CRM nunca pausa sozinho.
+
+A checagem e os avisos só rodam com o PC ligado e o CRM no ar (pm2).
+
 ## Instagram
 
 A tela **Conteúdo** mostra o grid real do seu Instagram (capas, números de cada post e crescimento de seguidores), com os posts planejados como "Pronto" aparecendo antes, como prévia. Quando um post sai no Instagram com a mesma legenda de um planejado, o CRM liga os dois sozinho.

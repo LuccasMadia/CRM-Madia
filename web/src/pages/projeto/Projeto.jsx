@@ -9,6 +9,7 @@ import { AbaGeral } from './AbaGeral.jsx';
 import { AbaTarefas } from './AbaTarefas.jsx';
 import { AbaFinanceiro } from './AbaFinanceiro.jsx';
 import { AbaDivulgacao } from './AbaDivulgacao.jsx';
+import { AbaHospedagem } from './AbaHospedagem.jsx';
 
 const ABAS = [
   ['geral', 'Visão geral'],
@@ -16,6 +17,7 @@ const ABAS = [
   ['financeiro', 'Financeiro'],
   ['divulgacao', 'Divulgação'],
 ];
+const ABA_HOSPEDAGEM = ['hospedagem', 'Hospedagem'];
 
 export function Projeto() {
   const { id } = useParams();
@@ -38,7 +40,7 @@ export function Projeto() {
         </div>
       </header>
       <div role="tablist" className="abas">
-        {ABAS.map(([chave, rotulo]) => (
+        {(projeto.servico === 'site_sistema' ? [...ABAS, ABA_HOSPEDAGEM] : ABAS).map(([chave, rotulo]) => (
           <button key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave} onClick={() => setAba(chave)}>
             {rotulo}
           </button>
@@ -49,6 +51,7 @@ export function Projeto() {
         {aba === 'tarefas' && <AbaTarefas projetoId={projeto.id} />}
         {aba === 'financeiro' && <AbaFinanceiro projeto={projeto} />}
         {aba === 'divulgacao' && <AbaDivulgacao projeto={projeto} />}
+        {aba === 'hospedagem' && <AbaHospedagem projeto={projeto} />}
       </div>
     </section>
   );
