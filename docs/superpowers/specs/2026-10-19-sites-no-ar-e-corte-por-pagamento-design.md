@@ -58,6 +58,7 @@ Sites fictícios do portfólio entram no monitoramento (são o que ele mostra pa
 - Guarda: estado atual, desde quando, último motivo da falha, hora da última checagem.
 - **Pausado por você** é um estado próprio, nunca vira alarme, e não é checado.
 - Volta sozinho para "no ar" na primeira checagem boa.
+- Antes de marcar "fora do ar", o CRM pergunta à Vercel se o projeto está pausado (ex.: pausado direto pelo painel da Vercel). Se estiver, marca "pausado" em vez de alarme. *(decisão do Claude)*
 
 ### 3. Aviso de mensalidade atrasada e corte
 
