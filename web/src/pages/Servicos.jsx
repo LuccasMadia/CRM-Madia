@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Icone } from '../components/Icone.jsx';
+import { formatarDinheiro } from '../lib/dinheiro.js';
 import { SitesSistemas } from './servicos/SitesSistemas.jsx';
 import { GoogleMeuNegocio } from './servicos/GoogleMeuNegocio.jsx';
 import { PlacasNfc } from './servicos/PlacasNfc.jsx';
@@ -20,14 +21,23 @@ const SERVICOS = [
   },
   {
     aba: 'placas', nome: 'Placas NFC', icone: 'nfc', servico: 'placas_nfc',
-    contar: (p) => p.etapa !== 'entregue', numero: (n) => `${n} a entregar`,
+    // Placas: o que importa é o dinheiro a receber e o que já está montado.
+    numero: (_, r) => [r.a_receber_centavos ? `${formatarDinheiro(r.a_receber_centavos)} a receber` : null, plural(r.montadas, 'montada', 'montadas')]
+      .filter(Boolean).join(' · '),
   },
 ];
+
+function textoDoCard(s, projetos, resumoServico) {
+  if (!s.contar) return resumoServico ? s.numero(0, resumoServico) : null;
+  const principal = s.numero(projetos.filter((p) => p.servico === s.servico && s.contar(p)).length);
+  return resumoServico?.a_receber_centavos ? `${principal} · ${formatarDinheiro(resumoServico.a_receber_centavos)} a receber` : principal;
+}
 
 export function Servicos() {
   const [params, setParams] = useSearchParams();
   const aba = SERVICOS.some((s) => s.aba === params.get('aba')) ? params.get('aba') : 'sites';
   const { dados: projetos } = useCarregar(() => api('/projetos'), []);
+  const { dados: resumo } = useCarregar(() => api('/servicos/resumo'), []);
 
   return (
     <section>
@@ -43,7 +53,7 @@ export function Servicos() {
             <span className="card-servico__icone"><Icone nome={s.icone} tamanho={22} /></span>
             <span className="card-servico__nome">{s.nome}</span>
             <span className="card-servico__numero">
-              {projetos && s.numero(projetos.filter((p) => p.servico === s.servico && s.contar(p)).length)}
+              {projetos && textoDoCard(s, projetos, resumo?.[s.servico])}
             </span>
           </button>
         ))}

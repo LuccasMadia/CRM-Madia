@@ -5,6 +5,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData } from '../../lib/datas.js';
+import { PainelReceber } from './PainelReceber.jsx';
 
 const configurado = (p) => p.etapa === 'entregue';
 
@@ -20,6 +21,7 @@ export function GoogleMeuNegocio() {
 
   return (
     <div>
+      <PainelReceber servico="google_meu_negocio" />
       <header className="pagina__topo">
         <div className="form--linha">
           <label className="campo">

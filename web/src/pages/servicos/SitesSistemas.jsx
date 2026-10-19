@@ -6,6 +6,7 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { Icone } from '../../components/Icone.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { PainelReceber } from './PainelReceber.jsx';
 
 // Rótulos curtos só para as pílulas do filtro.
 const FILTROS_ETAPA = [
@@ -46,6 +47,7 @@ export function SitesSistemas() {
 
   return (
     <div>
+      <PainelReceber servico="site_sistema" />
       <div className="filtros">
         <div className="pilulas" role="group" aria-label="Etapa">
           {FILTROS_ETAPA.map(([valor, rotulo]) => (
