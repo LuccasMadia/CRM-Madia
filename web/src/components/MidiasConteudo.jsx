@@ -11,6 +11,8 @@ export function MidiasConteudo({ conteudo, onMudou }) {
   const { erro, enviando, executar } = useEnvio();
   const midias = conteudo.midias ?? [];
   const base = `/conteudos/${conteudo.id}/midias`;
+  // Saindo ou já no Instagram: as mídias ficam só para ver.
+  const editavel = conteudo.estado !== 'publicando' && conteudo.estado !== 'publicado';
 
   const mudar = (chamada) => executar(async () => onMudou(await chamada()));
   const mensagem = erro && { message: erro.erros?.[0]?.mensagem ?? erro.message };
@@ -40,20 +42,22 @@ export function MidiasConteudo({ conteudo, onMudou }) {
               {m.tipo === 'video'
                 ? <video src={m.url} muted preload="metadata" />
                 : <img src={m.url} alt={`Mídia ${i + 1}`} />}
-              <span className="midias__acoes">
-                {i > 0 && (
-                  <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para antes: mídia ${i + 1}`} onClick={() => mover(i, -1)}>←</button>
-                )}
-                {i < midias.length - 1 && (
-                  <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para depois: mídia ${i + 1}`} onClick={() => mover(i, 1)}>→</button>
-                )}
-                <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Remover mídia ${i + 1}`} onClick={() => mudar(() => api(`${base}/${m.id}`, { method: 'DELETE' }))}>×</button>
-              </span>
+              {editavel && (
+                <span className="midias__acoes">
+                  {i > 0 && (
+                    <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para antes: mídia ${i + 1}`} onClick={() => mover(i, -1)}>←</button>
+                  )}
+                  {i < midias.length - 1 && (
+                    <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para depois: mídia ${i + 1}`} onClick={() => mover(i, 1)}>→</button>
+                  )}
+                  <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Remover mídia ${i + 1}`} onClick={() => mudar(() => api(`${base}/${m.id}`, { method: 'DELETE' }))}>×</button>
+                </span>
+              )}
             </li>
           ))}
         </ul>
       )}
-      {ehPc() ? (
+      {!editavel ? null : ehPc() ? (
         <>
           <label htmlFor="campo-midias">Adicionar mídias</label>
           <input

@@ -62,6 +62,14 @@ describe('MidiasConteudo', () => {
     expect(screen.getByText('Suba a mídia pelo PC.')).toBeInTheDocument();
   });
 
+  it.each(['publicando', 'publicado'])('em %s mostra as mídias sem botões de mover, remover nem envio', (estado) => {
+    render(<MidiasConteudo conteudo={conteudo({ estado })} onMudou={() => {}} />);
+    expect(screen.getByAltText('Mídia 1')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Adicionar mídias')).not.toBeInTheDocument();
+    expect(screen.queryByText('Suba a mídia pelo PC.')).not.toBeInTheDocument();
+  });
+
   it('mostra a mensagem do erro 400 do servidor', async () => {
     mockApi({ 'POST /conteudos/3/midias': resposta(400, { erros: [{ campo: 'midias', mensagem: 'Carrossel não aceita vídeo' }] }) });
     const onMudou = vi.fn();
