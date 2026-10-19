@@ -10,6 +10,8 @@ const mes = hojeISO().slice(0, 7);
 
 const projetos = [
   { id: 1, servico: 'site_sistema', etapa: 'andamento', cliente_id: 5, cliente_nome: 'Popy', titulo: 'Site Popy' },
+  { id: 4, servico: 'site_sistema', etapa: 'prototipo', cliente_id: 5, cliente_nome: 'Popy', titulo: 'App Popy' },
+  { id: 5, servico: 'site_sistema', etapa: 'teste', cliente_id: 5, cliente_nome: 'Popy', titulo: 'Loja Popy' },
   { id: 2, servico: 'site_sistema', etapa: 'entregue', data_entrega: `${mes}-01`, cliente_id: 6, cliente_nome: 'Dri', titulo: 'Loja Dri' },
   { id: 3, servico: 'site_sistema', etapa: 'entregue', data_entrega: '2020-01-01', cliente_id: 6, cliente_nome: 'Dri', titulo: 'Antigo' },
 ];
@@ -26,7 +28,8 @@ describe('PainelReceber — Sites e Sistemas', () => {
     renderizar(<PainelReceber servico="site_sistema" />);
     expect(await screen.findByText('R$ 1.000,00')).toBeInTheDocument();
     expect(screen.getByText('R$ 1.000,00').closest('.faixa-numeros')).not.toBeNull();
-    expect(screen.getByText('Em andamento').nextSibling).toHaveTextContent('1');
+    // em andamento = protótipo + versão final; em teste depende do cliente
+    expect(screen.getByText('Em andamento').nextSibling).toHaveTextContent('2');
     expect(screen.getByText('Entregues no mês').nextSibling).toHaveTextContent('1');
     const lista = screen.getByRole('region', { name: 'A receber' });
     const linhas = within(lista).getAllByRole('row').slice(1);

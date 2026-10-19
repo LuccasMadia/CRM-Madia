@@ -20,7 +20,7 @@ describe('aplicarRegrasProjeto', () => {
     });
   });
   it('não mexe em outras etapas', () => {
-    expect(aplicarRegrasProjeto(null, { etapa: 'proposta' }, '2026-09-23')).toEqual({ etapa: 'proposta' });
+    expect(aplicarRegrasProjeto(null, { etapa: 'valor_definido' }, '2026-09-23')).toEqual({ etapa: 'valor_definido' });
   });
 });
 

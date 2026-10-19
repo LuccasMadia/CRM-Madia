@@ -9,9 +9,9 @@ beforeEach(async () => {
 });
 
 describe('/api/projetos', () => {
-  it('cria com cliente existente, etapa padrão contato e valor 0', async () => {
+  it('cria com cliente existente, etapa padrão ideia e valor 0', async () => {
     const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201);
-    expect(res.body).toMatchObject({ titulo: 'Site', etapa: 'contato', valor_total_centavos: 0, cliente_nome: 'Ana' });
+    expect(res.body).toMatchObject({ titulo: 'Site', etapa: 'ideia', valor_total_centavos: 0, cliente_nome: 'Ana' });
   });
 
   it('cria junto com um cliente novo', async () => {
@@ -45,9 +45,9 @@ describe('/api/projetos', () => {
   });
 
   it('lista filtrando por etapa', async () => {
-    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', etapa: 'proposta' });
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', etapa: 'valor_definido' });
     await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' });
-    const res = await ctx.http.get('/api/projetos?etapa=proposta').expect(200);
+    const res = await ctx.http.get('/api/projetos?etapa=valor_definido').expect(200);
     expect(res.body.map((p) => p.titulo)).toEqual(['A']);
   });
 
@@ -345,13 +345,13 @@ describe('/api/projetos — tipo de serviço', () => {
   it('GMN nasce em andamento; etapa diferente na criação dá 400', async () => {
     const res = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', link_perfil: 'https://g.page/ana' }).expect(201);
     expect(res.body).toMatchObject({ servico: 'google_meu_negocio', etapa: 'andamento', link_perfil: 'https://g.page/ana' });
-    const erro = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', etapa: 'proposta' }).expect(400);
+    const erro = await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', etapa: 'valor_definido' }).expect(400);
     expect(erro.body.erros).toEqual([{ campo: 'etapa', mensagem: 'Etapa inválida para este serviço' }]);
   });
 
   it('GMN vai para entregue mas não para proposta', async () => {
     const gmn = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' })).body;
-    await ctx.http.put(`/api/projetos/${gmn.id}`).send({ etapa: 'proposta' }).expect(400);
+    await ctx.http.put(`/api/projetos/${gmn.id}`).send({ etapa: 'valor_definido' }).expect(400);
     const res = await ctx.http.put(`/api/projetos/${gmn.id}`).send({ etapa: 'entregue' }).expect(200);
     expect(res.body).toMatchObject({ etapa: 'entregue', data_entrega: '2026-09-23' });
   });
@@ -545,5 +545,30 @@ describe('/api/projetos — categorias, nicho e início da mensalidade', () => {
   it('ir para andamento preenche a data de início', async () => {
     const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
     expect((await ctx.http.put(`/api/projetos/${criado.id}`).send({ etapa: 'andamento' })).body.data_inicio).toBe('2026-09-23');
+  });
+});
+
+describe('/api/projetos — etapas do funil de sites', () => {
+  it('guarda protótipo pronto e a data de início do teste', async () => {
+    const p = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'App', etapa: 'prototipo' }).expect(201)).body;
+    expect(p).toMatchObject({ prototipo_pronto: 0, teste_inicio: null });
+    await ctx.http.put(`/api/projetos/${p.id}`).send({ prototipo_pronto: true }).expect(200);
+    const emTeste = (await ctx.http.put(`/api/projetos/${p.id}`).send({ etapa: 'teste', teste_inicio: '2026-09-20' }).expect(200)).body;
+    expect(emTeste).toMatchObject({ etapa: 'teste', prototipo_pronto: 1, teste_inicio: '2026-09-20' });
+  });
+
+  it('aceita todas as etapas novas e recusa as antigas', async () => {
+    for (const etapa of ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue', 'perdido']) {
+      await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: etapa, etapa }).expect(201);
+    }
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'x', etapa: 'contato' }).expect(400);
+  });
+
+  it('a lista diz quantas parcelas o projeto tem e quantas já foram pagas, sem mensalidades', async () => {
+    const p = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site', etapa: 'andamento' }).expect(201)).body;
+    await ctx.http.post(`/api/projetos/${p.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-09-10', pago_em: '2026-09-10' }).expect(201);
+    await ctx.http.post(`/api/projetos/${p.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-10-10' }).expect(201);
+    const [linha] = (await ctx.http.get('/api/projetos?servico=site_sistema').expect(200)).body;
+    expect(linha).toMatchObject({ parcelas_total: 2, parcelas_pagas: 1 });
   });
 });

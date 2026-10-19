@@ -20,7 +20,7 @@ const REGRAS_PROJETO = {
   cliente_id: { tipo: 'inteiro', obrigatorio: true },
   titulo: { tipo: 'texto', obrigatorio: true },
   descricao: { tipo: 'texto' },
-  etapa: { tipo: 'enum', valores: ETAPAS, padrao: 'contato' },
+  etapa: { tipo: 'enum', valores: ETAPAS, padrao: 'ideia' },
   valor_total_centavos: { tipo: 'inteiro', min: 0, padrao: 0 },
   desconto_centavos: { tipo: 'inteiro', min: 0, padrao: 0 },
   data_inicio: { tipo: 'data' },
@@ -37,6 +37,8 @@ const REGRAS_PROJETO = {
   nicho_id: { tipo: 'inteiro', min: 1 },
   mensalidade_inicio_modo: { tipo: 'enum', valores: MODOS_INICIO_MENSALIDADE },
   mensalidade_inicio_data: { tipo: 'data' },
+  prototipo_pronto: { tipo: 'bool', padrao: 0 },
+  teste_inicio: { tipo: 'data' },
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };

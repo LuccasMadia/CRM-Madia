@@ -128,3 +128,36 @@ describe('migration 017_categorias_nichos_mensalidade', () => {
     expect(() => db.prepare("INSERT INTO categorias (nome, criado_em, atualizado_em) VALUES ('site', 'x', 'x')").run()).toThrow(/UNIQUE/);
   });
 });
+
+describe('migration 019_etapas_funil_sites', () => {
+  it('troca as etapas antigas pelas novas sem apagar parcelas e tarefas', () => {
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys = ON;');
+    migrate(db, { ate: '018_placas_montagens_recebimento.sql' });
+    const t = '2026-10-01T00:00:00.000Z';
+    db.prepare('INSERT INTO clientes (id, nome, criado_em, atualizado_em) VALUES (1, ?, ?, ?)').run('Ana', t, t);
+    const projeto = db.prepare('INSERT INTO projetos (id, cliente_id, titulo, etapa, servico, criado_em, atualizado_em) VALUES (?, 1, ?, ?, ?, ?, ?)');
+    projeto.run(1, 'A', 'contato', 'site_sistema', t, t);
+    projeto.run(2, 'B', 'proposta', 'site_sistema', t, t);
+    projeto.run(3, 'C', 'andamento', 'site_sistema', t, t);
+    projeto.run(4, 'D', 'andamento', 'google_meu_negocio', t, t);
+    db.prepare('INSERT INTO parcelas (projeto_id, valor_centavos, vencimento, criado_em, atualizado_em) VALUES (2, 500, ?, ?, ?)').run('2026-10-10', t, t);
+    db.prepare('INSERT INTO tarefas (projeto_id, texto, criado_em, atualizado_em) VALUES (3, ?, ?, ?)').run('Fazer', t, t);
+
+    migrate(db);
+
+    expect(db.prepare('SELECT id, etapa, prototipo_pronto, teste_inicio FROM projetos ORDER BY id').all().map((r) => ({ ...r }))).toEqual([
+      { id: 1, etapa: 'ideia', prototipo_pronto: 0, teste_inicio: null },
+      { id: 2, etapa: 'valor_definido', prototipo_pronto: 0, teste_inicio: null },
+      { id: 3, etapa: 'andamento', prototipo_pronto: 0, teste_inicio: null },
+      { id: 4, etapa: 'andamento', prototipo_pronto: 0, teste_inicio: null },
+    ]);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM parcelas').get().n).toBe(1);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM tarefas').get().n).toBe(1);
+    expect(db.prepare('PRAGMA foreign_keys').get().foreign_keys).toBe(1);
+    expect(() => db.prepare("UPDATE projetos SET etapa = 'contato' WHERE id = 1").run()).toThrow(/CHECK/);
+    // a chave estrangeira dos filhos continua valendo depois da troca da tabela
+    expect(() => db.prepare('DELETE FROM projetos WHERE id = 2').run()).not.toThrow();
+    expect(db.prepare('SELECT COUNT(*) AS n FROM parcelas').get().n).toBe(0);
+  });
+});

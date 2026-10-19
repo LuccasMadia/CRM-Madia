@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { Funil } from './Funil.jsx';
 
 const etapas = [
-  { etapa: 'contato', quantidade: 24, percentual: 100 },
-  { etapa: 'proposta', quantidade: 12, percentual: 50 },
+  { etapa: 'ideia', quantidade: 24, percentual: 100 },
+  { etapa: 'valor_definido', quantidade: 12, percentual: 50 },
   { etapa: 'andamento', quantidade: 7, percentual: 29 },
   { etapa: 'entregue', quantidade: 5, percentual: 21 },
 ];
@@ -13,7 +13,7 @@ describe('Funil', () => {
   it('mostra quantidade, nome e percentual de cada etapa', () => {
     render(<Funil etapas={etapas} perdidos={0} />);
     expect(screen.getByRole('img', { name: 'Funil de oportunidades' })).toBeInTheDocument();
-    for (const texto of ['24', '12', '7', '5', 'Contato', 'Proposta enviada', 'Em andamento', 'Entregue', '100%', '50%', '29%', '21%']) {
+    for (const texto of ['24', '12', '7', '5', 'Ideia', 'Valor definido', 'Versão final', 'Entregue', '100%', '50%', '29%', '21%']) {
       expect(screen.getByText(texto)).toBeInTheDocument();
     }
     expect(screen.queryByText(/perdido/)).not.toBeInTheDocument();

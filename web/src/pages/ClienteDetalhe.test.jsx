@@ -19,7 +19,7 @@ describe('ClienteDetalhe', () => {
     expect(screen.getByRole('tab', { name: 'Google Meu Negócio (1)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Placas NFC (0)' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Site' })).toHaveAttribute('href', '/projetos/4');
-    expect(screen.getByText('Em andamento')).toBeInTheDocument();
+    expect(screen.getByText('Versão final')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Google Meu Negócio' })).not.toBeInTheDocument();
   });
 

@@ -20,10 +20,10 @@ const gmnConfigurado = {
 
 const placasPendente = { id: 8, servico: 'placas_nfc', etapa: 'andamento' };
 const placasEntregue = { id: 9, servico: 'placas_nfc', etapa: 'entregue' };
-const siteContato = { ...site, id: 2, etapa: 'contato' };
+const siteContato = { ...site, id: 2, etapa: 'ideia' };
 
 const rotas = {
-  'GET /projetos': [{ ...site, servico: 'site_sistema' }, siteContato, gmnPendente, gmnConfigurado, placasPendente, placasEntregue],
+  'GET /projetos': [{ ...site, servico: 'site_sistema' }, { ...site, id: 3, servico: 'site_sistema', etapa: 'prototipo' }, { ...site, id: 4, servico: 'site_sistema', etapa: 'teste' }, siteContato, gmnPendente, gmnConfigurado, placasPendente, placasEntregue],
   'GET /projetos?servico=site_sistema': [site],
   'GET /projetos?servico=google_meu_negocio': [gmnPendente, gmnConfigurado],
   'GET /clientes': [],
@@ -92,7 +92,7 @@ describe('Servicos', () => {
   it('cada aba mostra só a contagem do que está pendente, sem dinheiro', async () => {
     mockApi(rotas);
     abrir();
-    expect(await screen.findByLabelText('1 em andamento')).toHaveTextContent(/^1$/);
+    expect(await screen.findByLabelText('2 em andamento')).toHaveTextContent(/^2$/);
     expect(await screen.findByLabelText('1 pendente')).toHaveTextContent(/^1$/);
     expect(await screen.findByLabelText('2 vendas a receber')).toHaveTextContent(/^2$/);
     expect(screen.getByRole('tablist')).not.toHaveTextContent('R$');

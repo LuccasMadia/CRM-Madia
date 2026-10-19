@@ -6,13 +6,14 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { FaixaNumeros } from '../../components/FaixaNumeros.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO, diasDesde } from '../../lib/datas.js';
+import { ETAPAS_EM_ANDAMENTO } from '../../lib/rotulos.js';
 
 const entregueNoMes = (p) => p.etapa === 'entregue' && p.data_entrega?.slice(0, 7) === hojeISO().slice(0, 7);
 
 // Números de cada serviço, além do "A receber" que todos têm.
 const NUMEROS = {
   site_sistema: [
-    ['Em andamento', (p) => p.etapa === 'andamento'],
+    ['Em andamento', (p) => ETAPAS_EM_ANDAMENTO.includes(p.etapa)],
     ['Entregues no mês', entregueNoMes],
   ],
   google_meu_negocio: [

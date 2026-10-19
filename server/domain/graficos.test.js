@@ -11,31 +11,33 @@ describe('ultimosMeses', () => {
 
 describe('montarFunil', () => {
   it('conta cumulativo: cada projeto entra em todas as etapas até a dele', () => {
-    const r = montarFunil([site('contato'), site('proposta'), site('andamento'), site('entregue'), site('entregue')]);
+    const r = montarFunil([site('ideia'), site('valor_definido'), site('andamento'), site('entregue'), site('entregue')]);
     expect(r.etapas).toEqual([
-      { etapa: 'contato', quantidade: 5, percentual: 100 },
-      { etapa: 'proposta', quantidade: 4, percentual: 80 },
+      { etapa: 'ideia', quantidade: 5, percentual: 100 },
+      { etapa: 'apresentado', quantidade: 4, percentual: 80 },
+      { etapa: 'valor_definido', quantidade: 4, percentual: 80 },
+      { etapa: 'teste', quantidade: 3, percentual: 60 },
       { etapa: 'andamento', quantidade: 3, percentual: 60 },
       { etapa: 'entregue', quantidade: 2, percentual: 40 },
     ]);
     expect(r.perdidos).toBe(0);
   });
 
-  it('perdido conta só em contato e em perdidos', () => {
-    const r = montarFunil([site('perdido'), site('proposta')]);
-    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 1, 0, 0]);
+  it('perdido conta só em ideia e em perdidos', () => {
+    const r = montarFunil([site('perdido'), site('valor_definido')]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 1, 1, 0, 0, 0]);
     expect(r.perdidos).toBe(1);
   });
 
   it('só com perdidos não divide por zero', () => {
     const r = montarFunil([site('perdido'), site('perdido')]);
-    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 0, 0, 0]);
-    expect(r.etapas.map((e) => e.percentual)).toEqual([100, 0, 0, 0]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 0, 0, 0, 0, 0]);
+    expect(r.etapas.map((e) => e.percentual)).toEqual([100, 0, 0, 0, 0, 0]);
   });
 
   it('sem projetos fica tudo zero', () => {
     const r = montarFunil([]);
-    expect(r.etapas.map((e) => [e.quantidade, e.percentual])).toEqual([[0, 0], [0, 0], [0, 0], [0, 0]]);
+    expect(r.etapas.map((e) => [e.quantidade, e.percentual])).toEqual([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]);
     expect(r.perdidos).toBe(0);
   });
 
@@ -49,8 +51,13 @@ describe('montarFunil', () => {
   });
 
   it('arredonda o percentual', () => {
-    const r = montarFunil([site('contato'), site('contato'), site('proposta')]);
+    const r = montarFunil([site('ideia'), site('ideia'), site('valor_definido')]);
     expect(r.etapas[1].percentual).toBe(33);
+  });
+
+  it('protótipo é opcional: conta só como ideia', () => {
+    const r = montarFunil([site('prototipo'), site('teste')]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 1, 1, 1, 0, 0]);
   });
 });
 

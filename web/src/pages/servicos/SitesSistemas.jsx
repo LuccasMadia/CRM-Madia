@@ -1,19 +1,25 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Icone } from '../../components/Icone.jsx';
+import { Modal } from '../../components/Modal.jsx';
+import { FormOportunidade } from '../../components/FormOportunidade.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import { PainelReceber } from './PainelReceber.jsx';
+import { QuadroFunil } from './QuadroFunil.jsx';
 
 // Rótulos curtos só para as pílulas do filtro.
 const FILTROS_ETAPA = [
   ['', 'Ativos'],
-  ['contato', 'Contato'],
-  ['proposta', 'Proposta'],
-  ['andamento', 'Em andamento'],
+  ['ideia', 'Ideia'],
+  ['prototipo', 'Protótipo'],
+  ['apresentado', 'Apresentado'],
+  ['valor_definido', 'Valor definido'],
+  ['teste', 'Em teste'],
+  ['andamento', 'Versão final'],
   ['entregue', 'Entregue'],
   ['perdido', 'Perdidos'],
 ];
@@ -22,7 +28,7 @@ function Selo({ icone, rotulo }) {
   return <span className="selo-divulgacao" role="img" aria-label={rotulo} title={rotulo}><Icone nome={icone} tamanho={16} /></span>;
 }
 
-export function SitesSistemas() {
+function ListaSites() {
   const navegar = useNavigate();
   const [etapa, setEtapa] = useState('');
   const [clienteId, setClienteId] = useState('');
@@ -46,8 +52,7 @@ export function SitesSistemas() {
   }
 
   return (
-    <div>
-      <PainelReceber servico="site_sistema" />
+    <>
       <div className="filtros">
         <div className="pilulas" role="group" aria-label="Etapa">
           {FILTROS_ETAPA.map(([valor, rotulo]) => (
@@ -92,6 +97,72 @@ export function SitesSistemas() {
           </tbody>
         </table>
       ) : <p className="vazio">Nenhum projeto encontrado.</p>)}
+    </>
+  );
+}
+
+const CHAVE_VISAO = 'crm.sitesVisao';
+const VISOES = [['lista', 'Lista'], ['funil', 'Funil']];
+const ORIGENS = [['reais', 'Reais'], ['ficticios', 'Fictícios']];
+
+function visaoSalva() {
+  try {
+    return localStorage.getItem(CHAVE_VISAO) === 'funil' ? 'funil' : 'lista';
+  } catch {
+    return 'lista';
+  }
+}
+
+// O Funil é o mesmo conjunto de projetos visto em quadro; /funil e ?ver=funil abrem direto nele.
+export function SitesSistemas() {
+  const navegar = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const pedida = params.get('ver');
+  const visao = pedida === 'funil' || pedida === 'lista' ? pedida : visaoSalva();
+  const [origem, setOrigem] = useState('reais');
+  const [criando, setCriando] = useState(false);
+  const ficticio = visao === 'funil' && origem === 'ficticios';
+
+  function trocarVisao(nova) {
+    try {
+      localStorage.setItem(CHAVE_VISAO, nova);
+    } catch {
+      // sem armazenamento: a escolha vale só nesta visita
+    }
+    setParams({ aba: 'sites', ver: nova });
+  }
+
+  async function criar(dados) {
+    const projeto = await api('/projetos', { method: 'POST', body: dados });
+    navegar(`/projetos/${projeto.id}`);
+  }
+
+  return (
+    <div>
+      <PainelReceber servico="site_sistema" />
+      <div className="barra-visao">
+        <div className="segmentado" role="group" aria-label="Visão">
+          {VISOES.map(([chave, rotulo]) => (
+            <button key={chave} type="button" aria-pressed={visao === chave} onClick={() => trocarVisao(chave)}>{rotulo}</button>
+          ))}
+        </div>
+        {visao === 'funil' && (
+          <div role="tablist" className="pilulas" aria-label="Projetos">
+            {ORIGENS.map(([chave, rotulo]) => (
+              <button key={chave} role="tab" type="button" className="pilula" aria-selected={origem === chave} onClick={() => setOrigem(chave)}>
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        )}
+        <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Oportunidade</button>
+      </div>
+      {visao === 'funil' ? <QuadroFunil ficticio={ficticio} /> : <ListaSites />}
+      {criando && (
+        <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>
+          <FormOportunidade onSalvar={criar} ficticioFixo={ficticio} />
+        </Modal>
+      )}
     </div>
   );
 }

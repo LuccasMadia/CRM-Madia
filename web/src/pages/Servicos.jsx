@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Icone } from '../components/Icone.jsx';
+import { ETAPAS_EM_ANDAMENTO } from '../lib/rotulos.js';
 import { SitesSistemas } from './servicos/SitesSistemas.jsx';
 import { GoogleMeuNegocio } from './servicos/GoogleMeuNegocio.jsx';
 import { PlacasNfc } from './servicos/PlacasNfc.jsx';
@@ -12,7 +13,7 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 const SERVICOS = [
   {
     aba: 'sites', nome: 'Sites e Sistemas', icone: 'site',
-    contar: ({ projetos }) => projetos?.filter((p) => p.servico === 'site_sistema' && p.etapa === 'andamento').length,
+    contar: ({ projetos }) => projetos?.filter((p) => p.servico === 'site_sistema' && ETAPAS_EM_ANDAMENTO.includes(p.etapa)).length,
     rotulo: (n) => `${n} em andamento`,
   },
   {

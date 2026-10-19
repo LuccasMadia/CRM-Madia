@@ -87,7 +87,7 @@ describe('Projeto', () => {
   it('etapa é só leitura, com link para o Funil', async () => {
     mockApi(rotasBase());
     renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
-    expect(await screen.findByRole('link', { name: 'alterar no Funil' })).toHaveAttribute('href', '/funil');
+    expect(await screen.findByRole('link', { name: 'alterar no Funil' })).toHaveAttribute('href', '/servicos?aba=sites&ver=funil');
     expect(screen.queryByLabelText('Etapa')).toBeNull();
   });
 

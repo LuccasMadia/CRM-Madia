@@ -1,6 +1,7 @@
 import { somarMeses, mesDe } from './datas.js';
 
-export const ETAPAS_FUNIL = ['contato', 'proposta', 'andamento', 'entregue'];
+// Protótipo é opcional, então fica fora do gráfico e conta como ideia.
+export const ETAPAS_FUNIL = ['ideia', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
 export const SERVICOS_GRAFICO = ['site_sistema', 'google_meu_negocio', 'placas_nfc'];
 const NAO_INFORMADO = 'Não informado';
 const MAX_FATIAS = 4;
@@ -12,12 +13,12 @@ export function ultimosMeses(hoje, n) {
 
 export function montarFunil(projetos) {
   const sites = projetos.filter((p) => p.servico === 'site_sistema');
-  // Até que etapa o projeto chegou; perdido só conta como contato.
-  const alcance = (p) => (p.etapa === 'perdido' ? 0 : ETAPAS_FUNIL.indexOf(p.etapa));
-  const contato = sites.length;
+  // Até que etapa o projeto chegou; perdido e protótipo só contam como ideia.
+  const alcance = (p) => Math.max(0, ETAPAS_FUNIL.indexOf(p.etapa));
+  const total = sites.length;
   const etapas = ETAPAS_FUNIL.map((etapa, i) => {
     const quantidade = sites.filter((p) => alcance(p) >= i).length;
-    return { etapa, quantidade, percentual: contato ? Math.round((quantidade / contato) * 100) : 0 };
+    return { etapa, quantidade, percentual: total ? Math.round((quantidade / total) * 100) : 0 };
   });
   return { etapas, perdidos: sites.filter((p) => p.etapa === 'perdido').length };
 }

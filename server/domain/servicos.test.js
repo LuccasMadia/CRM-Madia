@@ -50,7 +50,7 @@ describe('errosDoServico', () => {
   const base = { etapa: undefined, ficticio: 0, tiposLinhas: null, criando: true };
 
   it('site aceita qualquer etapa e nenhuma linha de serviço', () => {
-    expect(errosDoServico({ ...base, servico: 'site_sistema', etapa: 'proposta', tiposLinhas: [] })).toEqual([]);
+    expect(errosDoServico({ ...base, servico: 'site_sistema', etapa: 'valor_definido', tiposLinhas: [] })).toEqual([]);
     expect(errosDoServico({ ...base, servico: 'site_sistema', tiposLinhas: ['placas_nfc'] }))
       .toEqual([{ campo: 'servicos', mensagem: 'Sites e sistemas não têm linhas de serviço' }]);
   });
@@ -59,7 +59,7 @@ describe('errosDoServico', () => {
     expect(errosDoServico({ ...base, servico: 'google_meu_negocio', etapa: 'entregue' }))
       .toEqual([{ campo: 'etapa', mensagem: 'Etapa inválida para este serviço' }]);
     expect(errosDoServico({ ...base, servico: 'google_meu_negocio', etapa: 'entregue', criando: false })).toEqual([]);
-    expect(errosDoServico({ ...base, servico: 'google_meu_negocio', etapa: 'proposta', criando: false }))
+    expect(errosDoServico({ ...base, servico: 'google_meu_negocio', etapa: 'valor_definido', criando: false }))
       .toEqual([{ campo: 'etapa', mensagem: 'Etapa inválida para este serviço' }]);
     expect(errosDoServico({ ...base, servico: 'google_meu_negocio', ficticio: 1 }))
       .toEqual([{ campo: 'ficticio', mensagem: 'Só sites e sistemas podem ser fictícios' }]);

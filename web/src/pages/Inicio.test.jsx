@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { Inicio } from './Inicio.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
@@ -9,15 +9,15 @@ vi.mock('recharts', async () => (await import('../test/mockRecharts.js')).rechar
 const PAINEL_VAZIO = {
   cartoes: { a_receber_mes_centavos: 0, atrasadas: { quantidade: 0, total_centavos: 0 }, em_andamento: 0, propostas: { quantidade: 0, total_centavos: 0 } },
   tarefas_por_projeto: { reais: [], ficticios: [] },
-  proximos: [],
+  divulgacao: [],
   para_entregar: { gmn: 0, placas: 0, itens: [] },
 };
 
 const GRAFICOS = {
   funil: {
     etapas: [
-      { etapa: 'contato', quantidade: 4, percentual: 100 },
-      { etapa: 'proposta', quantidade: 2, percentual: 50 },
+      { etapa: 'ideia', quantidade: 4, percentual: 100 },
+      { etapa: 'valor_definido', quantidade: 2, percentual: 50 },
       { etapa: 'andamento', quantidade: 1, percentual: 25 },
       { etapa: 'entregue', quantidade: 1, percentual: 25 },
     ],
@@ -40,63 +40,71 @@ const GRAFICOS_VAZIOS = {
 };
 
 describe('Inicio', () => {
-  it('mostra cartões e próximos itens, destacando atrasados', async () => {
-    mockApi({
-      'GET /painel': {
-        cartoes: {
-          a_receber_mes_centavos: 300000,
-          atrasadas: { quantidade: 1, total_centavos: 50000 },
-          em_andamento: 2,
-          propostas: { quantidade: 1, total_centavos: 800000 },
+  it('mostra os cartões, as entregas com prazo e a divulgação à parte', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-23T12:00:00'));
+    try {
+      mockApi({
+        'GET /painel': {
+          ...PAINEL_VAZIO,
+          cartoes: {
+            a_receber_mes_centavos: 300000,
+            atrasadas: { quantidade: 1, total_centavos: 50000 },
+            em_andamento: 2,
+            propostas: { quantidade: 1, total_centavos: 800000 },
+          },
+          tarefas_por_projeto: {
+            reais: [{ projeto_id: 10, projeto_titulo: 'Site A', tarefas: [
+              { id: 1, texto: 'Revisar', prazo: null },
+              { id: 2, texto: 'Mandar layout', prazo: '2026-09-30' },
+              { id: 3, texto: 'Cobrar conteúdo', prazo: '2026-09-20' },
+            ] }],
+            ficticios: [{ projeto_id: 20, projeto_titulo: 'Case em obra', tarefas: [{ id: 4, texto: 'Ajustar', prazo: null }] }],
+          },
+          divulgacao: [
+            { projeto_id: 30, projeto_titulo: 'Loja real', ficticio: false, falta: ['portfolio'] },
+            { projeto_id: 40, projeto_titulo: 'Case pronto', ficticio: true, falta: ['instagram', 'portfolio'] },
+          ],
         },
-        tarefas_por_projeto: {
-          reais: [{ projeto_id: 10, projeto_titulo: 'Site A', tarefas: [
-            { id: 1, texto: 'Revisar', prazo: null },
-            { id: 'divulgacao-10-Publicar no portfólio', texto: 'Publicar no portfólio', prazo: null },
-          ] }],
-          ficticios: [{ projeto_id: 20, projeto_titulo: 'Case fictício', tarefas: [{ id: 2, texto: 'Ajustar', prazo: '2026-09-30' }] }],
-        },
-        proximos: [
-          { tipo: 'parcela', id: 3, projeto_id: 5, titulo: 'Entrada', contexto: 'Site Ana', data: '2026-09-20', atrasado: true, valor_centavos: 50000 },
-          { tipo: 'conteudo', id: 4, projeto_id: null, titulo: 'Post case', contexto: 'instagram', data: '2026-09-25', atrasado: false },
-        ],
-      },
-    });
-    renderizar(<Inicio />);
-    expect(await screen.findByText(/3\.000,00/)).toBeInTheDocument();
-    expect(screen.getByText(/1 · R\$\s500,00/)).toBeInTheDocument(); // \s cobre o espaço não separável do Intl
-    expect(screen.getByRole('link', { name: 'Entrada' })).toHaveAttribute('href', '/projetos/5');
-    expect(screen.getByRole('link', { name: 'Post case' })).toHaveAttribute('href', '/conteudo');
-    expect(screen.getByText('atrasado')).toBeInTheDocument();
+      });
+      renderizar(<Inicio />);
+      expect(await screen.findByText(/3\.000,00/)).toBeInTheDocument();
+      expect(screen.getByText(/1 · R\$\s500,00/)).toBeInTheDocument(); // \s cobre o espaço não separável do Intl
 
-    expect(screen.getByRole('link', { name: 'Site A' })).toHaveAttribute('href', '/projetos/10');
-    expect(screen.getByText('Revisar')).toBeInTheDocument();
-    expect(screen.getByText('Publicar no portfólio')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Case fictício' })).toHaveAttribute('href', '/projetos/20');
-    expect(screen.getByText('Ajustar')).toBeInTheDocument();
+      const entregas = within(screen.getByRole('heading', { name: 'Entregas a clientes' }).closest('section'));
+      expect(entregas.getByRole('link', { name: 'Site A' })).toHaveAttribute('href', '/projetos/10');
+      expect(entregas.getByText('Revisar')).toBeInTheDocument();
+      expect(entregas.getByText('30/09/2026')).toBeInTheDocument();
+      expect(entregas.getByText('20/09/2026 · atrasada')).toHaveClass('item-atrasado');
+      expect(entregas.queryByText('Publicar no portfólio')).not.toBeInTheDocument();
 
-    expect(screen.queryByText(/Divulgação pendente/)).not.toBeInTheDocument();
+      const divulgacao = within(screen.getByRole('heading', { name: 'Divulgação e portfólio' }).closest('section'));
+      expect(divulgacao.getByRole('link', { name: 'Loja real' })).toHaveAttribute('href', '/projetos/30');
+      expect(divulgacao.getAllByText('Portfólio')).toHaveLength(2);
+      expect(divulgacao.getAllByText('Instagram')).toHaveLength(1);
+      expect(divulgacao.getAllByText('fictício')).toHaveLength(1);
+      expect(divulgacao.getByRole('link', { name: 'Case em obra' })).toHaveAttribute('href', '/projetos/20');
+      expect(divulgacao.getByText('Ajustar')).toBeInTheDocument();
+
+      expect(screen.queryByText(/Próximos 7 dias/)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('mostra mensagem quando não há nada nos próximos dias nem tarefas', async () => {
-    mockApi({
-      'GET /painel': {
-        cartoes: { a_receber_mes_centavos: 0, atrasadas: { quantidade: 0, total_centavos: 0 }, em_andamento: 0, propostas: { quantidade: 0, total_centavos: 0 } },
-        tarefas_por_projeto: { reais: [], ficticios: [] },
-        proximos: [],
-      },
-    });
+  it('mostra mensagens quando não há nada pendente', async () => {
+    mockApi({ 'GET /painel': PAINEL_VAZIO });
     renderizar(<Inicio />);
-    expect(await screen.findByText('Nada para os próximos 7 dias.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum GMN pendente.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma placa pendente.')).toBeInTheDocument();
+    expect(screen.getByText('Tudo divulgado.')).toBeInTheDocument();
     expect(screen.getAllByText('Nenhuma tarefa pendente.')).toHaveLength(2);
   });
 
-  it('mostra o que falta entregar e leva parcela de GMN ao perfil', async () => {
+  it('mostra GMN e placas a entregar em grupos separados', async () => {
     mockApi({
       'GET /painel': {
-        cartoes: { a_receber_mes_centavos: 0, atrasadas: { quantidade: 0, total_centavos: 0 }, em_andamento: 0, propostas: { quantidade: 0, total_centavos: 0 } },
-        tarefas_por_projeto: { reais: [], ficticios: [] },
-        proximos: [{ tipo: 'parcela', id: 3, projeto_id: 6, titulo: 'Pagamento', contexto: 'Google Meu Negócio', data: '2026-09-25', atrasado: false, valor_centavos: 20000, servico: 'google_meu_negocio', cliente_id: 1 }],
+        ...PAINEL_VAZIO,
         para_entregar: {
           gmn: 1, placas: 1,
           itens: [
@@ -107,10 +115,12 @@ describe('Inicio', () => {
       },
     });
     renderizar(<Inicio />);
-    expect(await screen.findByText('1 GMN pendente · 1 venda de placas a receber')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ana — Google Meu Negócio' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
-    expect(screen.getByRole('link', { name: 'Bruno — Placas NFC' })).toHaveAttribute('href', '/clientes/2?aba=placas');
-    expect(screen.getByRole('link', { name: 'Pagamento' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
+    expect(await screen.findByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/1?aba=gmn');
+    expect(screen.getByRole('link', { name: 'Bruno' })).toHaveAttribute('href', '/clientes/2?aba=placas');
+    expect(screen.getByRole('heading', { name: 'Google Meu Negócio' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Placas NFC' })).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma placa pendente.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '1 venda de placas a receber' })).toHaveAttribute('href', '/servicos?aba=placas&placas=vendas');
   });
 
   it('mostra os 4 gráficos com os dados do painel', async () => {
@@ -135,7 +145,7 @@ describe('Inicio', () => {
   it('erro nos gráficos não esconde o resto da Início', async () => {
     mockApi({ 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': resposta(500, { erro: 'Falhou' }) });
     renderizar(<Inicio />);
-    expect(await screen.findByText('Nada para os próximos 7 dias.')).toBeInTheDocument();
+    expect(await screen.findByText('Tudo divulgado.')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getAllByText('Nenhuma tarefa pendente.')).toHaveLength(2);
     expect(screen.queryByRole('heading', { name: 'Funil de oportunidades' })).not.toBeInTheDocument();

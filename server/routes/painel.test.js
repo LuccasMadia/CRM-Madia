@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { criarContexto } from '../test/contexto.js';
 
 describe('GET /api/painel', () => {
-  it('monta cartões e próximos 7 dias', async () => {
+  it('monta os cartões e não manda mais os próximos 7 dias', async () => {
     const ctx = criarContexto({ hoje: '2026-09-23' });
     const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
     const emAndamento = (await ctx.http.post('/api/projetos').send({
       cliente_id: cliente.id, titulo: 'Site', etapa: 'andamento', prazo_entrega: '2026-09-28',
     })).body;
-    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Proposta', etapa: 'proposta', valor_total_centavos: 80000 });
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Proposta', etapa: 'valor_definido', valor_total_centavos: 80000 });
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Testando', etapa: 'teste', valor_total_centavos: 20000 });
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Protótipo', etapa: 'prototipo', valor_total_centavos: 5000 });
     const parcelas = `/api/projetos/${emAndamento.id}/parcelas`;
     await ctx.http.post(parcelas).send({ valor_centavos: 1000, vencimento: '2026-09-10' });
     await ctx.http.post(parcelas).send({ valor_centavos: 2000, vencimento: '2026-09-30' });
@@ -19,13 +21,13 @@ describe('GET /api/painel', () => {
     expect(res.body.cartoes).toEqual({
       a_receber_mes_centavos: 3000,
       atrasadas: { quantidade: 1, total_centavos: 1000 },
-      em_andamento: 1,
-      propostas: { quantidade: 1, total_centavos: 80000 },
+      em_andamento: 2,
+      propostas: { quantidade: 2, total_centavos: 100000 },
     });
-    expect(res.body.proximos.map((i) => i.tipo)).toEqual(['parcela', 'conteudo', 'entrega', 'parcela']);
+    expect(res.body.proximos).toBeUndefined();
   });
 
-  it('ignora projetos fictícios nos cartões e nos próximos', async () => {
+  it('ignora projetos fictícios nos cartões', async () => {
     const ctx = criarContexto({ hoje: '2026-09-23' });
     const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
     await ctx.http.post('/api/projetos').send({
@@ -34,7 +36,7 @@ describe('GET /api/painel', () => {
     const ficticio = (await ctx.http.post('/api/projetos').send({
       cliente_id: cliente.id, titulo: 'Case fictício', etapa: 'andamento', prazo_entrega: '2026-09-28', ficticio: true,
     })).body;
-    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Proposta fictícia', etapa: 'proposta', valor_total_centavos: 80000, ficticio: true });
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Proposta fictícia', etapa: 'valor_definido', valor_total_centavos: 80000, ficticio: true });
     await ctx.http.post(`/api/projetos/${ficticio.id}/parcelas`).send({ valor_centavos: 5000, vencimento: '2026-09-10' });
     await ctx.http.post(`/api/projetos/${ficticio.id}/tarefas`).send({ texto: 'Revisar case', prazo: '2026-09-24' });
 
@@ -42,11 +44,9 @@ describe('GET /api/painel', () => {
     expect(res.body.cartoes.em_andamento).toBe(1);
     expect(res.body.cartoes.propostas).toEqual({ quantidade: 0, total_centavos: 0 });
     expect(res.body.cartoes.atrasadas).toEqual({ quantidade: 0, total_centavos: 0 });
-    expect(res.body.proximos.every((i) => i.titulo !== 'Case fictício' && i.titulo !== 'Revisar case')).toBe(true);
-    expect(res.body.proximos.some((i) => i.titulo === 'Site real')).toBe(true);
   });
 
-  it('agrupa tarefas por projeto (com e sem prazo) e lista divulgação pendente', async () => {
+  it('agrupa tarefas por projeto (com e sem prazo) e lista a divulgação pendente à parte', async () => {
     const ctx = criarContexto({ hoje: '2026-09-23' });
     const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
     const real = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site real', etapa: 'entregue' })).body;
@@ -62,18 +62,17 @@ describe('GET /api/painel', () => {
       { projeto_id: real.id, projeto_titulo: 'Site real', tarefas: [
         { id: expect.any(Number), texto: 'Com prazo', prazo: '2026-09-30' },
         { id: expect.any(Number), texto: 'Sem prazo', prazo: null },
-        { id: `divulgacao-${real.id}-Publicar no portfólio`, texto: 'Publicar no portfólio', prazo: null },
       ] },
     ]);
     expect(res.body.tarefas_por_projeto.ficticios).toEqual([
       { projeto_id: ficticio.id, projeto_titulo: 'Case fictício', tarefas: [
         { id: expect.any(Number), texto: 'Tarefa do case', prazo: null },
-        { id: `divulgacao-${ficticio.id}-Postar no Instagram`, texto: 'Postar no Instagram', prazo: null },
-        { id: `divulgacao-${ficticio.id}-Publicar no portfólio`, texto: 'Publicar no portfólio', prazo: null },
       ] },
     ]);
-    expect(res.body.proximos.some((i) => i.tipo === 'tarefa')).toBe(false);
-    expect(res.body.divulgacao_pendente).toBeUndefined();
+    expect(res.body.divulgacao).toEqual([
+      { projeto_id: real.id, projeto_titulo: 'Site real', ficticio: false, falta: ['portfolio'] },
+      { projeto_id: ficticio.id, projeto_titulo: 'Case fictício', ficticio: true, falta: ['instagram', 'portfolio'] },
+    ]);
   });
 
   it('conta só sites nos cartões, ignora GMN/placas na divulgação e lista o que falta entregar', async () => {
@@ -92,9 +91,7 @@ describe('GET /api/painel', () => {
       gmn: 1, placas: 0,
       itens: [{ projeto_id: gmn.id, cliente_id: ana.id, cliente_nome: 'Ana', servico: 'google_meu_negocio' }],
     });
-    const divulgacao = [...res.body.tarefas_por_projeto.reais].filter((p) => p.projeto_id === gmnPronto.id);
-    expect(divulgacao).toEqual([]);
-    expect(res.body.proximos.find((i) => i.tipo === 'parcela')).toMatchObject({ servico: 'google_meu_negocio', cliente_id: ana.id });
+    expect(res.body.divulgacao.filter((p) => p.projeto_id === gmnPronto.id)).toEqual([]);
   });
 });
 
@@ -120,7 +117,7 @@ describe('GET /api/painel/graficos', () => {
     await ctx.http.post('/api/clientes').send({ nome: 'Caio' });
 
     const entregue = novoProjeto(ctx, { clienteId: ana.id, titulo: 'Site', etapa: 'entregue' });
-    novoProjeto(ctx, { clienteId: ana.id, titulo: 'Proposta', etapa: 'proposta' });
+    novoProjeto(ctx, { clienteId: ana.id, titulo: 'Proposta', etapa: 'valor_definido' });
     novoProjeto(ctx, { clienteId: ana.id, titulo: 'Perdido', etapa: 'perdido' });
     const ficticio = novoProjeto(ctx, { clienteId: ana.id, titulo: 'Case', etapa: 'entregue', ficticio: 1 });
     const gmn = novoProjeto(ctx, { clienteId: ana.id, titulo: 'GMN', etapa: 'entregue', servico: 'google_meu_negocio' });
@@ -133,8 +130,10 @@ describe('GET /api/painel/graficos', () => {
     const res = await ctx.http.get('/api/painel/graficos').expect(200);
     expect(res.body.funil).toEqual({
       etapas: [
-        { etapa: 'contato', quantidade: 3, percentual: 100 },
-        { etapa: 'proposta', quantidade: 2, percentual: 67 },
+        { etapa: 'ideia', quantidade: 3, percentual: 100 },
+        { etapa: 'apresentado', quantidade: 2, percentual: 67 },
+        { etapa: 'valor_definido', quantidade: 2, percentual: 67 },
+        { etapa: 'teste', quantidade: 1, percentual: 33 },
         { etapa: 'andamento', quantidade: 1, percentual: 33 },
         { etapa: 'entregue', quantidade: 1, percentual: 33 },
       ],

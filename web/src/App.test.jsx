@@ -34,6 +34,14 @@ describe('App', () => {
     expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('endereço antigo /funil abre Sites e Sistemas na visão Funil', async () => {
+    mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /projetos?servico=site_sistema&ficticio=0': [] });
+    abrir('/funil');
+    expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('region', { name: 'Ideia' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Funil' })).toBeNull();
+  });
+
   it('endereço antigo /placas abre Serviços em Placas NFC', async () => {
     mockApi({});
     abrir('/placas');

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { linha } from '../repos/crud.js';
 import { gerarTodasMensalidades } from '../repos/mensalidades.js';
 import { aReceberNoMes, estadoParcela } from '../domain/financeiro.js';
-import { montarProximos, agruparTarefasPorProjeto, montarTarefasDivulgacao } from '../domain/painel.js';
+import { agruparTarefasPorProjeto, montarDivulgacao } from '../domain/painel.js';
 import { montarFunil, recebidoPorMes, agruparOrigens, faturamentoPorServico } from '../domain/graficos.js';
 import { vendasPlacasComoParcelas, repoPlacasMontagens, repoPlacasVendas, repoPlacasModelos } from '../repos/placas.js';
 import { montadasDoModelo } from '../domain/placas.js';
@@ -23,10 +23,10 @@ export function rotasPainel({ db, hoje }) {
       ...parcelasAbertas.filter((p) => estadoParcela(p, dia) === 'atrasada'),
       ...vendasAbertas.filter((v) => v.estado === 'atrasada'),
     ];
-    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa = 'proposta' AND ficticio = 0 AND servico = 'site_sistema'");
-    const entregas = todas(
-      `SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.etapa = 'andamento' AND p.ficticio = 0 AND p.servico = 'site_sistema'`,
+    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa IN ('apresentado', 'valor_definido', 'teste') AND ficticio = 0 AND servico = 'site_sistema'");
+    // Em andamento = protótipo + versão final: o que está nas mãos do Lucca, não do cliente.
+    const emAndamento = todas(
+      "SELECT id FROM projetos WHERE etapa IN ('prototipo', 'andamento') AND ficticio = 0 AND servico = 'site_sistema'",
     );
 
     const paraEntregar = todas(
@@ -43,7 +43,7 @@ export function rotasPainel({ db, hoje }) {
           quantidade: atrasadas.length,
           total_centavos: atrasadas.reduce((s, p) => s + p.valor_centavos, 0),
         },
-        em_andamento: entregas.length,
+        em_andamento: emAndamento.length,
         propostas: {
           quantidade: propostas.length,
           total_centavos: propostas.reduce((s, p) => s + p.valor_total_centavos, 0),
@@ -54,32 +54,21 @@ export function rotasPainel({ db, hoje }) {
         placas: vendasAbertas.length,
         itens: paraEntregar,
       },
-      tarefas_por_projeto: agruparTarefasPorProjeto([
-        ...todas(
+      tarefas_por_projeto: agruparTarefasPorProjeto(
+        todas(
           `SELECT t.id, t.texto, t.prazo, p.id AS projeto_id, p.titulo AS projeto_titulo, p.ficticio
            FROM tarefas t JOIN projetos p ON p.id = t.projeto_id
            WHERE t.concluida = 0 AND p.etapa <> 'perdido'
            ORDER BY p.prazo_entrega IS NULL, p.prazo_entrega, p.id, t.ordem, t.id`,
         ),
-        ...montarTarefasDivulgacao(
-          todas(
-            `SELECT p.id, p.titulo, p.ficticio, p.postou_instagram, COALESCE(pf.publicar, 0) AS portfolio_publicado
-             FROM projetos p LEFT JOIN portfolio pf ON pf.projeto_id = p.id
-             WHERE p.etapa = 'entregue' AND p.servico = 'site_sistema' AND (p.postou_instagram = 0 OR COALESCE(pf.publicar, 0) = 0)
-             ORDER BY p.titulo`,
-          ),
+      ),
+      divulgacao: montarDivulgacao(
+        todas(
+          `SELECT p.id, p.titulo, p.ficticio, p.postou_instagram, COALESCE(pf.publicar, 0) AS portfolio_publicado
+           FROM projetos p LEFT JOIN portfolio pf ON pf.projeto_id = p.id
+           WHERE p.etapa = 'entregue' AND p.servico = 'site_sistema' AND (p.postou_instagram = 0 OR COALESCE(pf.publicar, 0) = 0)
+           ORDER BY p.ficticio, p.titulo`,
         ),
-      ]),
-      proximos: montarProximos(
-        {
-          parcelas: parcelasAbertas,
-          entregas,
-          conteudos: todas(
-            `SELECT c.* FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id
-             WHERE c.midia_id IS NULL AND c.data_planejada IS NOT NULL AND (p.id IS NULL OR p.ficticio = 0)`,
-          ),
-        },
-        dia,
       ),
     });
   });

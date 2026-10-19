@@ -1,22 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Funil } from './Funil.jsx';
-import { mockApi, resposta } from '../test/mockApi.js';
-import { renderizar } from '../test/renderizar.jsx';
+import { SitesSistemas } from './SitesSistemas.jsx';
+import { mockApi as mockApiBase, resposta } from '../../test/mockApi.js';
+import { renderizar } from '../../test/renderizar.jsx';
+import { hojeISO } from '../../lib/datas.js';
+
+const somar = (iso, dias) => new Date(Date.parse(`${iso}T00:00:00Z`) + dias * 86400000).toISOString().slice(0, 10);
 
 const projetos = [
-  { id: 1, titulo: 'Site Ana', cliente_nome: 'Ana', etapa: 'contato', valor_total_centavos: 250000, prazo_entrega: '2026-10-01' },
+  { id: 1, titulo: 'Site Ana', cliente_nome: 'Ana', etapa: 'ideia', valor_total_centavos: 250000, prazo_entrega: '2026-10-01' },
   { id: 2, titulo: 'Loja antiga', cliente_nome: 'Bruno', etapa: 'perdido', valor_total_centavos: 0, prazo_entrega: null },
 ];
 
-const abrir = () => renderizar(<Funil />, { rota: '/funil', padrao: '/funil' });
+// O painel de a receber fica em cima nas duas visões.
+const mockApi = (rotas) => mockApiBase({ 'GET /parcelas?servico=site_sistema': [], 'GET /projetos?servico=site_sistema': [], ...rotas });
 
-describe('Funil', () => {
+const abrir = () => renderizar(<SitesSistemas />, { rota: '/servicos?aba=sites&ver=funil', padrao: '/servicos' });
+
+describe('Sites e Sistemas — visão Funil', () => {
   it('mostra cards por etapa e recolhe "Perdido"', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos });
     abrir();
-    const contato = await screen.findByRole('region', { name: 'Contato' });
+    const contato = await screen.findByRole('region', { name: 'Ideia' });
     expect(within(contato).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
     expect(within(contato).getByText(/2\.500,00/)).toBeInTheDocument();
     expect(screen.queryByText('Loja antiga')).not.toBeInTheDocument();
@@ -25,10 +31,10 @@ describe('Funil', () => {
   });
 
   it('muda a etapa pelo menu do card', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'proposta' } });
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'apresentado' } });
     abrir();
-    await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Site Ana'), 'proposta');
-    expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/1', corpo: { etapa: 'proposta' } });
+    await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Site Ana'), 'apresentado');
+    expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/1', corpo: { etapa: 'apresentado' } });
   });
 
   it('nova oportunidade: valor inválido não chama a API', async () => {
@@ -59,7 +65,7 @@ describe('Funil', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Site', etapa: 'contato', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' }, categorias: [1], nicho_id: null,
+      titulo: 'Site', etapa: 'ideia', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' }, categorias: [1], nicho_id: null,
     });
   });
 
@@ -70,7 +76,7 @@ describe('Funil', () => {
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
     await user.click(screen.getByLabelText('Projeto fictício (só portfólio)'));
     const opcoes = within(screen.getByLabelText('Etapa')).getAllByRole('option').map((o) => o.textContent);
-    expect(opcoes).toEqual(['Em andamento', 'Entregue']);
+    expect(opcoes).toEqual(['Versão final', 'Entregue']);
   });
 
   it('aba Fictícios carrega só fictícios e mostra colunas reduzidas', async () => {
@@ -79,13 +85,13 @@ describe('Funil', () => {
     ];
     mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'GET /projetos?servico=site_sistema&ficticio=1': ficticios });
     abrir();
-    await screen.findByRole('region', { name: 'Contato' });
+    await screen.findByRole('region', { name: 'Ideia' });
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
     expect(await screen.findByRole('link', { name: 'Case Padaria' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Contato' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Proposta enviada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Ideia' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Apresentado' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Perdido' })).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Em andamento' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Versão final' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Entregue' })).toBeInTheDocument();
   });
 
@@ -143,7 +149,7 @@ describe('Funil', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Site', etapa: 'contato', prazo_entrega: '', ficticio: false, cliente_id: 3,
+      titulo: 'Site', etapa: 'ideia', prazo_entrega: '', ficticio: false, cliente_id: 3,
       categorias: [4], nicho_id: 7, valor_total_centavos: 150000,
     });
   });
@@ -162,5 +168,54 @@ describe('Funil', () => {
     mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [{ ...projetos[0], cliente_id: 7 }] });
     abrir();
     expect(await screen.findByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/7');
+  });
+
+  it('protótipo: o card mostra se está pronto e alterna com um clique', async () => {
+    const proto = { id: 4, titulo: 'App Barbearia', cliente_id: 1, cliente_nome: 'Thiago', etapa: 'prototipo', prototipo_pronto: 0, valor_total_centavos: 0, prazo_entrega: null };
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [proto], 'PUT /projetos/4': { ...proto, prototipo_pronto: 1 } });
+    abrir();
+    const botao = await screen.findByRole('button', { name: 'Protótipo em construção' });
+    expect(botao).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.setup().click(botao);
+    await waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')).toMatchObject({ caminho: '/projetos/4', corpo: { prototipo_pronto: true } }));
+  });
+
+  it('em teste: sem data pede o início; com data mostra quanto falta ou que acabou', async () => {
+    const hoje = hojeISO();
+    const base = { cliente_id: 1, cliente_nome: 'Ana', etapa: 'teste', valor_total_centavos: 0, prazo_entrega: null };
+    const { chamadas } = mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': [
+        { ...base, id: 5, titulo: 'Sem data', teste_inicio: null },
+        { ...base, id: 6, titulo: 'Recente', teste_inicio: somar(hoje, -2) },
+        { ...base, id: 7, titulo: 'Antigo', teste_inicio: somar(hoje, -10) },
+      ],
+      'PUT /projetos/5': { ...base, id: 5, teste_inicio: hoje },
+    });
+    abrir();
+    const coluna = await screen.findByRole('region', { name: 'Em teste' });
+    expect(within(coluna).getByText('Faltam 5 dias')).toBeInTheDocument();
+    expect(within(coluna).getByText(/Teste acabou/)).toHaveClass('etiqueta--atrasada');
+    const campo = within(coluna).getByLabelText('Início do teste de Sem data');
+    fireEvent.change(campo, { target: { value: hoje } });
+    await waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')).toMatchObject({ caminho: '/projetos/5', corpo: { teste_inicio: hoje } }));
+  });
+
+  it('versão final: selo de pagamento pelas parcelas', async () => {
+    const base = { cliente_id: 1, cliente_nome: 'Ana', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null };
+    mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': [
+        { ...base, id: 8, titulo: 'Quitado', parcelas_total: 2, parcelas_pagas: 2 },
+        { ...base, id: 9, titulo: 'Parte', parcelas_total: 2, parcelas_pagas: 1 },
+        { ...base, id: 10, titulo: 'Nada', parcelas_total: 1, parcelas_pagas: 0 },
+        { ...base, id: 11, titulo: 'Sem parcelas', parcelas_total: 0, parcelas_pagas: 0 },
+      ],
+    });
+    abrir();
+    const coluna = await screen.findByRole('region', { name: 'Versão final' });
+    const card = (titulo) => within(coluna).getByRole('link', { name: titulo }).closest('.kanban__card');
+    expect(within(card('Quitado')).getByText('Pago')).toHaveClass('etiqueta--entregue');
+    expect(within(card('Parte')).getByText('Pago em parte')).toBeInTheDocument();
+    expect(within(card('Nada')).getByText('Aguardando pagamento')).toBeInTheDocument();
+    expect(within(card('Sem parcelas')).getByText('Sem parcelas lançadas')).toBeInTheDocument();
   });
 });

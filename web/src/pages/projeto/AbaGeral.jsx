@@ -86,7 +86,7 @@ export function AbaGeral({ projeto, onSalvo }) {
     if (!window.confirm(`Excluir o projeto "${projeto.titulo}"? Parcelas, tarefas e dados do portfólio também serão excluídos.`)) return;
     executar(async () => {
       await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
-      navegar('/funil');
+      navegar('/servicos?aba=sites');
     });
   }
 
@@ -136,7 +136,7 @@ export function AbaGeral({ projeto, onSalvo }) {
         <section className="cartao">
           <p className="visao-geral__etapa">
             <span className={`etapa etapa--${projeto.etapa}`}>{ROTULO_ETAPA[projeto.etapa]}</span>
-            <Link to="/funil">alterar no Funil</Link>
+            <Link to="/servicos?aba=sites&ver=funil">alterar no Funil</Link>
           </p>
           <label className="campo--check">
             <input type="checkbox" checked={valores.postou_instagram} onChange={(e) => alterar({ postou_instagram: e.target.checked })} />

@@ -15,7 +15,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
   const { dados: categorias, erro: erroCategorias } = useCarregar(() => api('/categorias'), []);
   const { valores, campo, setValores } = useFormulario({
     titulo: '', cliente_id: clienteInicial ? String(clienteInicial) : '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
-    etapa: ficticioFixo ? 'andamento' : 'contato', ficticio: ficticioFixo,
+    etapa: ficticioFixo ? 'andamento' : 'ideia', ficticio: ficticioFixo,
   });
   const [categoriasMarcadas, setCategoriasMarcadas] = useState([]);
   const [nichoId, setNichoId] = useState('');
@@ -27,7 +27,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
     setValores((v) => ({
       ...v,
       ficticio: marcado,
-      etapa: marcado ? 'andamento' : 'contato',
+      etapa: marcado ? 'andamento' : 'ideia',
     }));
   }
 
