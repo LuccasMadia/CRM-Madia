@@ -5,8 +5,7 @@ import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Confirmacao } from '../../components/Confirmacao.jsx';
-import { formatarDinheiro } from '../../lib/dinheiro.js';
-import { formatarData } from '../../lib/datas.js';
+import { TextoCobranca } from '../../components/TextoCobranca.jsx';
 import { BolinhaStatus, textoStatus, dataHoraCurta } from '../../lib/hospedagem.js';
 
 function FormCadastro({ projetoId, hospedagem, projetosVercel, aoSalvar }) {
@@ -62,17 +61,6 @@ function FormCadastro({ projetoId, hospedagem, projetosVercel, aoSalvar }) {
       <div><button className="btn btn--primario" disabled={enviando}>Salvar</button></div>
     </form>
   );
-}
-
-function TextoCobranca({ cobranca, prazoDias }) {
-  const { fase } = cobranca;
-  const atraso = `Mensalidade de ${formatarDinheiro(cobranca.valor_centavos)} atrasada desde ${formatarData(cobranca.atrasada_desde)}`;
-  if (fase === 'atrasada') return <p>{atraso}</p>;
-  if (fase === 'avisado') return <p>Cliente avisado em {formatarData(cobranca.avisado_em)} — prazo até {formatarData(cobranca.prazo_ate)}</p>;
-  if (fase === 'prazo_vencido') return <p>Prazo de {prazoDias} dias venceu — tirar do ar?</p>;
-  if (fase === 'pausado_atrasado') return <p>{atraso}. O site já está fora do ar.</p>;
-  if (fase === 'pago_pausado') return <p>Pago — colocar no ar?</p>;
-  return null;
 }
 
 export function AbaHospedagem({ projeto }) {

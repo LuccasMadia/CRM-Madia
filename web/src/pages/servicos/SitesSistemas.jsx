@@ -8,6 +8,7 @@ import { Modal } from '../../components/Modal.jsx';
 import { FormOportunidade } from '../../components/FormOportunidade.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { BolinhaStatus } from '../../lib/hospedagem.js';
 import { PainelReceber } from './PainelReceber.jsx';
 import { QuadroFunil } from './QuadroFunil.jsx';
 
@@ -39,6 +40,8 @@ function ListaSites() {
 
   const { dados: projetos, erro } = useCarregar(() => api(`/projetos${consulta ? `?${consulta}` : ''}`), [consulta]);
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
+  const { dados: hospedagens } = useCarregar(() => api('/hospedagem/status'), []);
+  const hospedagemDe = (id) => (hospedagens ?? []).find((h) => h.projeto_id === id);
 
   const lista = (projetos ?? [])
     .filter((p) => etapa || p.etapa !== 'perdido')
@@ -77,7 +80,7 @@ function ListaSites() {
       {projetos && (lista.length ? (
         <table className="tabela tabela--limpa">
           <thead>
-            <tr><th>Projeto</th><th>Etapa</th><th>Divulgação</th><th className="num">Valor</th></tr>
+            <tr><th>Projeto</th><th>Etapa</th><th>Divulgação</th><th>No ar</th><th className="num">Valor</th></tr>
           </thead>
           <tbody>
             {lista.map((p) => (
@@ -91,6 +94,7 @@ function ListaSites() {
                   {Boolean(p.postou_instagram) && <Selo icone="instagram" rotulo="Postou no Instagram" />}
                   {Boolean(p.no_portfolio) && <Selo icone="portfolio" rotulo="No portfólio" />}
                 </td>
+                <td>{hospedagemDe(p.id)?.tipo === 'vercel' ? <BolinhaStatus status={hospedagemDe(p.id).status} /> : '—'}</td>
                 <td className="num tabela__valor">{p.valor_total_centavos ? formatarDinheiro(p.valor_total_centavos) : '—'}</td>
               </tr>
             ))}
