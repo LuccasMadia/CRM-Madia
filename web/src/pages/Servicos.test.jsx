@@ -44,7 +44,7 @@ describe('Servicos', () => {
   });
 
   it('a aba vem do endereço e trocar de aba atualiza o endereço', async () => {
-    mockApi({ ...rotas, 'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] } } });
+    mockApi({ ...rotas, 'GET /placas/resumo': { lucro_previsto_por_modelo: [], lucro_real_por_modelo: [], materiais: [], prejuizo_avarias: { total_centavos: 0, por_modelo: [] }, a_receber: { total_centavos: 0, vendas: [] }, montadas: [], mes: { vendidas: 0, lucro_centavos: 0 } } });
     abrir('/servicos?aba=gmn');
     expect(screen.getByRole('tab', { name: /Google Meu Negócio/ })).toHaveAttribute('aria-selected', 'true');
     await screen.findByRole('link', { name: 'Bruno' });

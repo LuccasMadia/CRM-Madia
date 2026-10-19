@@ -247,6 +247,14 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .painel-midia__numeros dt { color: var(--texto-suave); }
 .painel-midia__numeros dd { margin: 0; font-weight: 600; }
 .painel-midia__vinculo { display: grid; gap: 6px; margin: 0; }
+.painel-placas { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; margin-top: 12px; }
+.painel-placas .cartao-grafico__topo h2 { margin: 0; }
+.lista-montadas { list-style: none; margin: 0; padding: 0; display: grid; }
+.lista-montadas li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--borda); }
+.lista-montadas li:last-child { border-bottom: 0; }
+.lista-montadas small { display: block; font-size: 0.8rem; }
+.lista-montadas strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) { .painel-placas { grid-template-columns: 1fr; } }
 .lista-rascunhos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .lista-rascunhos li { display: flex; gap: 12px; align-items: baseline; }
 .lista-publicados { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }

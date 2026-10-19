@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useFormulario } from '../hooks/useFormulario.js';
@@ -19,6 +20,7 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
     comprador_nome: inicial.comprador_nome ?? '',
     data_venda: inicial.data_venda ?? hojeISO(),
   });
+  const [recebido, setRecebido] = useState(false);
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const compradorAvulso = valores.comprador === 'avulso';
 
@@ -46,6 +48,7 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
       cliente_id: compradorAvulso || !valores.comprador ? null : Number(valores.comprador),
       comprador_nome: compradorAvulso ? valores.comprador_nome : null,
       data_venda: valores.data_venda,
+      recebido,
     }));
   }
 
@@ -70,6 +73,9 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
         <Campo rotulo="Nome do comprador avulso" nome="comprador_nome" erros={erros} {...campo('comprador_nome')} />
       )}
       <Campo rotulo="Data da venda" nome="data_venda" erros={erros} type="date" {...campo('data_venda')} />
+      <label className="campo--check">
+        <input type="checkbox" checked={recebido} onChange={(e) => setRecebido(e.target.checked)} /> Já recebi
+      </label>
       <Aviso erro={erro} />
       <div><button className="btn btn--primario" disabled={enviando}>{rotuloBotao}</button></div>
     </form>
