@@ -15,11 +15,15 @@ function mensagemDoStatus(status) {
   return `A Vercel respondeu ${status}.`;
 }
 
-export function criarClienteVercel({ token, fetch = globalThis.fetch }) {
+export function criarClienteVercel({ token, fetch = globalThis.fetch, timeoutMs = 15_000 }) {
   async function requisitar(caminho, metodo = 'GET') {
     let resposta;
     try {
-      resposta = await fetch(`${BASE}${caminho}`, { method: metodo, headers: { Authorization: `Bearer ${token}` } });
+      resposta = await fetch(`${BASE}${caminho}`, {
+        method: metodo,
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
     } catch {
       throw new ErroVercel('Não foi possível falar com a Vercel. Verifique a internet.');
     }
@@ -33,8 +37,12 @@ export function criarClienteVercel({ token, fetch = globalThis.fetch }) {
   }
 
   async function listarProjetos() {
-    const { projects = [] } = await requisitar('/v10/projects?limit=100');
-    return projects.map((p) => ({ id: p.id, nome: p.name })).sort((a, b) => a.nome.localeCompare(b.nome));
+    // A API documenta duas formas: array puro ou { projects, pagination }.
+    const corpo = await requisitar('/v10/projects?limit=100');
+    const projects = Array.isArray(corpo) ? corpo : (corpo.projects ?? []);
+    return projects
+      .map((p) => ({ id: p.id, nome: p.name }))
+      .sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? ''));
   }
 
   const id = encodeURIComponent;

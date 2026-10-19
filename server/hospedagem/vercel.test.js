@@ -62,6 +62,37 @@ describe('cliente da Vercel', () => {
     expect(e500.message).toBe('A Vercel respondeu 500.');
   });
 
+  it('aceita a lista como array puro e projeto sem nome', async () => {
+    const { fetch } = fetchFalso({
+      [`${BASE}/v10/projects?limit=100`]: [{ id: 'prj_b', name: 'b' }, { id: 'prj_x' }],
+    });
+    const lista = await criarClienteVercel({ token: 'tok', fetch }).listarProjetos();
+    expect(lista.map((p) => p.id)).toEqual(['prj_x', 'prj_b']);
+  });
+
+  it('403 também é token inválido', async () => {
+    const { fetch } = fetchFalso({ [`${BASE}/v10/projects?limit=100`]: { status: 403, corpo: {} } });
+    const erro = await criarClienteVercel({ token: 'x', fetch }).listarProjetos().catch((e) => e);
+    expect(erro.tokenInvalido).toBe(true);
+  });
+
+  it('corpo de sucesso que não é JSON não quebra pausar', async () => {
+    const fetch = async () => new Response('ok', { status: 200 });
+    await expect(criarClienteVercel({ token: 'tok', fetch }).pausar('prj_1')).resolves.toBeUndefined();
+  });
+
+  it('manda um sinal de tempo limite e trata o estouro como sem rede', async () => {
+    let sinal;
+    const fetch = async (url, init) => {
+      sinal = init.signal;
+      throw new DOMException('timeout', 'TimeoutError');
+    };
+    const erro = await criarClienteVercel({ token: 'tok', fetch, timeoutMs: 50 }).estaPausado('prj_1').catch((e) => e);
+    expect(sinal).toBeInstanceOf(AbortSignal);
+    expect(erro.status).toBe(0);
+    expect(erro.message).toBe('Não foi possível falar com a Vercel. Verifique a internet.');
+  });
+
   it('sem rede vira status 0', async () => {
     const fetch = async () => { throw new TypeError('fetch failed'); };
     const erro = await criarClienteVercel({ token: 'tok', fetch }).listarProjetos().catch((e) => e);
