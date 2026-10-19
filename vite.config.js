@@ -27,7 +27,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg}'],
+        // Sem html no precache: senão o index.html servido do cache responde "/" e o
+        // start_url mesmo com a sessão do Access expirada, e o login nunca aparece.
+        globPatterns: ['**/*.{js,css,png,svg}'],
         // Navegações sempre tentam a rede: com a sessão do Cloudflare Access expirada,
         // a recarga precisa chegar ao login em vez de receber o index.html do cache.
         navigateFallback: null,
