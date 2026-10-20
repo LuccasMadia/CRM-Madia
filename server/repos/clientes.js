@@ -2,6 +2,7 @@ import { criarRepo, linha, emTransacao } from './crud.js';
 
 // `nome` é o nome da empresa; a pessoa de contato fica em `responsavel`.
 // `foto` só muda pelas rotas de foto; o PUT comum não a aceita.
+// `proprio` (o cliente que sou eu) só muda no banco, por isso não está nos campos.
 export const CAMPOS_CLIENTE = ['nome', 'responsavel', 'email', 'telefone', 'instagram', 'origem', 'notas', 'foto'];
 
 export function repoClientes(db) {
@@ -11,7 +12,7 @@ export function repoClientes(db) {
     buscar(termo = '') {
       const padrao = `%${termo.trim()}%`;
       return db
-        .prepare('SELECT * FROM clientes WHERE nome LIKE ? OR responsavel LIKE ? OR instagram LIKE ? OR email LIKE ? ORDER BY nome COLLATE NOCASE')
+        .prepare('SELECT * FROM clientes WHERE nome LIKE ? OR responsavel LIKE ? OR instagram LIKE ? OR email LIKE ? ORDER BY proprio DESC, nome COLLATE NOCASE')
         .all(padrao, padrao, padrao, padrao)
         .map(linha);
     },

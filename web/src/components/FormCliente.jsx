@@ -4,6 +4,7 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { FotoCliente } from './FotoCliente.jsx';
+import { arroba } from '../lib/instagram.js';
 
 const VAZIO = {
   nome: '', responsavel: '', email: '', telefone: '', instagram: '', origem: '', notas: '',
@@ -11,9 +12,10 @@ const VAZIO = {
 const ORIGENS = ['Indicação', 'Instagram', 'Site', 'Outro'];
 
 // onSalvar(dados, { foto, removerFoto }): a foto escolhida só é enviada quando o formulário é salvo.
+// O Instagram já começa com "@": basta digitar o perfil.
 export function FormCliente({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
   const { valores, campo } = useFormulario(
-    Object.fromEntries(Object.keys(VAZIO).map((k) => [k, inicial[k] ?? ''])),
+    { ...Object.fromEntries(Object.keys(VAZIO).map((k) => [k, inicial[k] ?? ''])), instagram: inicial.instagram || '@' },
   );
   const { erros, erro, enviando, executar } = useEnvio();
   const [foto, setFoto] = useState(null);
@@ -53,7 +55,7 @@ export function FormCliente({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) 
 
   function enviar(e) {
     e.preventDefault();
-    executar(() => onSalvar(valores, { foto, removerFoto: !foto && removerFoto && Boolean(inicial.foto) }));
+    executar(() => onSalvar({ ...valores, instagram: arroba(valores.instagram) }, { foto, removerFoto: !foto && removerFoto && Boolean(inicial.foto) }));
   }
 
   return (

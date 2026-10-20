@@ -7,6 +7,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
+import { LinkInstagram } from '../components/LinkInstagram.jsx';
 import { salvarFotoCliente } from '../lib/clientes.js';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { AbaSites } from './cliente/AbaSites.jsx';
@@ -35,7 +36,7 @@ export function ClienteDetalhe() {
   if (!cliente || !projetos) return <p>Carregando…</p>;
 
   const doServico = (servico) => projetos.filter((p) => p.servico === servico);
-  const contato = [cliente.responsavel, cliente.telefone, cliente.email, cliente.instagram].filter(Boolean).join(' · ');
+  const contato = [cliente.responsavel, cliente.telefone, cliente.email].filter(Boolean).join(' · ');
 
   async function salvar(dados, fotoEscolhida) {
     await api(`/clientes/${id}`, { method: 'PUT', body: dados });
@@ -66,7 +67,13 @@ export function ClienteDetalhe() {
           <div>
             <p className="sobretitulo"><Link to="/clientes">Clientes</Link></p>
             <h1>{cliente.nome || 'Sem empresa'}</h1>
-            {contato && <p className="vazio">{contato}</p>}
+            {(contato || cliente.instagram) && (
+              <p className="vazio">
+                {contato}
+                {contato && cliente.instagram && ' · '}
+                {cliente.instagram && <LinkInstagram instagram={cliente.instagram} />}
+              </p>
+            )}
             <p>Total faturado: <strong>{formatarDinheiro(cliente.total_faturado_centavos)}</strong></p>
           </div>
         </div>

@@ -102,4 +102,12 @@ describe('ClienteDetalhe', () => {
     await user.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(chamadas.some((c) => c.metodo === 'DELETE' && c.caminho === '/clientes/1/foto')).toBe(true));
   });
+
+  it('o Instagram do topo abre o perfil do cliente', async () => {
+    const rotas = rotasPerfil();
+    const cliente = rotas['GET /clientes/1'];
+    mockApi({ ...rotas, 'GET /clientes/1': { ...cliente, instagram: 'padariadaana' } });
+    abrir();
+    expect(await screen.findByRole('link', { name: '@padariadaana' })).toHaveAttribute('href', 'https://www.instagram.com/padariadaana/');
+  });
 });

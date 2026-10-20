@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Clientes } from './Clientes.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -14,7 +14,7 @@ describe('Clientes', () => {
     expect(await screen.findByRole('link', { name: 'Doces da Ana' })).toHaveAttribute('href', '/clientes/1');
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((c) => c.textContent).slice(0, 4)).toEqual(['Empresa', 'Responsável', 'Instagram', 'WhatsApp']);
-    expect(screen.getByText('@docesdaana')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '@docesdaana' })).toHaveAttribute('href', 'https://www.instagram.com/docesdaana/');
     expect(screen.getByText('67 99999-0000')).toBeInTheDocument();
     expect(screen.queryByText('ana@doces.com')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Buscar clientes'), { target: { value: 'doces' } });
@@ -48,6 +48,14 @@ describe('Clientes', () => {
     expect(await screen.findByRole('link', { name: 'Doces da Ana Ltda' })).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toMatchObject({ nome: 'Doces da Ana Ltda', responsavel: 'Ana Souza' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('o cliente próprio aparece marcado como "Você"', async () => {
+    mockApi({ 'GET /clientes?busca=': [{ id: 5, nome: 'Portfólio', proprio: 1 }, { ...ana, proprio: 0 }] });
+    renderizar(<Clientes />, { rota: '/clientes', padrao: '/clientes' });
+    const [linhaEu, linhaAna] = (await screen.findAllByRole('row')).slice(1);
+    expect(linhaEu).toHaveTextContent('Você');
+    expect(linhaAna).not.toHaveTextContent('Você');
   });
 
   it('cliente ainda sem empresa aparece como "Sem empresa"', async () => {
@@ -92,5 +100,43 @@ describe('Clientes', () => {
     await user.click(screen.getByRole('button', { name: 'Criar cliente' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.filter((c) => c.metodo === 'POST').map((c) => c.caminho)).toEqual(['/clientes', '/clientes/7/foto']);
+  });
+
+  it('Instagram já vem com @: basta digitar o perfil, e sem perfil vai vazio', async () => {
+    const { chamadas } = mockApi({ 'GET /clientes?busca=': [], 'POST /clientes': { ...ana, id: 7 } });
+    renderizar(<Clientes />, { rota: '/clientes', padrao: '/clientes' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Cliente' }));
+    const instagram = screen.getByLabelText('Instagram');
+    expect(instagram).toHaveValue('@');
+    await user.type(screen.getByLabelText('Empresa'), 'Doces da Ana');
+    await user.click(screen.getByRole('button', { name: 'Criar cliente' }));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo.instagram).toBe('');
+  });
+
+  it('digitando só o nome do perfil, salva com @', async () => {
+    const { chamadas } = mockApi({ 'GET /clientes?busca=': [], 'POST /clientes': { ...ana, id: 7 } });
+    renderizar(<Clientes />, { rota: '/clientes', padrao: '/clientes' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '+ Cliente' }));
+    await user.type(screen.getByLabelText('Empresa'), 'Doces da Ana');
+    await user.type(screen.getByLabelText('Instagram'), 'docesdaana');
+    await user.click(screen.getByRole('button', { name: 'Criar cliente' }));
+    expect(await screen.findByText('Outra página')).toBeInTheDocument();
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo.instagram).toBe('@docesdaana');
+  });
+
+  it('ao editar, mantém o Instagram que já existe e não duplica o @', async () => {
+    const { chamadas } = mockApi({ 'GET /clientes?busca=': [ana], 'PUT /clientes/1': (corpo) => ({ ...ana, ...corpo }) });
+    renderizar(<Clientes />, { rota: '/clientes', padrao: '/clientes' });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar Doces da Ana' }));
+    const instagram = screen.getByLabelText('Instagram');
+    expect(instagram).toHaveValue('@docesdaana');
+    await user.clear(instagram);
+    await user.type(instagram, '@@novo');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')?.corpo.instagram).toBe('@novo'));
   });
 });

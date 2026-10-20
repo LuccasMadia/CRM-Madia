@@ -7,6 +7,7 @@ import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { Icone } from '../components/Icone.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
+import { LinkInstagram } from '../components/LinkInstagram.jsx';
 import { salvarFotoCliente } from '../lib/clientes.js';
 
 export function Clientes() {
@@ -54,10 +55,11 @@ export function Clientes() {
                   <span className="cliente-nome">
                     <FotoCliente cliente={c} tamanho={32} />
                     <Link to={`/clientes/${c.id}`}>{c.nome || 'Sem empresa'}</Link>
+                    {c.proprio ? <span className="etiqueta etiqueta--andamento">Você</span> : null}
                   </span>
                 </td>
                 <td>{c.responsavel ?? '—'}</td>
-                <td>{c.instagram ?? '—'}</td>
+                <td><LinkInstagram instagram={c.instagram} /></td>
                 <td>{c.telefone ?? '—'}</td>
                 <td className="tabela__acoes">
                   <button

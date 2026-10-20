@@ -26,6 +26,16 @@ describe('/api/clientes', () => {
     expect(porInstagram.body.map((c) => c.nome)).toEqual(['Carla Bolos']);
   });
 
+  it('o cliente próprio (eu) vem sempre primeiro, e o PUT não muda isso', async () => {
+    await criarCliente({ nome: 'Ana Doces' });
+    const eu = await criarCliente({ nome: 'Portfólio' });
+    ctx.db.prepare('UPDATE clientes SET proprio = 1 WHERE id = ?').run(eu.id);
+    const lista = (await ctx.http.get('/api/clientes').expect(200)).body;
+    expect(lista.map((c) => [c.nome, c.proprio])).toEqual([['Portfólio', 1], ['Ana Doces', 0]]);
+    await ctx.http.put(`/api/clientes/${eu.id}`).send({ proprio: 0 }).expect(200);
+    expect((await ctx.http.get(`/api/clientes/${eu.id}`).expect(200)).body.proprio).toBe(1);
+  });
+
   it('exige o nome da empresa', async () => {
     const res = await ctx.http.post('/api/clientes').send({ responsavel: 'X' }).expect(400);
     expect(res.body.erros).toEqual([{ campo: 'nome', mensagem: 'Obrigatório' }]);
