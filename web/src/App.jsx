@@ -9,6 +9,7 @@ import { Projeto } from './pages/projeto/Projeto.jsx';
 import { Conteudo } from './pages/Conteudo.jsx';
 import { Portfolio } from './pages/Portfolio.jsx';
 import { Financeiro } from './pages/Financeiro.jsx';
+import { Ferramentas } from './pages/Ferramentas.jsx';
 import { Config } from './pages/Config.jsx';
 import { alternarValoresOcultos, useValoresOcultos } from './lib/privacidade.js';
 
@@ -43,6 +44,7 @@ export function App() {
           <Route path="/conteudo" element={<Conteudo />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/financeiro" element={<Financeiro />} />
+          <Route path="/ferramentas" element={<Ferramentas />} />
           <Route path="/configuracoes" element={<Config />} />
           <Route path="*" element={<p>Página não encontrada.</p>} />
         </Routes>

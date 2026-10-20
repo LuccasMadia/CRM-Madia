@@ -22,6 +22,7 @@ import { criarExecutorUnico } from './instagram/executor.js';
 import { criarMonitor } from './hospedagem/monitor.js';
 import { rotasHospedagem } from './routes/hospedagem.js';
 import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
+import { rotasFerramentas } from './routes/ferramentas.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
   const app = express();
@@ -41,6 +42,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api/projetos', rotasProjetos(ctx));
   app.use('/api/categorias', rotasCategorias(ctx));
   app.use('/api/nichos', rotasNichos(ctx));
+  app.use('/api/ferramentas', rotasFerramentas(ctx));
   app.use('/api', rotasParcelas(ctx));
   app.use('/api', rotasTarefas(ctx));
   app.use('/api', rotasConteudos(ctx));

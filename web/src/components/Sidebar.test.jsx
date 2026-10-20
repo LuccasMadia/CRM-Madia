@@ -20,7 +20,7 @@ describe('Sidebar', () => {
     const nav = screen.getByRole('navigation', { name: 'Principal' });
     expect(nav).toHaveClass('sidebar--recolhida');
     expect(screen.getByRole('link', { name: 'Clientes' })).toHaveAttribute('title', 'Clientes');
-    expect(nav.querySelectorAll('a svg')).toHaveLength(7);
+    expect(nav.querySelectorAll('a svg')).toHaveLength(8);
   });
 
   it('começa recolhida mesmo com uma escolha antiga salva', () => {
@@ -58,7 +58,7 @@ describe('Sidebar', () => {
   it('serviços ficam num item só, sem Projetos, Placas e QR Codes', () => {
     renderizarSidebar();
     const rotulos = screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'));
-    expect(rotulos).toEqual(['Início', 'Clientes', 'Serviços', 'Conteúdo', 'Portfólio', 'Financeiro', 'Configurações']);
+    expect(rotulos).toEqual(['Início', 'Clientes', 'Serviços', 'Conteúdo', 'Portfólio', 'Financeiro', 'Ferramentas', 'Configurações']);
     expect(screen.getByRole('link', { name: 'Serviços' })).toHaveAttribute('href', '/servicos');
   });
 
