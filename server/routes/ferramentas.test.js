@@ -9,13 +9,13 @@ beforeEach(() => {
 const listar = async (consulta = '') => (await ctx.http.get(`/api/ferramentas${consulta}`).expect(200)).body;
 
 describe('/api/ferramentas', () => {
-  it('já vem com a assinatura do Claude, valendo 0 até ser preenchida', async () => {
+  it('já vem com a assinatura do Claude', async () => {
     const { mes, ferramentas, total_mes_centavos } = await listar();
     expect(mes).toBe('2026-10');
     expect(ferramentas).toEqual([
-      expect.objectContaining({ nome: 'Claude', cobranca: 'mensalidade', valor_centavos: 0, cancelada_em: null, gasto_mes_centavos: 0 }),
+      expect.objectContaining({ nome: 'Claude', cobranca: 'mensalidade', valor_centavos: 11855, cancelada_em: null, gasto_mes_centavos: 11855 }),
     ]);
-    expect(total_mes_centavos).toBe(0);
+    expect(total_mes_centavos).toBe(11855);
   });
 
   it('cria mensalidade e créditos; créditos não guardam valor nem dia', async () => {

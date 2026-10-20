@@ -23,6 +23,6 @@ CREATE TABLE ferramentas_recargas (
 );
 CREATE INDEX idx_ferramentas_recargas_ferramenta ON ferramentas_recargas(ferramenta_id, data);
 
--- Valor fica 0 até o Lucca preencher o que vem na fatura.
+-- Valor que vem na fatura (R$ 118,55).
 INSERT INTO ferramentas (nome, cobranca, valor_centavos, criado_em, atualizado_em)
-  VALUES ('Claude', 'mensalidade', 0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+  VALUES ('Claude', 'mensalidade', 11855, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
