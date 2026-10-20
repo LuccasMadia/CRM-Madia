@@ -5,12 +5,11 @@ import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 
 export function FormFerramenta({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) {
-  const { valores, setValores, campo } = useFormulario({
+  const { valores, campo } = useFormulario({
     nome: inicial.nome ?? '',
     cobranca: inicial.cobranca ?? 'mensalidade',
     valor: centavosParaTexto(inicial.valor_centavos),
     dia_cobranca: inicial.dia_cobranca ?? '',
-    ativa: inicial.ativa ?? 1,
     observacao: inicial.observacao ?? '',
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
@@ -18,7 +17,7 @@ export function FormFerramenta({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
 
   function enviar(e) {
     e.preventDefault();
-    const dados = { nome: valores.nome, cobranca: valores.cobranca, ativa: Boolean(valores.ativa), observacao: valores.observacao };
+    const dados = { nome: valores.nome, cobranca: valores.cobranca, observacao: valores.observacao };
     if (mensalidade) {
       const valor = paraCentavos(valores.valor);
       if (valor === null || Number.isNaN(valor)) {
@@ -47,9 +46,6 @@ export function FormFerramenta({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
         </div>
       )}
       {mensalidade && <p className="form__ajuda">O valor em reais que vem na fatura.</p>}
-      <label className="campo--check">
-        <input type="checkbox" checked={Boolean(valores.ativa)} onChange={(e) => setValores((v) => ({ ...v, ativa: e.target.checked ? 1 : 0 }))} /> Ainda pago
-      </label>
       <Campo rotulo="Observação" nome="observacao" erros={erros}><textarea rows={2} {...campo('observacao')} /></Campo>
       <Aviso erro={erro} />
       <div><button className="btn btn--primario" disabled={enviando}>{rotuloBotao}</button></div>

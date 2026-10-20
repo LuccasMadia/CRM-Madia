@@ -13,6 +13,23 @@ const parcela = {
   valor_centavos: 150000, vencimento: '2026-09-10', estado: 'atrasada', servico: 'site_sistema', cliente_id: 1,
 };
 
+describe('Financeiro — abas', () => {
+  it('abre em Recebimentos e troca para Ferramentas', async () => {
+    const mesAtual = hojeISO().slice(0, 7);
+    mockApi({
+      'GET /parcelas': [],
+      [`GET /financeiro/mensal?ano=${ano}`]: meses,
+      [`GET /ferramentas?mes=${mesAtual}`]: { mes: mesAtual, ferramentas: [], total_mes_centavos: 0 },
+    });
+    renderizar(<Financeiro />);
+    expect(screen.getByRole('tab', { name: 'Recebimentos' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('Nenhuma parcela com esses filtros.')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Ferramentas' }));
+    expect(await screen.findByText('Nenhuma ferramenta cadastrada.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Estado')).not.toBeInTheDocument();
+  });
+});
+
 describe('Financeiro', () => {
   it('lista parcelas, total e recebido por mês; filtra por estado', async () => {
     const { chamadas } = mockApi({

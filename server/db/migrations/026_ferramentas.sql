@@ -6,7 +6,8 @@ CREATE TABLE ferramentas (
   -- Só para mensalidade: valor em reais que cai na fatura e dia do mês em que cobra.
   valor_centavos INTEGER,
   dia_cobranca INTEGER CHECK (dia_cobranca BETWEEN 1 AND 31),
-  ativa INTEGER NOT NULL DEFAULT 1,
+  -- Assinatura cancelada continua contando até o mês do cancelamento.
+  cancelada_em TEXT,
   observacao TEXT,
   criado_em TEXT NOT NULL,
   atualizado_em TEXT NOT NULL

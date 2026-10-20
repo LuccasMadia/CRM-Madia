@@ -1,13 +1,43 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { formatarData, hojeISO, nomeMes } from '../lib/datas.js';
 import { ROTULO_ESTADO_PARCELA, ROTULO_SERVICO, ABA_DO_SERVICO } from '../lib/rotulos.js';
+import { Ferramentas } from './financeiro/Ferramentas.jsx';
+
+const ABAS = [
+  { aba: 'recebimentos', nome: 'Recebimentos' },
+  { aba: 'ferramentas', nome: 'Ferramentas' },
+];
 
 export function Financeiro() {
+  const [params, setParams] = useSearchParams();
+  const aba = ABAS.some((a) => a.aba === params.get('aba')) ? params.get('aba') : 'recebimentos';
+
+  return (
+    <section>
+      <header className="pagina__topo">
+        <h1>Financeiro</h1>
+      </header>
+      <div role="tablist" className="abas">
+        {ABAS.map((a) => (
+          <button key={a.aba} role="tab" type="button" className="abas__aba" aria-selected={aba === a.aba} onClick={() => setParams({ aba: a.aba })}>
+            {a.nome}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel">
+        {aba === 'recebimentos' && <Recebimentos />}
+        {aba === 'ferramentas' && <Ferramentas />}
+      </div>
+    </section>
+  );
+}
+
+function Recebimentos() {
   const [estado, setEstado] = useState('');
   const [mes, setMes] = useState('');
   const [servico, setServico] = useState('');
@@ -27,29 +57,26 @@ export function Financeiro() {
 
   return (
     <section>
-      <header className="pagina__topo">
-        <h1>Financeiro</h1>
-        <div className="form--linha">
-          <label className="campo">
-            <span>Estado</span>
-            <select aria-label="Estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
-              <option value="">Todas</option>
-              {Object.entries(ROTULO_ESTADO_PARCELA).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
-            </select>
-          </label>
-          <label className="campo">
-            <span>Mês de vencimento</span>
-            <input type="month" aria-label="Mês de vencimento" value={mes} onChange={(e) => setMes(e.target.value)} />
-          </label>
-          <label className="campo">
-            <span>Serviço</span>
-            <select aria-label="Serviço" value={servico} onChange={(e) => setServico(e.target.value)}>
-              <option value="">Todos</option>
-              {Object.entries(ROTULO_SERVICO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
-            </select>
-          </label>
-        </div>
-      </header>
+      <div className="form--linha" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
+        <label className="campo">
+          <span>Estado</span>
+          <select aria-label="Estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
+            <option value="">Todas</option>
+            {Object.entries(ROTULO_ESTADO_PARCELA).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+          </select>
+        </label>
+        <label className="campo">
+          <span>Mês de vencimento</span>
+          <input type="month" aria-label="Mês de vencimento" value={mes} onChange={(e) => setMes(e.target.value)} />
+        </label>
+        <label className="campo">
+          <span>Serviço</span>
+          <select aria-label="Serviço" value={servico} onChange={(e) => setServico(e.target.value)}>
+            <option value="">Todos</option>
+            {Object.entries(ROTULO_SERVICO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+          </select>
+        </label>
+      </div>
       <Aviso erro={erro} />
 
       <section className="cartao">

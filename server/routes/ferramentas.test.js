@@ -13,7 +13,7 @@ describe('/api/ferramentas', () => {
     const { mes, ferramentas, total_mes_centavos } = await listar();
     expect(mes).toBe('2026-10');
     expect(ferramentas).toEqual([
-      expect.objectContaining({ nome: 'Claude', cobranca: 'mensalidade', valor_centavos: 0, ativa: 1, gasto_mes_centavos: 0 }),
+      expect.objectContaining({ nome: 'Claude', cobranca: 'mensalidade', valor_centavos: 0, cancelada_em: null, gasto_mes_centavos: 0 }),
     ]);
     expect(total_mes_centavos).toBe(0);
   });
@@ -21,7 +21,7 @@ describe('/api/ferramentas', () => {
   it('cria mensalidade e créditos; créditos não guardam valor nem dia', async () => {
     const mensal = (await ctx.http.post('/api/ferramentas')
       .send({ nome: ' Cursor ', cobranca: 'mensalidade', valor_centavos: 11000, dia_cobranca: 5 }).expect(201)).body;
-    expect(mensal).toMatchObject({ nome: 'Cursor', valor_centavos: 11000, dia_cobranca: 5, ativa: 1 });
+    expect(mensal).toMatchObject({ nome: 'Cursor', valor_centavos: 11000, dia_cobranca: 5, cancelada_em: null });
     const creditos = (await ctx.http.post('/api/ferramentas')
       .send({ nome: 'API OpenAI', cobranca: 'creditos', valor_centavos: 999, dia_cobranca: 3 }).expect(201)).body;
     expect(creditos).toMatchObject({ cobranca: 'creditos', valor_centavos: null, dia_cobranca: null });
@@ -36,10 +36,10 @@ describe('/api/ferramentas', () => {
       .toEqual([{ campo: 'dia_cobranca', mensagem: 'Deve ser no máximo 31' }]);
   });
 
-  it('total do mês soma mensalidades ativas e recargas do mês', async () => {
+  it('total do mês soma mensalidades não canceladas e recargas do mês', async () => {
     await ctx.http.put('/api/ferramentas/1').send({ valor_centavos: 11000 }).expect(200);
     const parada = (await ctx.http.post('/api/ferramentas').send({ nome: 'Midjourney', cobranca: 'mensalidade', valor_centavos: 5000 })).body;
-    await ctx.http.put(`/api/ferramentas/${parada.id}`).send({ ativa: false }).expect(200);
+    await ctx.http.post(`/api/ferramentas/${parada.id}/cancelar`).send({ data: '2026-09-10' }).expect(200);
     const api = (await ctx.http.post('/api/ferramentas').send({ nome: 'API OpenAI', cobranca: 'creditos' })).body;
     await ctx.http.post(`/api/ferramentas/${api.id}/recargas`).send({ data: '2026-10-02', valor_centavos: 10000 }).expect(201);
     await ctx.http.post(`/api/ferramentas/${api.id}/recargas`).send({ data: '2026-10-15', valor_centavos: 5000 }).expect(201);
@@ -51,7 +51,8 @@ describe('/api/ferramentas', () => {
     ]);
     expect(outubro.ferramentas.find((f) => f.nome === 'API OpenAI').ultima_recarga).toBe('2026-10-15');
     expect(outubro.total_mes_centavos).toBe(26000);
-    expect((await listar('?mes=2026-09')).total_mes_centavos).toBe(18000);
+    // Setembro: Claude + Midjourney (cancelada em setembro ainda conta) + recarga de setembro.
+    expect((await listar('?mes=2026-09')).total_mes_centavos).toBe(23000);
     await ctx.http.get('/api/ferramentas?mes=setembro').expect(400);
   });
 
@@ -66,6 +67,16 @@ describe('/api/ferramentas', () => {
       .toEqual([{ campo: 'valor_centavos', mensagem: 'Obrigatório' }]);
     expect((await ctx.http.post('/api/ferramentas/1/recargas').send({ data: '2026-10-01', valor_centavos: 1 }).expect(409)).body.erro)
       .toBe('Só ferramentas de créditos têm recargas');
+  });
+
+  it('cancela a assinatura hoje (ou na data dada) e reativa; créditos não se cancelam', async () => {
+    expect((await ctx.http.post('/api/ferramentas/1/cancelar').send({}).expect(200)).body.cancelada_em).toBe('2026-10-20');
+    expect((await ctx.http.post('/api/ferramentas/1/cancelar').send({}).expect(409)).body.erro).toBe('Assinatura já cancelada');
+    expect((await ctx.http.post('/api/ferramentas/1/reativar').expect(200)).body.cancelada_em).toBeNull();
+    await ctx.http.post('/api/ferramentas/1/cancelar').send({ data: '20/10' }).expect(400);
+    const api = (await ctx.http.post('/api/ferramentas').send({ nome: 'API OpenAI', cobranca: 'creditos' })).body;
+    expect((await ctx.http.post(`/api/ferramentas/${api.id}/cancelar`).send({}).expect(409)).body.erro).toBe('Só mensalidades podem ser canceladas');
+    await ctx.http.post('/api/ferramentas/99/cancelar').send({}).expect(404);
   });
 
   it('trocar para mensalidade exige valor; excluir leva as recargas junto', async () => {

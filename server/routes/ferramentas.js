@@ -9,7 +9,6 @@ const REGRAS = {
   cobranca: { tipo: 'enum', valores: ['mensalidade', 'creditos'], obrigatorio: true },
   valor_centavos: { tipo: 'inteiro', min: 0 },
   dia_cobranca: { tipo: 'inteiro', min: 1, max: 31 },
-  ativa: { tipo: 'bool' },
   observacao: { tipo: 'texto' },
 };
 
@@ -48,6 +47,26 @@ export function rotasFerramentas({ db, hoje }) {
     const atual = ferramentas.obter(id);
     if (!atual) throw naoEncontrado('Ferramenta');
     res.json(ferramentas.atualizar(id, ajustarCobranca(validar(req.body, REGRAS, { parcial: true }), atual)));
+  });
+
+  function exigirMensalidade(id) {
+    const ferramenta = ferramentas.obter(id);
+    if (!ferramenta) throw naoEncontrado('Ferramenta');
+    if (ferramenta.cobranca !== 'mensalidade') throw new ErroHttp(409, 'Só mensalidades podem ser canceladas');
+    return ferramenta;
+  }
+
+  r.post('/:id/cancelar', (req, res) => {
+    const id = lerId(req.params.id);
+    if (exigirMensalidade(id).cancelada_em) throw new ErroHttp(409, 'Assinatura já cancelada');
+    const { data } = validar(req.body, { data: { tipo: 'data' } });
+    res.json(ferramentas.atualizar(id, { cancelada_em: data ?? hoje() }));
+  });
+
+  r.post('/:id/reativar', (req, res) => {
+    const id = lerId(req.params.id);
+    exigirMensalidade(id);
+    res.json(ferramentas.atualizar(id, { cancelada_em: null }));
   });
 
   r.delete('/recargas/:id', (req, res) => {
