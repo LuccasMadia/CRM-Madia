@@ -13,11 +13,14 @@ import { formatarDinheiro } from '../lib/dinheiro.js';
 import { AbaSites } from './cliente/AbaSites.jsx';
 import { AbaGmn } from './cliente/AbaGmn.jsx';
 import { AbaPlacas } from './cliente/AbaPlacas.jsx';
+import { AbaOrcamentos } from './cliente/AbaOrcamentos.jsx';
 
+// O terceiro item é o serviço contado no rótulo; Orçamentos não tem serviço, então fica sem contagem.
 const ABAS = [
   ['sites', 'Sites e Sistemas', 'site_sistema'],
   ['gmn', 'Google Meu Negócio', 'google_meu_negocio'],
   ['placas', 'Placas NFC', 'placas_nfc'],
+  ['orcamentos', 'Orçamentos'],
 ];
 
 export function ClienteDetalhe() {
@@ -89,7 +92,7 @@ export function ClienteDetalhe() {
             key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave}
             onClick={() => setParams({ aba: chave })}
           >
-            {`${rotulo} (${doServico(servico).length})`}
+            {servico ? `${rotulo} (${doServico(servico).length})` : rotulo}
           </button>
         ))}
       </div>
@@ -97,6 +100,7 @@ export function ClienteDetalhe() {
         {aba === 'sites' && <AbaSites cliente={cliente} projetos={doServico('site_sistema')} />}
         {aba === 'gmn' && <AbaGmn cliente={cliente} projetos={doServico('google_meu_negocio')} onMudou={mudou} />}
         {aba === 'placas' && <AbaPlacas cliente={cliente} projetos={doServico('placas_nfc')} onMudou={mudou} />}
+        {aba === 'orcamentos' && <AbaOrcamentos cliente={cliente} />}
       </div>
       {editando && (
         <Modal titulo="Editar dados" onFechar={() => setEditando(false)}>

@@ -361,3 +361,38 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .status-site--fora_do_ar { background: var(--perigo); }
 .status-site--pausado { background: var(--texto-suave); }
 .status-linha { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; }
+
+/* Orçamento: montado ao vivo com o cliente, no PC ou no celular */
+.orcamento__acoes { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.orcamento__adicionar { display: grid; gap: 12px; margin-bottom: 16px; max-width: 640px; }
+.orcamento__escolha { padding: 12px; border: 1px dashed var(--borda); border-radius: var(--raio-controle); }
+.orcamento__escolha fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.orcamento__botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.orcamento__sugestao { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.orcamento__itens { list-style: none; margin: 0; padding: 0; display: grid; }
+.orcamento__item { display: grid; grid-template-columns: minmax(0, 3fr) 70px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px 12px; align-items: end; padding: 14px 0; border-bottom: 1px solid var(--borda); }
+.orcamento__item:last-child { border-bottom: 0; }
+.orcamento__item input { width: 100%; min-width: 0; }
+.orcamento__frase { grid-column: 1 / -1; display: grid; gap: 4px; }
+.orcamento__rotulo { font-size: 0.85rem; color: var(--texto-suave); }
+.orcamento__totais { max-width: 520px; }
+.orcamento__linha { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 6px 0; font-variant-numeric: tabular-nums; }
+.orcamento__linha > :last-child { text-align: right; white-space: nowrap; }
+.orcamento__linha--total { border-top: 1px solid var(--borda); margin-top: 6px; padding-top: 10px; }
+.orcamento__linha--total strong { font-size: 1.25rem; }
+.orcamento__desconto { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 6px; }
+.orcamento__desconto .campo { width: 110px; }
+.orcamento__campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 720px; }
+.orcamento__campos .campo:last-child { grid-column: 1 / -1; }
+.orcamento__campos input, .orcamento__campos textarea { width: 100%; min-width: 0; }
+@media (max-width: 760px) {
+  .orcamento__acoes { width: 100%; }
+  .orcamento__acoes .campo { flex: 1 1 100%; }
+  .orcamento__acoes .btn { flex: 1; text-align: center; }
+  .orcamento__item { grid-template-columns: 1fr; }
+  .orcamento__remover { justify-self: end; }
+  .orcamento__totais { max-width: none; }
+  .orcamento__campos { grid-template-columns: 1fr; }
+  .orcamento__adicionar { max-width: none; }
+  .orcamento__adicionar select, .orcamento__escolha input:not([type='checkbox']), .orcamento__escolha select { width: 100%; }
+}
