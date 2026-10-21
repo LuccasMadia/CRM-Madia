@@ -95,7 +95,7 @@ describe('Orcamento', () => {
     abrir();
     const seletor = await screen.findByRole('combobox', { name: 'Adicionar' });
     expect(within(seletor).queryByRole('option', { name: 'Serviço antigo' })).toBeNull();
-    expect(within(seletor).queryByRole('option', { name: 'Hospedagem e suporte' })).toBeNull();
+    expect(within(seletor).getByRole('option', { name: 'Hospedagem e suporte' })).toBeInTheDocument();
     expect(within(seletor).getByRole('option', { name: 'Presença no Google' })).toBeInTheDocument();
     await userEvent.setup().selectOptions(seletor, 'Cardápio digital B2B');
     expect(await screen.findByLabelText('Nome de Cardápio digital B2B')).toBeInTheDocument();
@@ -235,6 +235,39 @@ describe('Orcamento', () => {
     await userEvent.setup().click(within(faixa).getByRole('button', { name: 'Adicionar' }));
     await vi.waitFor(() => expect(screen.queryByText(/Este site pode ter hospedagem/)).toBeNull());
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({ servico_id: 4 });
+  });
+
+  it('hospedagem pode ser adicionada pelo seletor', async () => {
+    const { chamadas } = mockApi(rotas({ 'GET /orcamentos/7': vazio, 'POST /orcamentos/7/itens': filinto }));
+    abrir();
+    await userEvent.setup().selectOptions(await screen.findByRole('combobox', { name: 'Adicionar' }), 'Hospedagem e suporte');
+    await vi.waitFor(() => expect(chamadas.find((c) => c.metodo === 'POST')?.corpo).toEqual({ servico_id: 4 }));
+  });
+
+  it('só a placa tem campo de quantidade, sem aviso de ajustar o valor', async () => {
+    mockApi(rotas());
+    abrir();
+    expect(await screen.findByLabelText('Quantidade de Placa NFC — Redonda')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Quantidade de Cardápio digital B2B')).toBeNull();
+    expect(screen.queryByLabelText('Quantidade de Configuração do Google Meu Negócio')).toBeNull();
+    expect(screen.queryByText(/ajuste o valor/)).toBeNull();
+  });
+
+  it('link do PDF fica travado enquanto há pedido em andamento', async () => {
+    mockApi(rotas({ 'GET /orcamentos/7': { ...filinto, sugerir_hospedagem: true }, 'POST /orcamentos/7/itens': filinto }));
+    const pendentes = segurarEscritas();
+    abrir();
+    const user = userEvent.setup();
+    const link = await screen.findByRole('link', { name: 'Baixar PDF' });
+    expect(link).not.toHaveAttribute('aria-disabled');
+    const faixa = screen.getByText(/Este site pode ter hospedagem e suporte./).closest('div');
+    await user.click(within(faixa).getByRole('button', { name: 'Adicionar' }));
+    expect(link).toHaveAttribute('aria-disabled', 'true');
+    const clique = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(clique);
+    expect(clique.defaultPrevented).toBe(true);
+    pendentes[0].soltar();
+    await vi.waitFor(() => expect(link).not.toHaveAttribute('aria-disabled'));
   });
 
   it('muda a situação na hora', async () => {

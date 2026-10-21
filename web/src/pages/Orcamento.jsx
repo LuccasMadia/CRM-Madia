@@ -142,7 +142,10 @@ export function Orcamento() {
               {Object.entries(ROTULO_SITUACAO).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
             </select>
           </Campo>
-          <a className="btn btn--primario" href={`/api/orcamentos/${id}/pdf`} download>Baixar PDF</a>
+          <a
+            className={`btn btn--primario${ocupado ? ' btn--desabilitado' : ''}`} href={`/api/orcamentos/${id}/pdf`} download
+            aria-disabled={ocupado || undefined} onClick={(e) => { if (ocupado) e.preventDefault(); }}
+          >Baixar PDF</a>
           <button type="button" className="btn" onClick={duplicar} disabled={ocupado}>Duplicar</button>
           <button type="button" className="btn btn--perigo" onClick={excluir} disabled={ocupado}>Excluir</button>
         </div>
@@ -189,7 +192,7 @@ export function Orcamento() {
 
 function Adicionar({ tabela, enviando, onItem, onPacote }) {
   const [escolha, setEscolha] = useState(null); // { tipo: 'placa', servico } | { tipo: 'pacote', pacote } | { tipo: 'livre' }
-  const servicos = tabela.servicos.filter((s) => s.ativo && s.tipo !== 'hospedagem');
+  const servicos = tabela.servicos.filter((s) => s.ativo);
   const concluir = (promessa) => promessa.then((r) => r && setEscolha(null));
 
   function escolher(valor) {
@@ -372,13 +375,14 @@ function ItemLinha({ item, ocupado, onSalvar, onRemover }) {
   return (
     <li className="orcamento__item">
       <CampoAoSair key={`nome-${item.nome}`} {...campo('nome')} className="orcamento__nome" rotulo="Nome" rotuloAcessivel={`Nome de ${item.nome}`} texto={item.nome} converter={comoObrigatorio('Informe o nome')} />
-      <CampoAoSair key={`quantidade-${item.quantidade}`} {...campo('quantidade')} rotulo="Qtd." rotuloAcessivel={`Quantidade de ${item.nome}`} inputMode="numeric" texto={String(item.quantidade)} converter={comoInteiro(1)} />
+      {item.tipo_servico === 'placa' && (
+        <CampoAoSair key={`quantidade-${item.quantidade}`} {...campo('quantidade')} rotulo="Qtd." rotuloAcessivel={`Quantidade de ${item.nome}`} inputMode="numeric" texto={String(item.quantidade)} converter={comoInteiro(1)} />
+      )}
       {dinheiro('valor_unico_centavos', 'Valor único (R$)', 'Valor único')}
       {dinheiro('valor_mensal_centavos', 'Por mês (R$)', 'Valor mensal')}
       <button type="button" className="btn btn--pequeno btn--perigo orcamento__remover" aria-label={`Remover ${item.nome}`} disabled={ocupado} onClick={onRemover}>Remover</button>
       <div className="orcamento__frase">
         <CampoAoSair key={`frase-${item.frase}`} {...campo('frase')} rotulo="Frase" rotuloAcessivel={`Frase de ${item.nome}`} texto={item.frase} />
-        {item.tipo_servico === 'placa' && <small className="vazio">Mudar a quantidade não muda o valor: ajuste o valor se precisar.</small>}
       </div>
     </li>
   );

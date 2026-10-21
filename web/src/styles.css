@@ -95,7 +95,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 
 .btn { font: inherit; font-weight: 500; cursor: pointer; border: 1px solid var(--borda); background: var(--superficie-2); color: var(--texto); border-radius: var(--raio-controle); padding: 8px 16px; text-decoration: none; display: inline-block; }
 .btn:hover { border-color: var(--texto-suave); text-decoration: none; }
-.btn:disabled { opacity: 0.6; cursor: wait; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.6; cursor: wait; }
 .btn--primario { background: var(--primaria); border-color: var(--primaria); color: var(--primaria-texto); font-weight: 600; }
 .btn--primario:hover { background: var(--t1); border-color: var(--t1); }
 .btn--perigo { color: var(--perigo); border-color: var(--perigo); background: transparent; }

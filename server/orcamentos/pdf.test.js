@@ -45,7 +45,7 @@ describe('modeloDocumento', () => {
       totais: { subtotal_unico_centavos: 0, desconto_centavos: 0, total_unico_centavos: 0, mensalidades: [{ nome: 'Hospedagem', valor_centavos: 15000 }], total_mensal_centavos: 15000 },
     }, { whatsapp: '(11) 99999-0000' }));
     expect(m.desconto).toBeNull();
-    expect(m.total_unico).toBe('R$ 0,00');
+    expect(m.total_unico).toBeNull();
     expect(m.itens[0].valor).toBe('R$ 150,00/mês');
     expect(m.rodape[1]).toBe('WhatsApp (11) 99999-0000 · @madia.consultoria');
   });

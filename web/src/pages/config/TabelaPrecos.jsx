@@ -120,8 +120,8 @@ function FormServico({ servico, onFechar, onSalvo }) {
   const [v, setV] = useState({
     nome: servico?.nome ?? '',
     frase: servico?.frase ?? '',
-    unico: centavosParaTexto(servico?.valor_unico_centavos ?? 0),
-    mensal: centavosParaTexto(servico?.valor_mensal_centavos ?? 0),
+    unico: centavosParaTexto(servico?.valor_unico_centavos),
+    mensal: centavosParaTexto(servico?.valor_mensal_centavos),
     hospedagem: servico?.hospedagem ?? 'nao_se_aplica',
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();

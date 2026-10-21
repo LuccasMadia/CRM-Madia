@@ -39,7 +39,9 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
     desconto: totais.desconto_centavos > 0
       ? { rotulo: `Desconto combo (${orcamento.desconto_pct}%)`, valor: `- ${dinheiro(totais.desconto_centavos)}` }
       : null,
-    total_unico: dinheiro(totais.total_unico_centavos),
+    // Só mensalidades: sem a linha "R$ 0,00" pago uma vez. Orçamento vazio mantém o R$ 0,00.
+    total_unico: totais.total_unico_centavos === 0 && totais.mensalidades.length > 0
+      ? null : dinheiro(totais.total_unico_centavos),
     mensalidades: totais.mensalidades.map((m) => ({ nome: m.nome, valor: `${dinheiro(m.valor_centavos)}/mês` })),
     rodape,
   };
@@ -108,17 +110,19 @@ export function gerarPdf(modelo) {
 
     // Caixa de total
     y += 14;
-    const alturaCaixa = 22 + 20 + modelo.mensalidades.length * 18;
+    const alturaCaixa = (modelo.total_unico == null ? 16 : 42) + modelo.mensalidades.length * 18;
     garantirEspaco(alturaCaixa);
     doc.roundedRect(esq, y, largura, alturaCaixa, 6).fill(FUNDO_TOTAL);
     const xi = esq + 14;
     const li = largura - 28;
     doc.font('Helvetica-Bold').fontSize(15).fillColor(ESCURO);
-    doc.text('Total (pago uma vez)', xi, y + 13, { width: li, lineBreak: false });
-    doc.text(modelo.total_unico, xi, y + 13, { width: li, align: 'right', lineBreak: false });
-    doc.font('Helvetica').fontSize(12);
+    if (modelo.total_unico != null) {
+      doc.text('Total (pago uma vez)', xi, y + 13, { width: li, lineBreak: false });
+      doc.text(modelo.total_unico, xi, y + 13, { width: li, align: 'right', lineBreak: false });
+    }
+    doc.font('Helvetica').fontSize(12).fillColor(ESCURO);
     modelo.mensalidades.forEach((m, k) => {
-      const yy = y + 40 + k * 18;
+      const yy = y + (modelo.total_unico == null ? 12 : 40) + k * 18;
       doc.text(m.nome, xi, yy, { width: li - colValor, lineBreak: false });
       doc.text(m.valor, xi, yy, { width: li, align: 'right', lineBreak: false });
     });

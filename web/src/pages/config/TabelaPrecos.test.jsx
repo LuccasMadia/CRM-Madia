@@ -97,6 +97,18 @@ describe('TabelaPrecos', () => {
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo.valor_mensal_centavos).toBeNull();
   });
 
+  it('valor nulo abre vazio e salvar mantém null', async () => {
+    const comNulo = { ...tabela, servicos: [{ ...tabela.servicos[0], valor_mensal_centavos: null }, ...tabela.servicos.slice(1)] };
+    const { chamadas } = mockApi({ 'GET /tabela-precos': comNulo, 'PUT /tabela-precos/servicos/1': {} });
+    renderizar(<TabelaPrecos />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar Landing page' }));
+    expect(screen.getByLabelText('Valor mensal (R$)')).toHaveValue('');
+    await user.click(screen.getByRole('button', { name: 'Salvar serviço' }));
+    await vi.waitFor(() => expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(true));
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo.valor_mensal_centavos).toBeNull();
+  });
+
   it('cria pacote marcando a gestão como opcional', async () => {
     const { chamadas } = mockApi({ 'GET /tabela-precos': tabela, 'POST /tabela-precos/pacotes': {} });
     renderizar(<TabelaPrecos />);

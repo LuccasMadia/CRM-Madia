@@ -79,6 +79,18 @@ describe('/api/orcamentos', () => {
     expect(res.itens).toHaveLength(5);
   });
 
+  it('mudar a quantidade da placa recalcula o preço; valor explícito vence', async () => {
+    const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Redonda', preco_venda_centavos: 8000, itens: [] }).expect(201)).body;
+    const orc = await novoOrcamento();
+    const placa = await porTipo('placa');
+    let res = (await addItem(orc, { servico_id: placa.id, placa_modelo_id: modelo.id }).expect(201)).body;
+    const itemId = res.itens[0].id;
+    res = (await ctx.http.put(`/api/orcamentos/${orc.id}/itens/${itemId}`).send({ quantidade: 5 }).expect(200)).body;
+    expect(res.itens[0]).toMatchObject({ quantidade: 5, valor_unico_centavos: 40000 });
+    res = (await ctx.http.put(`/api/orcamentos/${orc.id}/itens/${itemId}`).send({ quantidade: 6, valor_unico_centavos: 1234 }).expect(200)).body;
+    expect(res.itens[0]).toMatchObject({ quantidade: 6, valor_unico_centavos: 1234 });
+  });
+
   it('landing page sugere hospedagem sem adicionar', async () => {
     const orc = await novoOrcamento();
     const landing = await porNome('Landing page');

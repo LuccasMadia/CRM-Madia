@@ -208,7 +208,18 @@ export function rotasOrcamentos({ db, hoje }) {
   r.put('/orcamentos/:id/itens/:itemId', (req, res) => {
     const orcamento = carregar(req.params.id);
     const item = carregarItem(orcamento, req.params.itemId);
-    itens.atualizar(item.id, validar(req.body, REGRAS_ITEM, { parcial: true }));
+    const dados = validar(req.body, REGRAS_ITEM, { parcial: true });
+    // Placa: o preço acompanha a quantidade (packs), a menos que o valor venha explícito.
+    if (dados.quantidade != null && dados.quantidade !== item.quantidade && dados.valor_unico_centavos === undefined
+      && item.servico_id && servicos.obter(item.servico_id)?.tipo === 'placa') {
+      const modelo = item.placa_modelo_id ? modelos.obter(item.placa_modelo_id) : null;
+      if (modelo) {
+        dados.valor_unico_centavos = precoSugeridoPlacas(db, {
+          modelo, quantidade: dados.quantidade, clienteId: orcamento.cliente_id,
+        }).total_centavos;
+      }
+    }
+    itens.atualizar(item.id, dados);
     res.json(montar(orcamento));
   });
 
