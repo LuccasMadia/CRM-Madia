@@ -17,9 +17,19 @@ describe('Clientes', () => {
     expect(screen.getByRole('link', { name: '@docesdaana' })).toHaveAttribute('href', 'https://www.instagram.com/docesdaana/');
     expect(screen.getByText('67 99999-0000')).toBeInTheDocument();
     expect(screen.queryByText('ana@doces.com')).not.toBeInTheDocument();
+    const antes = chamadas.length;
     fireEvent.change(screen.getByLabelText('Buscar clientes'), { target: { value: 'doces' } });
-    await screen.findByRole('link', { name: 'Doces da Ana' });
-    expect(chamadas.at(-1).caminho).toBe('/clientes?busca=doces');
+    expect(chamadas).toHaveLength(antes); // espera parar de digitar antes de buscar
+    await waitFor(() => expect(chamadas.at(-1).caminho).toBe('/clientes?busca=doces'));
+    expect(await screen.findByRole('link', { name: 'Doces da Ana' })).toBeInTheDocument();
+  });
+
+  it('sem nenhum cliente, oferece cadastrar o primeiro', async () => {
+    mockApi({ 'GET /clientes?busca=': [] });
+    renderizar(<Clientes />);
+    expect(await screen.findByText('Nenhum cliente cadastrado ainda.')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Cadastrar o primeiro cliente' }));
+    expect(screen.getByRole('dialog', { name: 'Novo cliente' })).toBeInTheDocument();
   });
 
   it('mostra a foto de cada cliente, ou as iniciais quando não tem', async () => {

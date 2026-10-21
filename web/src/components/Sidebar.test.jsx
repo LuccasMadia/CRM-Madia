@@ -73,6 +73,19 @@ describe('Sidebar', () => {
     expect(localStorage.getItem('crm.valoresOcultos')).toBe('0');
   });
 
+  it('"Mais" abre e fecha os itens secundários (usado na barra do celular)', async () => {
+    renderizarSidebar();
+    const usuario = userEvent.setup();
+    const nav = screen.getByRole('navigation', { name: 'Principal' });
+    const mais = screen.getByRole('button', { name: 'Mais' });
+    expect(mais).toHaveAttribute('aria-expanded', 'false');
+    await usuario.click(mais);
+    expect(mais).toHaveAttribute('aria-expanded', 'true');
+    expect(nav).toHaveClass('sidebar--mais-aberto');
+    await usuario.keyboard('{Escape}');
+    expect(nav).not.toHaveClass('sidebar--mais-aberto');
+  });
+
   it('funciona mesmo se o localStorage falhar', async () => {
     const original = Storage.prototype.getItem;
     Storage.prototype.getItem = () => { throw new Error('bloqueado'); };

@@ -95,7 +95,8 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 
 .btn { font: inherit; font-weight: 500; cursor: pointer; border: 1px solid var(--borda); background: var(--superficie-2); color: var(--texto); border-radius: var(--raio-controle); padding: 8px 16px; text-decoration: none; display: inline-block; }
 .btn:hover { border-color: var(--texto-suave); text-decoration: none; }
-.btn:disabled { opacity: 0.6; cursor: wait; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:focus-visible, .pilula:focus-visible, .abas__aba:focus-visible, .segmentado button:focus-visible, .sidebar a:focus-visible, .sidebar button:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .btn--primario { background: var(--primaria); border-color: var(--primaria); color: var(--primaria-texto); font-weight: 600; }
 .btn--primario:hover { background: var(--t1); border-color: var(--t1); }
 .btn--perigo { color: var(--perigo); border-color: var(--perigo); background: transparent; }
@@ -107,6 +108,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .aviso--erro { border-color: var(--perigo); color: var(--perigo); background: rgb(248 113 113 / 0.08); white-space: pre-line; }
 .aviso--ok { border-color: var(--ok); color: var(--ok); background: rgb(74 222 128 / 0.08); }
 .vazio { color: var(--texto-suave); }
+.estado-vazio { display: grid; justify-items: start; gap: 4px; padding: 24px 0; }
 .busca { width: 100%; max-width: 420px; margin-bottom: 16px; }
 
 .tabela { width: 100%; border-collapse: collapse; background: transparent; }
@@ -245,17 +247,56 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .rosca__legenda li { display: flex; align-items: center; gap: 10px; }
 .rosca__legenda b { margin-left: auto; font-variant-numeric: tabular-nums; }
 .rosca__ponto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+/* "Mais" só existe no celular; no computador os itens secundários seguem na mesma lista */
+.sidebar__item-mais { display: none; }
+.sidebar__extras > ul { margin-top: 4px; }
+.sidebar__mais { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--texto-suave); font: inherit; font-weight: 500; cursor: pointer; }
+.sidebar__mais.active, .sidebar__mais[aria-expanded='true'] { background: var(--primaria-suave); color: var(--primaria); }
+
+/* Celular: menu vira barra fixa embaixo, ao alcance do polegar */
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar, .sidebar--recolhida { position: static; height: auto; width: auto; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--borda); }
-  .sidebar__alternar { display: none; }
-  .sidebar--flutuante { margin-right: 0; box-shadow: none; }
-  .sidebar__topo { margin-bottom: 8px; }
-  .sidebar--recolhida .sidebar__marca, .sidebar--recolhida .sidebar__rotulo { display: revert; }
-  .sidebar ul { grid-auto-flow: column; overflow-x: auto; }
-  .conteudo { padding: 16px; }
+  .sidebar, .sidebar--recolhida, .sidebar--flutuante {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0; z-index: 25; height: auto; width: auto; margin: 0;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--borda);
+    overflow: visible; box-shadow: 0 -8px 24px rgb(0 0 0 / 0.35);
+  }
+  .sidebar__topo { display: none; }
+  .sidebar--recolhida .sidebar__rotulo { display: revert; }
+  .sidebar__principais { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .sidebar__item-mais { display: block; }
+  .sidebar__principais a, .sidebar--recolhida .sidebar__principais a, .sidebar__mais {
+    flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 6px 2px; font-size: 0.72rem;
+  }
+  .sidebar__extras {
+    display: none; position: absolute; right: 8px; bottom: calc(100% + 8px); min-width: 230px; padding: 8px;
+    background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: var(--sombra);
+  }
+  .sidebar--mais-aberto .sidebar__extras { display: block; }
+  .sidebar__extras > ul { margin-top: 0; }
+  .sidebar__extras a, .sidebar--recolhida .sidebar__extras a, .sidebar__extras .sidebar__valores, .sidebar--recolhida .sidebar__extras .sidebar__valores {
+    justify-content: flex-start; min-height: 44px; padding: 10px 12px;
+  }
+  .sidebar__extras .sidebar__valores { margin-top: 4px; border-top: 1px solid var(--borda); }
+  .conteudo { padding: 16px 16px calc(84px + env(safe-area-inset-bottom)); }
   .conteudo-layout { grid-template-columns: 1fr; }
   .pagina__topo h1 { font-size: 1.6rem; }
+  .notificacoes { left: 16px; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .portfolio { height: calc(100dvh - 116px); }
+
+  /* tabelas soltas na página rolam de lado sozinhas, sem empurrar a página inteira */
+  .tabela { display: block; overflow-x: auto; }
+}
+
+/* Telas de toque: alvos com pelo menos 44px */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn--pequeno { min-height: 40px; padding: 6px 12px; }
+  .btn--icone { min-width: 44px; min-height: 44px; }
+  .pilula, .segmentado button, .abas__aba { min-height: 44px; }
+  .select-compacto, .kanban__mover { min-height: 40px; }
+  input, select, textarea { font-size: 16px; } /* abaixo disso o iPhone dá zoom ao focar */
+  .grid-ig__setas .btn, .midias__acoes .btn { min-width: 36px; min-height: 36px; }
 }
 
 /* Conteúdo: grid do Instagram */
@@ -272,7 +313,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .grid-ig__abrir:focus-visible { outline: 2px solid var(--primaria); outline-offset: -2px; }
 .grid-ig__abrir img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .grid-ig__titulo { display: flex; align-items: center; justify-content: center; height: 100%; padding: 8px; text-align: center; font-size: 0.85rem; color: var(--primaria); }
-.grid-ig__rotulo { position: absolute; left: 4px; bottom: 4px; font-size: 0.7rem; background: rgb(0 0 0 / 0.6); color: var(--texto); padding: 2px 6px; border-radius: 6px; }
+.grid-ig__rotulo { position: absolute; left: 4px; bottom: 4px; font-size: 0.75rem; background: rgb(0 0 0 / 0.6); color: var(--texto); padding: 2px 6px; border-radius: 6px; }
 .grid-ig__icone { position: absolute; top: 6px; right: 8px; font-size: 0.8rem; color: #fff; text-shadow: 0 1px 3px rgb(0 0 0 / 0.8); }
 .grid-ig__setas { position: absolute; top: 2px; right: 2px; display: flex; }
 .grid-ig__setas .btn { padding: 2px 6px; background: rgb(0 0 0 / 0.55); }

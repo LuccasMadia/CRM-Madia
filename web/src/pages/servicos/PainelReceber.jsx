@@ -4,6 +4,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { FaixaNumeros } from '../../components/FaixaNumeros.jsx';
+import { Icone } from '../../components/Icone.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO, diasDesde } from '../../lib/datas.js';
 import { ETAPAS_EM_ANDAMENTO } from '../../lib/rotulos.js';
@@ -51,7 +52,7 @@ export function PainelReceber({ servico }) {
       <FaixaNumeros
         itens={[
           parcelas && !abertas.length
-            ? { rotulo: 'A receber', valor: '✓ Tudo recebido', destaque: 'ok' }
+            ? { rotulo: 'A receber', valor: <><Icone nome="check" tamanho={16} /> Tudo recebido</>, destaque: 'ok' }
             : { rotulo: 'A receber', valor: parcelas ? formatarDinheiro(total) : '—', destaque: 'primaria' },
           ...NUMEROS[servico].map(([rotulo, conta]) => ({ rotulo, valor: projetos ? projetos.filter(conta).length : '—' })),
         ]}

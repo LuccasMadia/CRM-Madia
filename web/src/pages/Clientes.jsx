@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
+import { useAtrasado } from '../hooks/useAtrasado.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
@@ -16,7 +17,8 @@ export function Clientes() {
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const navegar = useNavigate();
-  const { dados: clientes, erro, recarregar } = useCarregar(() => api(`/clientes?busca=${encodeURIComponent(busca)}`), [busca]);
+  const termo = useAtrasado(busca.trim());
+  const { dados: clientes, erro, recarregar } = useCarregar(() => api(`/clientes?busca=${encodeURIComponent(termo)}`), [termo]);
 
   async function criar(dados, fotoEscolhida) {
     const cliente = await api('/clientes', { method: 'POST', body: dados });
@@ -79,7 +81,14 @@ export function Clientes() {
             ))}
           </tbody>
         </table>
-      ) : <p className="vazio">Nenhum cliente encontrado.</p>)}
+      ) : termo ? (
+        <p className="vazio">Nenhum cliente encontrado para “{termo}”.</p>
+      ) : (
+        <div className="estado-vazio">
+          <p className="vazio">Nenhum cliente cadastrado ainda.</p>
+          <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>Cadastrar o primeiro cliente</button>
+        </div>
+      ))}
       {editando && (
         <Modal titulo="Editar cliente" onFechar={() => setEditando(null)}>
           <FormCliente inicial={editando} onSalvar={salvar} />
