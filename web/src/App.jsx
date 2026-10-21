@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, Navigate, Route, Routes } from 'react-router';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { Sidebar } from './components/Sidebar.jsx';
 import { BarraCarregando } from './components/Carregando.jsx';
 import { Notificacoes } from './components/Notificacoes.jsx';
@@ -13,6 +13,8 @@ import { Portfolio } from './pages/Portfolio.jsx';
 import { Financeiro } from './pages/Financeiro.jsx';
 import { Config } from './pages/Config.jsx';
 import { alternarValoresOcultos, useValoresOcultos } from './lib/privacidade.js';
+import { rotularTabelas } from './lib/rotularTabelas.js';
+import { manterAbasVisiveis, mostrarAbasSelecionadas } from './lib/abasVisiveis.js';
 
 export function App() {
   // assinar aqui faz a tela inteira redesenhar quando o modo muda, já que todo valor passa por formatarDinheiro
@@ -28,6 +30,15 @@ export function App() {
     window.addEventListener('keydown', atalho);
     return () => window.removeEventListener('keydown', atalho);
   }, []);
+
+  useEffect(() => rotularTabelas(), []);
+  useEffect(() => manterAbasVisiveis(), []);
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    // as abas podem só aparecer depois que os dados da página chegam: confere algumas vezes
+    const esperas = [50, 400, 1200].map((ms) => setTimeout(mostrarAbasSelecionadas, ms));
+    return () => esperas.forEach(clearTimeout);
+  }, [pathname, search]);
 
   return (
     <div className={`app${ocultos ? ' app--valores-ocultos' : ''}`}>

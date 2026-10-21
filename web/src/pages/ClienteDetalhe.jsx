@@ -38,7 +38,9 @@ export function ClienteDetalhe() {
   if (!cliente || !projetos) return <Carregando />;
 
   const doServico = (servico) => projetos.filter((p) => p.servico === servico);
-  const contato = [cliente.responsavel, cliente.telefone, cliente.email].filter(Boolean).join(' · ');
+  // o telefone não pode quebrar no meio da linha (espaço e hífen inquebráveis)
+  const telefone = cliente.telefone?.replace(/ /g, ' ').replace(/-/g, '‑');
+  const contato = [cliente.responsavel, telefone, cliente.email].filter(Boolean).join(' · ');
 
   async function salvar(dados, fotoEscolhida) {
     await api(`/clientes/${id}`, { method: 'PUT', body: dados });

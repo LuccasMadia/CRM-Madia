@@ -57,7 +57,7 @@ function Recebimentos() {
 
   return (
     <section>
-      <div className="form--linha" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
+      <div className="form--linha filtros-recebimentos">
         <label className="campo">
           <span>Estado</span>
           <select aria-label="Estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
@@ -108,13 +108,13 @@ function Recebimentos() {
       <section className="cartao">
         <h2>Recebido por mês em {ano}</h2>
         {mensal && (
-          <table className="tabela">
+          <table className="tabela tabela--fixa tabela--mensal">
             <tbody>
               {mensal.map((m) => (
                 <tr key={m.mes}>
-                  <td style={{ width: 180 }}>{nomeMes(m.mes)}</td>
+                  <td>{nomeMes(m.mes)}</td>
                   <td><div className="barra" style={{ width: `${(m.recebido_centavos / maior) * 100}%` }} /></td>
-                  <td className="num" style={{ width: 140 }}>{formatarDinheiro(m.recebido_centavos)}</td>
+                  <td className="num">{formatarDinheiro(m.recebido_centavos)}</td>
                 </tr>
               ))}
             </tbody>
