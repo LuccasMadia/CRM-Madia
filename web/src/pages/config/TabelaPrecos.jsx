@@ -132,12 +132,12 @@ function FormServico({ servico, onFechar, onSalvo }) {
     e.preventDefault();
     const corpo = { nome: v.nome, frase: v.frase };
     if (tipo !== 'placa') {
-      const unico = paraCentavos(v.unico) ?? 0;
+      const unico = paraCentavos(v.unico);
       if (Number.isNaN(unico)) return setErros([{ campo: 'valor_unico_centavos', mensagem: 'Valor inválido' }]);
       corpo.valor_unico_centavos = unico;
     }
     if (tipo === 'comum' || tipo === 'hospedagem') {
-      const mensal = paraCentavos(v.mensal) ?? 0;
+      const mensal = paraCentavos(v.mensal);
       if (Number.isNaN(mensal)) return setErros([{ campo: 'valor_mensal_centavos', mensagem: 'Valor inválido' }]);
       corpo.valor_mensal_centavos = mensal;
     }
@@ -234,14 +234,19 @@ function FormPacote({ pacote, servicos, onFechar, onSalvo }) {
 function ComboConfig({ inicial }) {
   const [desconto, setDesconto] = useState(String(inicial.desconto_combo_pct ?? 10));
   const [whatsapp, setWhatsapp] = useState(inicial.contato_whatsapp ?? '');
-  const { erros, erro, enviando, executar } = useEnvio();
+  const { erros, erro, enviando, executar, setErros } = useEnvio();
   const [salvo, setSalvo] = useState(false);
 
   function salvar(e) {
     e.preventDefault();
     setSalvo(false);
+    const pct = desconto.trim() === '' ? NaN : Number(desconto);
+    if (!Number.isInteger(pct) || pct < 0 || pct > 100) {
+      setErros([{ campo: 'desconto_combo_pct', mensagem: 'Informe um número inteiro de 0 a 100' }]);
+      return;
+    }
     executar(async () => {
-      await api('/tabela-precos/config', { method: 'PUT', body: { desconto_combo_pct: Number(desconto), contato_whatsapp: whatsapp } });
+      await api('/tabela-precos/config', { method: 'PUT', body: { desconto_combo_pct: pct, contato_whatsapp: whatsapp } });
       setSalvo(true);
     });
   }

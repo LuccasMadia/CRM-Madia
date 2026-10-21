@@ -71,6 +71,32 @@ describe('TabelaPrecos', () => {
     expect(put.corpo).toEqual({ desconto_combo_pct: 15, contato_whatsapp: '(11) 99999-0000' });
   });
 
+  it('desconto inválido mostra erro e não envia', async () => {
+    const { chamadas } = mockApi({ 'GET /tabela-precos': tabela });
+    renderizar(<TabelaPrecos />);
+    const user = userEvent.setup();
+    const desconto = await screen.findByLabelText('Desconto de combo (%)');
+    for (const ruim of ['', 'abc', '150', '2,5']) {
+      await user.clear(desconto);
+      if (ruim) await user.type(desconto, ruim);
+      await user.click(screen.getByRole('button', { name: 'Salvar combo' }));
+      expect(await screen.findByText('Informe um número inteiro de 0 a 100')).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Configuração salva.')).toBeNull();
+    expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(false);
+  });
+
+  it('valor vazio vai como null', async () => {
+    const { chamadas } = mockApi({ 'GET /tabela-precos': tabela, 'PUT /tabela-precos/servicos/1': {} });
+    renderizar(<TabelaPrecos />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar Landing page' }));
+    await user.clear(screen.getByLabelText('Valor mensal (R$)'));
+    await user.click(screen.getByRole('button', { name: 'Salvar serviço' }));
+    await vi.waitFor(() => expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(true));
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo.valor_mensal_centavos).toBeNull();
+  });
+
   it('cria pacote marcando a gestão como opcional', async () => {
     const { chamadas } = mockApi({ 'GET /tabela-precos': tabela, 'POST /tabela-precos/pacotes': {} });
     renderizar(<TabelaPrecos />);
