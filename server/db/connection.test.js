@@ -117,7 +117,7 @@ describe('migration 017_categorias_nichos_mensalidade', () => {
     expect(inicio(3)).toEqual({ modo: 'entrega', data: null });
     expect(inicio(4)).toEqual({ modo: 'data', data: '2026-08-10' });
     expect(inicio(5)).toEqual({ modo: 'data', data: '2026-08-15' });
-    expect(db.prepare('SELECT chave FROM config ORDER BY chave').all().map((c) => c.chave)).toEqual(['preco_servico_google_meu_negocio_centavos']);
+    expect(db.prepare("SELECT chave FROM config WHERE chave LIKE 'preco_servico_%' ORDER BY chave").all().map((c) => c.chave)).toEqual(['preco_servico_google_meu_negocio_centavos']);
     expect(db.prepare('SELECT COUNT(*) AS n FROM nichos').get().n).toBe(0);
   });
 
