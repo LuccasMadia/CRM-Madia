@@ -72,22 +72,6 @@ describe('Config', () => {
     expect(await screen.findByText('Importados: Canecas da Dri. Ignorados: Popy.')).toBeInTheDocument();
   });
 
-  it('salva o preço padrão do Google Meu Negócio', async () => {
-    const { chamadas } = mockApi({
-      'GET /config': { portfolio_repo_path: null, preco_servico_google_meu_negocio_centavos: 0 },
-      'PUT /config': { preco_servico_google_meu_negocio_centavos: 20000 },
-    });
-    renderizar(<Config />);
-    const user = userEvent.setup();
-    const gmn = await screen.findByLabelText('Google Meu Negócio (R$)');
-    await user.clear(gmn);
-    await user.type(gmn, '200');
-    await user.click(screen.getByRole('button', { name: 'Salvar preço' }));
-    expect(await screen.findByText('Preço salvo.')).toBeInTheDocument();
-    const put = chamadas.find((c) => c.caminho === '/config' && c.metodo === 'PUT');
-    expect(put.corpo).toEqual({ preco_servico_google_meu_negocio_centavos: 20000 });
-  });
-
   it('mostra a seção da Vercel logo abaixo do Instagram', async () => {
     mockApi({
       'GET /config': { portfolio_repo_path: null },

@@ -7,9 +7,9 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from '../components/Campo.jsx';
 import { Aviso } from '../components/Aviso.jsx';
 import { CadastroLista } from './config/CadastroLista.jsx';
-import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { ConexaoInstagram } from './config/ConexaoInstagram.jsx';
 import { ConexaoVercel } from './config/ConexaoVercel.jsx';
+import { TabelaPrecos } from './config/TabelaPrecos.jsx';
 
 export function Config() {
   const { dados: config, erro } = useCarregar(() => api('/config'), []);
@@ -22,47 +22,13 @@ export function Config() {
       {config && <Repositorio inicial={config} />}
       <CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />
       <CadastroLista titulo="Nichos" caminho="/nichos" rotuloNovo="Novo nicho" />
-      {config && <PrecosServicos inicial={config} />}
+      <TabelaPrecos />
       <Publicacao />
       <section className="cartao">
         <h2>Backup</h2>
         <p>Baixa um .zip com o banco de dados e todas as imagens enviadas.</p>
         <a className="btn" href="/api/backup" download>Exportar backup (.zip)</a>
       </section>
-    </section>
-  );
-}
-
-function PrecosServicos({ inicial }) {
-  const { valores, campo } = useFormulario({
-    preco_gmn: centavosParaTexto(inicial.preco_servico_google_meu_negocio_centavos ?? 0),
-  });
-  const { erros, erro, enviando, executar, setErros } = useEnvio();
-  const [salvo, setSalvo] = useState(false);
-
-  function salvar(e) {
-    e.preventDefault();
-    setSalvo(false);
-    const gmn = paraCentavos(valores.preco_gmn);
-    if (gmn === null || Number.isNaN(gmn)) {
-      setErros([{ campo: 'preco_servico_google_meu_negocio_centavos', mensagem: 'Valor inválido' }]);
-      return;
-    }
-    executar(async () => {
-      await api('/config', { method: 'PUT', body: { preco_servico_google_meu_negocio_centavos: gmn } });
-      setSalvo(true);
-    });
-  }
-
-  return (
-    <section className="cartao">
-      <h2>Preço padrão do Google Meu Negócio</h2>
-      <form onSubmit={salvar} className="form" noValidate>
-        <Campo rotulo="Google Meu Negócio (R$)" nome="preco_servico_google_meu_negocio_centavos" erros={erros} inputMode="decimal" {...campo('preco_gmn')} />
-        <Aviso erro={erro} />
-        {salvo && <p className="aviso aviso--ok" role="status">Preço salvo.</p>}
-        <div><button className="btn btn--primario" disabled={enviando}>Salvar preço</button></div>
-      </form>
     </section>
   );
 }
