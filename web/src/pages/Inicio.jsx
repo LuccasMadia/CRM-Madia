@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
+import { Carregando } from '../components/Carregando.jsx';
 import { AvisosPublicacao } from '../components/AvisosPublicacao.jsx';
 import { AvisosSites } from '../components/AvisosSites.jsx';
 import { Numero } from '../components/Numero.jsx';
@@ -108,9 +109,9 @@ function Divulgacao({ pendentes, ficticios }) {
 function Graficos() {
   const { dados, erro } = useCarregar(() => api('/painel/graficos'), []);
   if (erro) return <Aviso erro={erro} />;
-  if (!dados) return <p className="vazio">Carregando gráficos…</p>;
+  if (!dados) return <Carregando texto="Carregando gráficos…" />;
   const { funil, recebido_por_mes: recebido, origens, por_servico: porServico } = dados;
-  const carregando = <p className="vazio">Carregando…</p>;
+  const carregando = <Carregando />;
 
   return (
     <>
@@ -143,7 +144,7 @@ function Graficos() {
 export function Inicio() {
   const { dados, erro } = useCarregar(() => api('/painel'), []);
   if (erro) return <Aviso erro={erro} />;
-  if (!dados) return <p>Carregando…</p>;
+  if (!dados) return <Carregando />;
   const { cartoes, tarefas_por_projeto: tarefasPorProjeto, divulgacao = [], para_entregar: paraEntregar = { gmn: 0, placas: 0, itens: [] } } = dados;
 
   return (

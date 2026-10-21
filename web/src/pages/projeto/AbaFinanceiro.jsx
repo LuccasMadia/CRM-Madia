@@ -4,6 +4,7 @@ import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { Numero } from '../../components/Numero.jsx';
 import { formatarDinheiro, paraCentavos } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO } from '../../lib/datas.js';
@@ -60,7 +61,7 @@ export function AbaFinanceiro({ projeto }) {
   }
 
   if (erro) return <Aviso erro={erro} />;
-  if (!dados) return <p>Carregando…</p>;
+  if (!dados) return <Carregando />;
   const { parcelas, resumo } = dados;
   const acima = resumo.nao_parcelado_centavos < 0;
 

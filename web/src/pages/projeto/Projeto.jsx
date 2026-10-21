@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import { AbaGeral } from './AbaGeral.jsx';
@@ -25,7 +26,7 @@ export function Projeto() {
   const { dados: projeto, erro, recarregar } = useCarregar(() => api(`/projetos/${id}`), [id]);
 
   if (erro) return <Aviso erro={erro} />;
-  if (!projeto) return <p>Carregando…</p>;
+  if (!projeto) return <Carregando />;
 
   return (
     <section>

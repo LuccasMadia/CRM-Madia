@@ -4,6 +4,7 @@ import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { formatarData, hojeISO } from '../../lib/datas.js';
 
 export function AbaTarefas({ projetoId }) {
@@ -30,7 +31,7 @@ export function AbaTarefas({ projetoId }) {
   }
 
   if (erro) return <Aviso erro={erro} />;
-  if (!tarefas) return <p>Carregando…</p>;
+  if (!tarefas) return <Carregando />;
   const hoje = hojeISO();
 
   return (

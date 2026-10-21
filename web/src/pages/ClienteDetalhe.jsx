@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Aviso } from '../components/Aviso.jsx';
+import { Carregando } from '../components/Carregando.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
@@ -33,7 +34,7 @@ export function ClienteDetalhe() {
   const exclusao = useEnvio();
 
   if (erro || erroProjetos) return <Aviso erro={erro ?? erroProjetos} />;
-  if (!cliente || !projetos) return <p>Carregando…</p>;
+  if (!cliente || !projetos) return <Carregando />;
 
   const doServico = (servico) => projetos.filter((p) => p.servico === servico);
   const contato = [cliente.responsavel, cliente.telefone, cliente.email].filter(Boolean).join(' · ');

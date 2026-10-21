@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { Link, Navigate, Route, Routes } from 'react-router';
 import { Sidebar } from './components/Sidebar.jsx';
+import { BarraCarregando } from './components/Carregando.jsx';
+import { Notificacoes } from './components/Notificacoes.jsx';
 import { Inicio } from './pages/Inicio.jsx';
 import { Clientes } from './pages/Clientes.jsx';
 import { ClienteDetalhe } from './pages/ClienteDetalhe.jsx';
@@ -29,6 +31,7 @@ export function App() {
 
   return (
     <div className={`app${ocultos ? ' app--valores-ocultos' : ''}`}>
+      <BarraCarregando />
       <Sidebar />
       <main className="conteudo">
         <Routes>
@@ -44,9 +47,20 @@ export function App() {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/configuracoes" element={<Config />} />
-          <Route path="*" element={<p>Página não encontrada.</p>} />
+          <Route path="*" element={<NaoEncontrada />} />
         </Routes>
       </main>
+      <Notificacoes />
     </div>
+  );
+}
+
+function NaoEncontrada() {
+  return (
+    <section>
+      <header className="pagina__topo"><h1>Página não encontrada</h1></header>
+      <p className="vazio">Esse endereço não existe no CRM.</p>
+      <Link className="btn btn--primario" to="/">Voltar para o Início</Link>
+    </section>
   );
 }

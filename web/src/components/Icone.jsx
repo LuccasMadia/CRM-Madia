@@ -107,6 +107,24 @@ const DESENHOS = {
       <path d="M12 10v4.5M12 17.5v.01" />
     </>
   ),
+  fechar: <path d="M6 6l12 12M18 6 6 18" />,
+  'seta-esquerda': <path d="M15 5l-7 7 7 7" />,
+  'seta-direita': <path d="M9 5l7 7-7 7" />,
+  'seta-cima': <path d="M5 15l7-7 7 7" />,
+  'seta-baixo': <path d="M5 9l7 7 7-7" />,
+  check: <path d="M4.5 12.5l5 5L19.5 7" />,
+  reels: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="4" />
+      <path d="M10 8.5v7l5.5-3.5z" />
+    </>
+  ),
+  carrossel: (
+    <>
+      <rect x="7" y="7" width="13" height="13" rx="2" />
+      <path d="M4 16V5.5A1.5 1.5 0 0 1 5.5 4H16" />
+    </>
+  ),
 };
 
 export function Icone({ nome, tamanho = 20 }) {

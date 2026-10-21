@@ -4,6 +4,7 @@ import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { gerarSlug } from '../../../../server/domain/slug.js';
 
 const STATUS_SUGERIDOS = ['Em funcionamento', 'Em desenvolvimento'];
@@ -18,7 +19,7 @@ export function AbaPortfolio({ projeto }) {
   }, [projeto.id]);
 
   if (erroCarga) return <Aviso erro={erroCarga} />;
-  if (!pf) return <p>Carregando…</p>;
+  if (!pf) return <Carregando />;
 
   const executar = (fn) => envio.executar(async () => setPf(await fn()));
   const base = `/projetos/${projeto.id}/portfolio`;
