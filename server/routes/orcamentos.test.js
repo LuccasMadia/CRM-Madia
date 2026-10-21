@@ -195,3 +195,16 @@ describe('/api/orcamentos', () => {
     expect(ctx.db.prepare('SELECT COUNT(*) AS n FROM orcamento_itens').get().n).toBe(0);
   });
 });
+
+describe('GET /api/orcamentos/:id/pdf', () => {
+  it('baixa o PDF com o nome do arquivo', async () => {
+    const orc = await novoOrcamento(await novoCliente('Açaí & Cia/SP'));
+    const res = await ctx.http.get(`/api/orcamentos/${orc.id}/pdf`).buffer(true).parse((r, cb) => {
+      const partes = []; r.on('data', (d) => partes.push(d)); r.on('end', () => cb(null, Buffer.concat(partes)));
+    }).expect(200);
+    expect(res.headers['content-type']).toMatch(/application\/pdf/);
+    expect(res.headers['content-disposition']).toBe('attachment; filename="Orcamento-001-Acai-Cia-SP.pdf"');
+    expect(res.body.subarray(0, 5).toString()).toBe('%PDF-');
+    await ctx.http.get('/api/orcamentos/999/pdf').expect(404);
+  });
+});

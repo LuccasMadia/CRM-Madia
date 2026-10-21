@@ -4,7 +4,8 @@ import { repoOrcamentos, repoOrcamentoItens, repoTabelaServicos, repoTabelaPacot
 import { repoPlacasModelos, precoSugeridoPlacas } from '../repos/placas.js';
 import { obterConfig } from '../repos/config.js';
 import { emTransacao } from '../repos/crud.js';
-import { calcularTotais } from '../domain/orcamentos.js';
+import { calcularTotais, nomeArquivoPdf } from '../domain/orcamentos.js';
+import { modeloDocumento, gerarPdf } from '../orcamentos/pdf.js';
 import { precoGmnCentavos } from './tabelaPrecos.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
@@ -165,6 +166,16 @@ export function rotasOrcamentos({ db, hoje }) {
   });
 
   r.get('/orcamentos/:id', (req, res) => res.json(montar(carregar(req.params.id))));
+
+  r.get('/orcamentos/:id/pdf', async (req, res) => {
+    const orc = montar(carregar(req.params.id));
+    const pdf = await gerarPdf(modeloDocumento(orc, { whatsapp: obterConfig(db, 'contato_whatsapp') }));
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${nomeArquivoPdf(orc.numero, orc.cliente_nome)}"`,
+    });
+    res.send(pdf);
+  });
 
   r.put('/orcamentos/:id', (req, res) => {
     const orcamento = carregar(req.params.id);
