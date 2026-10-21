@@ -101,6 +101,19 @@ describe('/api/tabela-precos', () => {
     expect((await obter()).pacotes).toHaveLength(1);
   });
 
+  it('pacote com modelo de placa inexistente dá 400 e não grava nada', async () => {
+    const { servicos } = await obter();
+    const a = servicos[0];
+    const item = { servico_id: a.id, placa_modelo_id: 99999 };
+    await ctx.http.post('/api/tabela-precos/pacotes').send({ nome: 'Ruim', itens: [item] }).expect(400);
+    expect((await obter()).pacotes).toHaveLength(1);
+    const existente = (await obter()).pacotes[0];
+    await ctx.http.put(`/api/tabela-precos/pacotes/${existente.id}`).send({ nome: 'Renomeado', itens: [item] }).expect(400);
+    const depois = (await obter()).pacotes[0];
+    expect(depois.nome).toBe(existente.nome);
+    expect(depois.itens).toHaveLength(existente.itens.length);
+  });
+
   it('valida desconto entre 0 e 100 e grava o WhatsApp', async () => {
     await ctx.http.put('/api/tabela-precos/config').send({ desconto_combo_pct: 101 }).expect(400);
     await ctx.http.put('/api/tabela-precos/config').send({ desconto_combo_pct: -1 }).expect(400);

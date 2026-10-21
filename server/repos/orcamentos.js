@@ -21,6 +21,15 @@ export function repoTabelaServicos(db) {
 
 export function repoTabelaPacotes(db) {
   const base = criarRepo(db, 'tabela_pacotes', ['nome']);
+  function trocarItens(pacoteId, itens) {
+    db.prepare('DELETE FROM tabela_pacotes_itens WHERE pacote_id = ?').run(pacoteId);
+    const inserir = db.prepare(
+      `INSERT INTO tabela_pacotes_itens (pacote_id, servico_id, opcional, quantidade, placa_modelo_id, ordem)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    itens.forEach((i, ordem) =>
+      inserir.run(pacoteId, i.servico_id, i.opcional ? 1 : 0, i.quantidade ?? 1, i.placa_modelo_id ?? null, ordem));
+  }
   return {
     ...base,
     listarComItens() {
@@ -28,14 +37,15 @@ export function repoTabelaPacotes(db) {
       return base.listar({}, 'id').map((p) => ({ ...p, itens: itens.filter((i) => i.pacote_id === p.id) }));
     },
     substituirItens(pacoteId, itens) {
-      emTransacao(db, () => {
-        db.prepare('DELETE FROM tabela_pacotes_itens WHERE pacote_id = ?').run(pacoteId);
-        const inserir = db.prepare(
-          `INSERT INTO tabela_pacotes_itens (pacote_id, servico_id, opcional, quantidade, placa_modelo_id, ordem)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-        );
-        itens.forEach((i, ordem) =>
-          inserir.run(pacoteId, i.servico_id, i.opcional ? 1 : 0, i.quantidade ?? 1, i.placa_modelo_id ?? null, ordem));
+      emTransacao(db, () => trocarItens(pacoteId, itens));
+    },
+    // Grava o pacote e os itens numa transação só: se algo falhar, nada fica pela metade.
+    // id null cria; itens null mantém os atuais.
+    salvar(id, dados, itens) {
+      return emTransacao(db, () => {
+        const pacote = id === null ? base.criar(dados) : base.atualizar(id, dados);
+        if (itens) trocarItens(pacote.id, itens);
+        return pacote;
       });
     },
   };

@@ -41,6 +41,18 @@ describe('repositórios de orçamentos', () => {
     expect(depois.itens[0]).toMatchObject({ opcional: 1, quantidade: 1, ordem: 0 });
   });
 
+  it('salvar pacote é atômico: erro nos itens desfaz o pacote inteiro', () => {
+    const db = bancoNovo();
+    const pacotes = repoTabelaPacotes(db);
+    const [p] = pacotes.listarComItens();
+    expect(() => pacotes.salvar(null, { nome: 'Novo' }, [{ servico_id: 99999 }])).toThrow();
+    expect(() => pacotes.salvar(p.id, { nome: 'Renomeado' }, [{ servico_id: 99999 }])).toThrow();
+    const depois = pacotes.listarComItens();
+    expect(depois).toHaveLength(1);
+    expect(depois[0].nome).toBe('Presença Local');
+    expect(depois[0].itens).toHaveLength(3);
+  });
+
   it('lista orçamentos do cliente do mais novo e itens por ordem', () => {
     const db = bancoNovo();
     const orcs = repoOrcamentos(db);

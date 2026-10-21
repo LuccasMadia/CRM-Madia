@@ -47,6 +47,9 @@ export function rotasTabelaPrecos({ db }) {
     return itens.map((item) => {
       const dados = validar(item, REGRAS_ITEM);
       if (!servicos.obter(dados.servico_id)) throw new ErroValidacao([{ campo: 'itens', mensagem: 'Serviço não encontrado' }]);
+      if (dados.placa_modelo_id && !db.prepare('SELECT 1 FROM placas_modelos WHERE id = ?').get(dados.placa_modelo_id)) {
+        throw new ErroValidacao([{ campo: 'itens', mensagem: 'Modelo de placa não encontrado' }]);
+      }
       return dados;
     });
   }
@@ -109,9 +112,7 @@ export function rotasTabelaPrecos({ db }) {
   r.post('/pacotes', (req, res) => {
     const dados = validar(req.body, REGRAS_PACOTE);
     const itens = itensValidos(req.body);
-    // substituirItens já abre a própria transação (não aninha); os itens foram validados antes.
-    const pacote = pacotes.criar(dados);
-    pacotes.substituirItens(pacote.id, itens);
+    const pacote = pacotes.salvar(null, dados, itens);
     res.status(201).json(pacoteCompleto(pacote.id));
   });
 
@@ -120,8 +121,7 @@ export function rotasTabelaPrecos({ db }) {
     if (!pacotes.obter(id)) throw naoEncontrado('Pacote');
     const dados = validar(req.body, REGRAS_PACOTE, { parcial: true });
     const itens = 'itens' in (req.body ?? {}) ? itensValidos(req.body) : null;
-    pacotes.atualizar(id, dados);
-    if (itens) pacotes.substituirItens(id, itens);
+    pacotes.salvar(id, dados, itens);
     res.json(pacoteCompleto(id));
   });
 
