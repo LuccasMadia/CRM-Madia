@@ -10,6 +10,9 @@ const CHAVE_DESCONTO = 'orcamento_desconto_combo_pct';
 const CHAVE_WHATSAPP = 'contato_whatsapp';
 const TIPOS_FIXOS = ['placa', 'gmn_config', 'hospedagem'];
 
+// O preço da configuração do GMN vive na config; a linha da tabela nunca o guarda.
+export const precoGmnCentavos = (db) => Number(obterConfig(db, CHAVE_GMN) ?? 0);
+
 const REGRAS_SERVICO = {
   nome: { tipo: 'texto', obrigatorio: true },
   frase: { tipo: 'texto' },
@@ -37,9 +40,7 @@ export function rotasTabelaPrecos({ db }) {
   const servicos = repoTabelaServicos(db);
   const pacotes = repoTabelaPacotes(db);
 
-  const precoGmn = () => Number(obterConfig(db, CHAVE_GMN) ?? 0);
-  // O preço da configuração do GMN vive na config; a linha da tabela nunca o guarda.
-  const comPreco = (s) => (s.tipo === 'gmn_config' ? { ...s, valor_unico_centavos: precoGmn() } : s);
+  const comPreco = (s) => (s.tipo === 'gmn_config' ? { ...s, valor_unico_centavos: precoGmnCentavos(db) } : s);
 
   function itensValidos(corpo) {
     const itens = corpo?.itens;

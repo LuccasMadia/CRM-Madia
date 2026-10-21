@@ -24,6 +24,7 @@ import { rotasHospedagem } from './routes/hospedagem.js';
 import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
 import { rotasFerramentas } from './routes/ferramentas.js';
 import { rotasTabelaPrecos } from './routes/tabelaPrecos.js';
+import { rotasOrcamentos } from './routes/orcamentos.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
   const app = express();
@@ -45,6 +46,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api/nichos', rotasNichos(ctx));
   app.use('/api/ferramentas', rotasFerramentas(ctx));
   app.use('/api/tabela-precos', rotasTabelaPrecos(ctx));
+  app.use('/api', rotasOrcamentos(ctx));
   app.use('/api', rotasParcelas(ctx));
   app.use('/api', rotasTarefas(ctx));
   app.use('/api', rotasConteudos(ctx));
