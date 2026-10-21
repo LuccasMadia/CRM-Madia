@@ -4,6 +4,8 @@ import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { useParcelas, parcelaUnica } from '../../hooks/useParcelas.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormVendaPlacas } from '../../components/FormVendaPlacas.jsx';
@@ -16,6 +18,7 @@ function CartaoVenda({ cliente, projeto, onMudou }) {
   const { parcelas, recarregar } = useParcelas(projeto);
   const [editando, setEditando] = useState(false);
   const envio = useEnvio();
+  const [confirmar, dialogo] = useConfirmacao();
   const linha = projeto.servicos.find((s) => s.tipo === 'placas_nfc');
 
   function marcarEntregue() {
@@ -26,13 +29,14 @@ function CartaoVenda({ cliente, projeto, onMudou }) {
   }
 
   function excluir() {
-    const aviso = linha?.venda_id
-      ? 'Excluir esta venda de placas? A venda continua em Placas › Vendas; para devolver o estoque, exclua-a por lá.'
-      : 'Excluir esta venda de placas?';
-    if (!window.confirm(aviso)) return;
-    envio.executar(async () => {
-      await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
-      onMudou();
+    confirmar({
+      titulo: 'Excluir esta venda de placas?',
+      mensagem: linha?.venda_id ? 'A venda continua em Placas › Vendas; para devolver o estoque, exclua-a por lá.' : 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
+        notificar('Venda de placas excluída');
+        onMudou();
+      },
     });
   }
 
@@ -40,6 +44,7 @@ function CartaoVenda({ cliente, projeto, onMudou }) {
     await api(`/projetos/${projeto.id}`, { method: 'PUT', body: corpo });
     setEditando(false);
     onMudou();
+    notificar('Venda de placas salva');
   }
 
   return (
@@ -65,6 +70,7 @@ function CartaoVenda({ cliente, projeto, onMudou }) {
           <FormVendaPlacas cliente={cliente} projeto={projeto} parcela={parcelaUnica(parcelas)} onSalvar={salvar} />
         </Modal>
       )}
+      {dialogo}
     </li>
   );
 }

@@ -53,11 +53,13 @@ describe('ClienteDetalhe', () => {
   });
 
   it('mostra a mensagem quando o servidor recusa a exclusão', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockApi(rotasPerfil({ 'DELETE /clientes/1': resposta(409, { erro: 'Este cliente tem projetos.' }) }));
     abrir();
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Excluir' }));
-    expect(await screen.findByText('Este cliente tem projetos.')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Excluir' }));
+    const dialogo = screen.getByRole('dialog', { name: /Excluir o cliente/ });
+    await user.click(within(dialogo).getByRole('button', { name: 'Excluir' }));
+    expect(await within(dialogo).findByText('Este cliente tem projetos.')).toBeInTheDocument();
   });
 
   it('o topo só mostra a foto (ou as iniciais), sem controles de foto', async () => {

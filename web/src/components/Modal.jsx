@@ -58,6 +58,7 @@ export function Modal({ titulo, onFechar, children }) {
 
   function aoTeclar(e) {
     if (e.key !== 'Tab') return;
+    e.stopPropagation(); // num modal dentro de outro, só o de dentro prende o foco
     const focaveis = [...caixa.current.querySelectorAll(FOCAVEIS)];
     if (!focaveis.length) return;
     const [inicio, fim] = [focaveis[0], focaveis[focaveis.length - 1]];

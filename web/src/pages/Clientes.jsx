@@ -9,6 +9,7 @@ import { Icone } from '../components/Icone.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
 import { LinkInstagram } from '../components/LinkInstagram.jsx';
 import { salvarFotoCliente } from '../lib/clientes.js';
+import { notificar } from '../lib/notificacoes.js';
 
 export function Clientes() {
   const [busca, setBusca] = useState('');
@@ -21,6 +22,7 @@ export function Clientes() {
     const cliente = await api('/clientes', { method: 'POST', body: dados });
     await salvarFotoCliente(cliente.id, fotoEscolhida);
     navegar(`/clientes/${cliente.id}`);
+    notificar('Cliente criado');
   }
 
   async function salvar(dados, fotoEscolhida) {
@@ -28,6 +30,7 @@ export function Clientes() {
     await salvarFotoCliente(editando.id, fotoEscolhida);
     setEditando(null);
     recarregar();
+    notificar('Cliente salvo');
   }
 
   return (

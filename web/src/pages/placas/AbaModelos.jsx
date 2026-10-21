@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaModelo } from '../../components/FormPlacaModelo.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 
 export function AbaModelos() {
+  const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const { dados: modelos, erro, recarregar } = useCarregar(() => api('/placas/modelos'), []);
@@ -15,18 +18,26 @@ export function AbaModelos() {
     await api('/placas/modelos', { method: 'POST', body: dados });
     setCriando(false);
     recarregar();
+    notificar('Modelo criado');
   }
 
   async function salvarEdicao(dados) {
     await api(`/placas/modelos/${editando.id}`, { method: 'PUT', body: dados });
     setEditando(null);
     recarregar();
+    notificar('Modelo salvo');
   }
 
-  async function remover(modelo) {
-    if (!window.confirm(`Excluir o modelo ${modelo.nome}?`)) return;
-    await api(`/placas/modelos/${modelo.id}`, { method: 'DELETE' });
-    recarregar();
+  function remover(modelo) {
+    confirmar({
+      titulo: `Excluir o modelo ${modelo.nome}?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/placas/modelos/${modelo.id}`, { method: 'DELETE' });
+        notificar('Modelo excluído');
+        recarregar();
+      },
+    });
   }
 
   async function desativar(modelo) {
@@ -90,6 +101,7 @@ export function AbaModelos() {
           <FormPlacaModelo inicial={editando} rotuloBotao="Salvar" onSalvar={salvarEdicao} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

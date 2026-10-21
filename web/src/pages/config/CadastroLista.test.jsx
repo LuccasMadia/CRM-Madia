@@ -57,10 +57,11 @@ describe('CadastroLista', () => {
   });
 
   it('exclui com confirmação e mostra o 409 quando está em uso', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockApi({ 'GET /categorias': categorias, 'DELETE /categorias/1': resposta(409, { erro: 'Em uso por 3 projeto(s)' }) });
     render(<CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />);
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Excluir Site' }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Excluir Site' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir "Site"?' })).getByRole('button', { name: 'Excluir' }));
     expect(await screen.findByText('Em uso por 3 projeto(s)')).toBeInTheDocument();
     expect(screen.getByText('Site')).toBeInTheDocument();
   });

@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaMaterial } from '../../components/FormPlacaMaterial.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 
 export function AbaMateriais() {
+  const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const { dados: materiais, erro, recarregar } = useCarregar(() => api('/placas/materiais'), []);
@@ -15,18 +18,26 @@ export function AbaMateriais() {
     await api('/placas/materiais', { method: 'POST', body: dados });
     setCriando(false);
     recarregar();
+    notificar('Material criado');
   }
 
   async function salvarEdicao(dados) {
     await api(`/placas/materiais/${editando.id}`, { method: 'PUT', body: dados });
     setEditando(null);
     recarregar();
+    notificar('Material salvo');
   }
 
-  async function remover(material) {
-    if (!window.confirm(`Excluir o material ${material.nome}?`)) return;
-    await api(`/placas/materiais/${material.id}`, { method: 'DELETE' });
-    recarregar();
+  function remover(material) {
+    confirmar({
+      titulo: `Excluir o material ${material.nome}?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/placas/materiais/${material.id}`, { method: 'DELETE' });
+        notificar('Material excluído');
+        recarregar();
+      },
+    });
   }
 
   async function desativar(material) {
@@ -90,6 +101,7 @@ export function AbaMateriais() {
           <FormPlacaMaterial inicial={editando} rotuloBotao="Salvar" onSalvar={salvarEdicao} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

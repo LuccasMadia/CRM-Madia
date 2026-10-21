@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Icone } from '../../components/Icone.jsx';
 
 export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }) {
   const { dados: itens, erro, recarregar } = useCarregar(() => api(caminho), [caminho]);
@@ -10,6 +12,7 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
   const [editando, setEditando] = useState(null);
   const [nomeEditado, setNomeEditado] = useState('');
   const envio = useEnvio();
+  const [confirmar, dialogo] = useConfirmacao();
   // Renomear tem envio próprio: o erro aparece no item em edição, não no campo de adicionar.
   const renomeio = useEnvio();
   const erroNome = envio.erros.find((e) => e.campo === 'nome')?.mensagem;
@@ -40,10 +43,13 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
   }
 
   function excluir(item) {
-    if (!window.confirm(`Excluir "${item.nome}"?`)) return;
-    envio.executar(async () => {
-      await api(`${caminho}/${item.id}`, { method: 'DELETE' });
-      recarregar();
+    confirmar({
+      titulo: `Excluir "${item.nome}"?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`${caminho}/${item.id}`, { method: 'DELETE' });
+        recarregar();
+      },
     });
   }
 
@@ -79,10 +85,10 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
               <>
                 <span className="lista-cadastro__nome">{item.nome}</span>
                 {ordenavel && i > 0 && (
-                  <button type="button" className="btn btn--pequeno" aria-label={`Subir ${item.nome}`} onClick={() => trocar(i, i - 1)}>↑</button>
+                  <button type="button" className="btn btn--icone" aria-label={`Subir ${item.nome}`} onClick={() => trocar(i, i - 1)}><Icone nome="seta-cima" tamanho={18} /></button>
                 )}
                 {ordenavel && i < itens.length - 1 && (
-                  <button type="button" className="btn btn--pequeno" aria-label={`Descer ${item.nome}`} onClick={() => trocar(i, i + 1)}>↓</button>
+                  <button type="button" className="btn btn--icone" aria-label={`Descer ${item.nome}`} onClick={() => trocar(i, i + 1)}><Icone nome="seta-baixo" tamanho={18} /></button>
                 )}
                 <button type="button" className="btn btn--pequeno" aria-label={`Renomear ${item.nome}`} onClick={() => abrirRenomeio(item)}>Renomear</button>
                 <button type="button" className="btn btn--pequeno btn--perigo" aria-label={`Excluir ${item.nome}`} onClick={() => excluir(item)}>Excluir</button>
@@ -100,6 +106,7 @@ export function CadastroLista({ titulo, caminho, rotuloNovo, ordenavel = false }
         <button className="btn" disabled={envio.enviando}>Adicionar</button>
       </form>
       {!erroNome && <Aviso erro={envio.erro} />}
+      {dialogo}
     </section>
   );
 }

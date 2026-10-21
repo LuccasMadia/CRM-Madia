@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ClienteDetalhe } from '../ClienteDetalhe.jsx';
 import { mockApi, resposta } from '../../test/mockApi.js';
@@ -81,10 +81,12 @@ describe('Aba Google Meu Negócio', () => {
   });
 
   it('excluir pede confirmação e chama DELETE', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { chamadas } = mockApi(rotasPerfil({ 'DELETE /projetos/6': resposta(204) }));
     abrir();
-    await userEvent.setup().click(within(await cartao()).getByRole('button', { name: 'Excluir' }));
-    expect(chamadas.some((c) => c.metodo === 'DELETE' && c.caminho === '/projetos/6')).toBe(true);
+    const user = userEvent.setup();
+    await user.click(within(await cartao()).getByRole('button', { name: 'Excluir' }));
+    expect(chamadas.some((c) => c.metodo === 'DELETE')).toBe(false);
+    await user.click(within(screen.getByRole('dialog', { name: 'Excluir Google Meu Negócio?' })).getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(chamadas.some((c) => c.metodo === 'DELETE' && c.caminho === '/projetos/6')).toBe(true));
   });
 });

@@ -1,7 +1,9 @@
 import { api } from '../api/client.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { ehPc } from '../lib/ambiente.js';
+import { useConfirmacao } from '../hooks/useConfirmacao.jsx';
 import { Aviso } from './Aviso.jsx';
+import { Icone } from './Icone.jsx';
 
 const ACCEPT = { reels: 'video/mp4,video/quicktime' };
 const ACCEPT_IMAGEM = 'image/png,image/jpeg,image/webp';
@@ -9,6 +11,7 @@ const ACCEPT_IMAGEM = 'image/png,image/jpeg,image/webp';
 // Lista as mídias de um conteúdo já salvo; cada alteração devolve o conteúdo atualizado em `onMudou`.
 export function MidiasConteudo({ conteudo, onMudou }) {
   const { erro, enviando, executar } = useEnvio();
+  const [confirmar, dialogo] = useConfirmacao();
   const midias = conteudo.midias ?? [];
   const base = `/conteudos/${conteudo.id}/midias`;
   // Saindo ou já no Instagram: as mídias ficam só para ver.
@@ -21,6 +24,15 @@ export function MidiasConteudo({ conteudo, onMudou }) {
     const ids = midias.map((m) => m.id);
     [ids[indice], ids[indice + delta]] = [ids[indice + delta], ids[indice]];
     mudar(() => api(`${base}/ordem`, { method: 'PUT', body: { ids } }));
+  }
+
+  function remover(midia, i) {
+    confirmar({
+      titulo: `Remover a mídia ${i + 1}?`,
+      mensagem: 'O arquivo sai deste conteúdo.',
+      rotuloConfirmar: 'Remover',
+      onConfirmar: () => mudar(() => api(`${base}/${midia.id}`, { method: 'DELETE' })),
+    });
   }
 
   function enviar(e) {
@@ -45,12 +57,12 @@ export function MidiasConteudo({ conteudo, onMudou }) {
               {editavel && (
                 <span className="midias__acoes">
                   {i > 0 && (
-                    <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para antes: mídia ${i + 1}`} onClick={() => mover(i, -1)}>←</button>
+                    <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para antes: mídia ${i + 1}`} onClick={() => mover(i, -1)}><Icone nome="seta-esquerda" tamanho={16} /></button>
                   )}
                   {i < midias.length - 1 && (
-                    <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para depois: mídia ${i + 1}`} onClick={() => mover(i, 1)}>→</button>
+                    <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Mover para depois: mídia ${i + 1}`} onClick={() => mover(i, 1)}><Icone nome="seta-direita" tamanho={16} /></button>
                   )}
-                  <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Remover mídia ${i + 1}`} onClick={() => mudar(() => api(`${base}/${m.id}`, { method: 'DELETE' }))}>×</button>
+                  <button type="button" className="btn btn--fantasma" disabled={enviando} aria-label={`Remover mídia ${i + 1}`} onClick={() => remover(m, i)}><Icone nome="fechar" tamanho={16} /></button>
                 </span>
               )}
             </li>
@@ -73,6 +85,7 @@ export function MidiasConteudo({ conteudo, onMudou }) {
         <p className="aviso">Suba a mídia pelo PC.</p>
       )}
       <Aviso erro={mensagem} />
+      {dialogo}
     </div>
   );
 }

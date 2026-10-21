@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
 import { Campo } from '../../components/Campo.jsx';
+import { Icone } from '../../components/Icone.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Carregando } from '../../components/Carregando.jsx';
 import { gerarSlug } from '../../../../server/domain/slug.js';
@@ -110,6 +112,8 @@ function trocar(lista, indice, delta) {
 }
 
 function Imagens({ pf, base, executar }) {
+  const [confirmar, dialogo] = useConfirmacao();
+
   function enviar(e) {
     const arquivos = [...e.target.files];
     e.target.value = '';
@@ -122,6 +126,15 @@ function Imagens({ pf, base, executar }) {
   function mover(indice, delta) {
     const ids = trocar(pf.imagens, indice, delta);
     if (ids) executar(() => api(`${base}/imagens/ordem`, { method: 'PUT', body: { ids } }));
+  }
+
+  function remover(img, i) {
+    confirmar({
+      titulo: `Remover a imagem ${i + 1}?`,
+      mensagem: i === 0 ? 'Ela é a capa do projeto no site; a próxima imagem passa a ser a capa.' : 'Ela sai do portfólio do site.',
+      rotuloConfirmar: 'Remover',
+      onConfirmar: () => executar(() => api(`/portfolio/imagens/${img.id}`, { method: 'DELETE' })),
+    });
   }
 
   return (
@@ -138,13 +151,14 @@ function Imagens({ pf, base, executar }) {
             <img src={img.url} alt={`Imagem ${i + 1}`} />
             <figcaption className="form--linha">
               <span>{i + 1}</span>
-              <button type="button" className="btn btn--pequeno" aria-label={`Mover imagem ${i + 1} para antes`} onClick={() => mover(i, -1)}>←</button>
-              <button type="button" className="btn btn--pequeno" aria-label={`Mover imagem ${i + 1} para depois`} onClick={() => mover(i, 1)}>→</button>
-              <button type="button" className="btn btn--pequeno btn--perigo" aria-label={`Remover imagem ${i + 1}`} onClick={() => executar(() => api(`/portfolio/imagens/${img.id}`, { method: 'DELETE' }))}>×</button>
+              <button type="button" className="btn btn--icone" aria-label={`Mover imagem ${i + 1} para antes`} onClick={() => mover(i, -1)}><Icone nome="seta-esquerda" tamanho={18} /></button>
+              <button type="button" className="btn btn--icone" aria-label={`Mover imagem ${i + 1} para depois`} onClick={() => mover(i, 1)}><Icone nome="seta-direita" tamanho={18} /></button>
+              <button type="button" className="btn btn--icone btn--icone-perigo" aria-label={`Remover imagem ${i + 1}`} onClick={() => remover(img, i)}><Icone nome="fechar" tamanho={18} /></button>
             </figcaption>
           </figure>
         ))}
       </div>
+      {dialogo}
     </section>
   );
 }
@@ -184,6 +198,7 @@ function CaseStudy({ pf, base, executar }) {
 }
 
 function Slide({ slide, numero, imagens, executar, onMover }) {
+  const [confirmar, dialogo] = useConfirmacao();
   const { valores, campo } = useFormulario({
     titulo: slide.titulo ?? '',
     descricao: slide.descricao ?? '',
@@ -214,10 +229,23 @@ function Slide({ slide, numero, imagens, executar, onMover }) {
       </Campo>
       <div className="form--linha">
         <button className="btn btn--primario btn--pequeno" aria-label={`Salvar slide ${numero}`}>Salvar</button>
-        <button type="button" className="btn btn--pequeno" aria-label={`Mover slide ${numero} para cima`} onClick={() => onMover(-1)}>↑</button>
-        <button type="button" className="btn btn--pequeno" aria-label={`Mover slide ${numero} para baixo`} onClick={() => onMover(1)}>↓</button>
-        <button type="button" className="btn btn--pequeno btn--perigo" aria-label={`Remover slide ${numero}`} onClick={() => executar(() => api(`/portfolio/case-study/${slide.id}`, { method: 'DELETE' }))}>Remover</button>
+        <button type="button" className="btn btn--icone" aria-label={`Mover slide ${numero} para cima`} onClick={() => onMover(-1)}><Icone nome="seta-cima" tamanho={18} /></button>
+        <button type="button" className="btn btn--icone" aria-label={`Mover slide ${numero} para baixo`} onClick={() => onMover(1)}><Icone nome="seta-baixo" tamanho={18} /></button>
+        <button
+          type="button"
+          className="btn btn--pequeno btn--perigo"
+          aria-label={`Remover slide ${numero}`}
+          onClick={() => confirmar({
+            titulo: `Remover o slide ${numero}?`,
+            mensagem: 'O título e a descrição dele se perdem.',
+            rotuloConfirmar: 'Remover',
+            onConfirmar: () => executar(() => api(`/portfolio/case-study/${slide.id}`, { method: 'DELETE' })),
+          })}
+        >
+          Remover
+        </button>
       </div>
+      {dialogo}
     </form>
   );
 }

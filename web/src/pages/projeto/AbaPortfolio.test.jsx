@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AbaPortfolio } from './AbaPortfolio.jsx';
 import { mockApi, resposta } from '../../test/mockApi.js';
@@ -34,7 +34,11 @@ describe('AbaPortfolio', () => {
       'DELETE /portfolio/imagens/11': resposta(409, { erro: 'Esta imagem é usada no case study.' }),
     });
     render(<AbaPortfolio projeto={projeto} />);
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Remover imagem 1' }));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Remover imagem 1' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Remover a imagem 1?' });
+    expect(within(dialogo).getByText(/é a capa do projeto/)).toBeInTheDocument();
+    await user.click(within(dialogo).getByRole('button', { name: 'Remover' }));
     expect(await screen.findByText('Esta imagem é usada no case study.')).toBeInTheDocument();
     expect(screen.getByAltText('Imagem 1')).toBeInTheDocument();
   });

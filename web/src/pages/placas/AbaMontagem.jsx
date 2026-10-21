@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaMontagem } from '../../components/FormPlacaMontagem.jsx';
@@ -17,6 +19,7 @@ export function AvisoEstoqueMontagem({ avisos }) {
 }
 
 export function AbaMontagem() {
+  const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [avisosEstoque, setAvisosEstoque] = useState([]);
   const { dados: montagens, erro, recarregar } = useCarregar(() => api('/placas/montagens'), []);
@@ -27,13 +30,18 @@ export function AbaMontagem() {
     setCriando(false);
     setAvisosEstoque(res.avisos_estoque ?? []);
     recarregar();
+    notificar('Montagem registrada');
   }
 
   function remover(montagem) {
-    if (!window.confirm(`Excluir esta montagem de ${montagem.quantidade} × ${montagem.modelo_nome}? Os materiais voltam para o estoque.`)) return;
-    envio.executar(async () => {
-      await api(`/placas/montagens/${montagem.id}`, { method: 'DELETE' });
-      recarregar();
+    confirmar({
+      titulo: `Excluir esta montagem de ${montagem.quantidade} × ${montagem.modelo_nome}?`,
+      mensagem: 'Os materiais voltam para o estoque.',
+      onConfirmar: async () => {
+        await api(`/placas/montagens/${montagem.id}`, { method: 'DELETE' });
+        notificar('Montagem excluída');
+        recarregar();
+      },
     });
   }
 
@@ -68,6 +76,7 @@ export function AbaMontagem() {
           <FormPlacaMontagem onSalvar={criar} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

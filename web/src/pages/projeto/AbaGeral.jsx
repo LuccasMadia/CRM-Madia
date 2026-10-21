@@ -4,6 +4,8 @@ import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { SeletorCategorias } from '../../components/SeletorCategorias.jsx';
 import { SeletorNicho } from '../../components/SeletorNicho.jsx';
@@ -41,6 +43,7 @@ export function AbaGeral({ projeto, onSalvo }) {
   const { dados: categorias } = useCarregar(() => api('/categorias'), []);
   const [valores, setValores] = useState(() => valoresIniciais(projeto));
   const { erros, erro, enviando, executar, setErros } = useEnvio();
+  const [confirmar, dialogo] = useConfirmacao();
   const alterar = (parcial) => setValores((v) => comDiaSugerido({ ...v, ...parcial }));
   const texto = (nome) => ({ value: valores[nome], onChange: (e) => alterar({ [nome]: e.target.value }) });
 
@@ -78,15 +81,20 @@ export function AbaGeral({ projeto, onSalvo }) {
           mensalidade_inicio_data: resto.mensalidade_inicio_modo === 'data' ? resto.mensalidade_inicio_data : null,
         },
       });
+      notificar('Projeto salvo');
       onSalvo();
     });
   }
 
   function excluir() {
-    if (!window.confirm(`Excluir o projeto "${projeto.titulo}"? Parcelas, tarefas e dados do portfólio também serão excluídos.`)) return;
-    executar(async () => {
-      await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
-      navegar('/servicos?aba=sites');
+    confirmar({
+      titulo: `Excluir o projeto "${projeto.titulo}"?`,
+      mensagem: 'Parcelas, tarefas e dados do portfólio também serão excluídos.',
+      onConfirmar: async () => {
+        await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
+        notificar('Projeto excluído');
+        navegar('/servicos?aba=sites');
+      },
     });
   }
 
@@ -153,6 +161,7 @@ export function AbaGeral({ projeto, onSalvo }) {
         <button className="btn btn--primario" disabled={enviando}>Salvar projeto</button>
         <button type="button" className="btn btn--link-perigo" onClick={excluir}>Excluir projeto</button>
       </div>
+      {dialogo}
     </form>
   );
 }

@@ -173,7 +173,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .faixa-numeros__item small { color: var(--texto-suave); font-size: 0.8rem; }
 .faixa-numeros__item strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .faixa-numeros__item--primaria strong { color: var(--primaria); }
-.faixa-numeros__item--ok strong { color: var(--ok); font-size: 1rem; padding-top: 4px; }
+.faixa-numeros__item--ok strong { color: var(--ok); font-size: 1rem; padding-top: 4px; display: inline-flex; align-items: center; gap: 6px; }
 .pilulas--secoes { margin-bottom: 20px; }
 /* Sites e Sistemas: escolha entre lista e funil (quadro) */
 .barra-visao { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -344,6 +344,9 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .divulgacao__etiquetas { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn--icone { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-color: transparent; background: transparent; color: var(--texto-suave); }
 .btn--icone:hover { background: var(--superficie-2); border-color: transparent; color: var(--texto); }
+.btn--icone-perigo:hover { color: var(--perigo); }
+.grid-ig__setas .btn--fantasma, .midias__acoes .btn--fantasma { display: inline-flex; align-items: center; color: #fff; }
+.grid-ig__icone { display: inline-flex; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.8)); }
 .tabela__acoes { width: 1%; text-align: right; }
 
 /* Foto do cliente: imagem redonda ou iniciais */

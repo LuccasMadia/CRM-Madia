@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MidiasConteudo } from './MidiasConteudo.jsx';
 import { mockApi, resposta } from '../test/mockApi.js';
@@ -31,7 +31,10 @@ describe('MidiasConteudo', () => {
     const { chamadas } = mockApi({ 'DELETE /conteudos/3/midias/2': atualizado });
     const onMudou = vi.fn();
     render(<MidiasConteudo conteudo={conteudo()} onMudou={onMudou} />);
-    await userEvent.setup().click(screen.getAllByRole('button', { name: /Remover mídia/ })[1]);
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole('button', { name: /Remover mídia/ })[1]);
+    expect(chamadas).toHaveLength(0); // pergunta antes de apagar
+    await user.click(within(screen.getByRole('dialog', { name: 'Remover a mídia 2?' })).getByRole('button', { name: 'Remover' }));
     expect(chamadas[0].metodo).toBe('DELETE');
     expect(onMudou).toHaveBeenCalledWith(atualizado);
   });
