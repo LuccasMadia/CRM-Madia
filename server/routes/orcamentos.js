@@ -124,24 +124,24 @@ export function rotasOrcamentos({ db, hoje }) {
     return { servico, dados: base };
   }
 
-  // Grava os itens preparados (e a hospedagem, quando um serviço a exige). Sem transação própria:
+  const temHospedagem = (id) => !!db.prepare(
+    `SELECT 1 FROM orcamento_itens oi JOIN tabela_servicos ts ON ts.id = oi.servico_id
+      WHERE oi.orcamento_id = ? AND ts.tipo = 'hospedagem' LIMIT 1`,
+  ).get(id);
+
+  // Grava os itens preparados e, depois de todos, a hospedagem se algum serviço a exige e o orçamento
+  // ainda não tem. Um item de hospedagem repetido é ignorado. Sem transação própria:
   // quem chama envolve em emTransacao.
   function gravarItens(orcamento, preparados) {
     for (const { servico, dados } of preparados) {
+      if (servico?.tipo === 'hospedagem' && temHospedagem(orcamento.id)) continue;
       itens.criar({ ...dados, orcamento_id: orcamento.id, ordem: itens.proximaOrdem(orcamento.id) });
-      if (servico?.hospedagem !== 'obrigatoria') continue;
-      const jaTem = db.prepare(
-        `SELECT 1 FROM orcamento_itens oi JOIN tabela_servicos ts ON ts.id = oi.servico_id
-          WHERE oi.orcamento_id = ? AND ts.tipo = 'hospedagem' LIMIT 1`,
-      ).get(orcamento.id);
-      const hospedagem = servicos.listar({ tipo: 'hospedagem' })[0];
-      if (jaTem || !hospedagem) continue;
-      itens.criar({
-        orcamento_id: orcamento.id, servico_id: hospedagem.id, placa_modelo_id: null, nome: hospedagem.nome,
-        frase: hospedagem.frase, quantidade: 1, valor_unico_centavos: hospedagem.valor_unico_centavos,
-        valor_mensal_centavos: hospedagem.valor_mensal_centavos, ordem: itens.proximaOrdem(orcamento.id),
-      });
     }
+    if (!preparados.some(({ servico }) => servico?.hospedagem === 'obrigatoria') || temHospedagem(orcamento.id)) return;
+    const hospedagem = servicos.listar({ tipo: 'hospedagem' })[0];
+    if (!hospedagem || !hospedagem.ativo) return;
+    const { dados } = prepararItem(orcamento, { servico_id: hospedagem.id });
+    itens.criar({ ...dados, orcamento_id: orcamento.id, ordem: itens.proximaOrdem(orcamento.id) });
   }
 
   r.get('/clientes/:id/orcamentos', (req, res) => {

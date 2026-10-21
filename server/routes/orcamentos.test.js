@@ -124,6 +124,27 @@ describe('/api/orcamentos', () => {
     await ctx.http.post(`/api/orcamentos/${b.id}/pacote`).send({ pacote_id: 999 }).expect(404);
   });
 
+  it('pacote com hospedagem ou com dois serviços obrigatórios traz hospedagem uma vez só', async () => {
+    const cardapio = await porNome('Cardápio / catálogo digital');
+    const agenda = await porNome('Sistema de agendamento');
+    const hosp = await porTipo('hospedagem');
+    const criar = async (nome, ids) => (await ctx.http.post('/api/tabela-precos/pacotes')
+      .send({ nome, itens: ids.map((servico_id) => ({ servico_id })) }).expect(201)).body;
+    const comHosp = await criar('Com hospedagem', [cardapio.id, hosp.id]);
+    const doisObrig = await criar('Dois obrigatórios', [cardapio.id, agenda.id]);
+    const hospedagens = (o) => o.itens.filter((i) => i.tipo_servico === 'hospedagem');
+
+    const a = await novoOrcamento();
+    let res = (await ctx.http.post(`/api/orcamentos/${a.id}/pacote`).send({ pacote_id: comHosp.id }).expect(200)).body;
+    expect(hospedagens(res)).toHaveLength(1);
+    expect(res.totais.total_mensal_centavos).toBe(15000);
+
+    const b = await novoOrcamento();
+    res = (await ctx.http.post(`/api/orcamentos/${b.id}/pacote`).send({ pacote_id: doisObrig.id }).expect(200)).body;
+    expect(res.itens).toHaveLength(3);
+    expect(hospedagens(res)).toHaveLength(1);
+  });
+
   it('item livre conta para o combo e é validado', async () => {
     const orc = await novoOrcamento();
     await addItem(orc, { livre: true, valor_unico_centavos: 100 }).expect(400);
