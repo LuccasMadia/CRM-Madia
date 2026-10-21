@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Orcamento } from './Orcamento.jsx';
 import { mockApi } from '../test/mockApi.js';
@@ -58,6 +58,17 @@ const vazio = {
 const rotas = (extra = {}) => ({ 'GET /orcamentos/7': filinto, 'GET /tabela-precos': tabela, 'GET /placas/modelos': modelos, ...extra });
 const abrir = () => renderizar(<Orcamento />, { rota: '/orcamentos/7', padrao: '/orcamentos/:id' });
 const totais = () => screen.getByRole('region', { name: 'Totais' });
+
+// Segura as escritas (tudo que não é GET) até o teste soltar cada uma, na ordem que quiser.
+function segurarEscritas() {
+  const real = globalThis.fetch;
+  const pendentes = [];
+  vi.stubGlobal('fetch', vi.fn((url, opcoes = {}) => {
+    if ((opcoes.method ?? 'GET') === 'GET') return real(url, opcoes);
+    return new Promise((resolver) => pendentes.push({ url, soltar: () => resolver(real(url, opcoes)) }));
+  }));
+  return pendentes;
+}
 
 afterEach(() => definirValoresOcultos(false));
 
@@ -156,6 +167,65 @@ describe('Orcamento', () => {
     expect(await screen.findByRole('button', { name: 'Aplicar desconto' })).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ desconto_pct: null });
     expect(within(totais()).getByText('Total pago uma vez').closest('div')).toHaveTextContent(/R\$\s1\.830,00/);
+  });
+
+  it('sem combo não mostra a linha de desconto, mas deixa tirar o desconto', async () => {
+    const semCombo = {
+      ...vazio,
+      itens: [item({ id: 40, servico_id: 3, nome: 'Cardápio digital B2B', valor_unico_centavos: 150000 })],
+      totais: { ...vazio.totais, servicos_combo: 1, subtotal_unico_centavos: 150000, total_unico_centavos: 150000 },
+    };
+    mockApi(rotas({ 'GET /orcamentos/7': semCombo }));
+    abrir();
+    await screen.findByLabelText('Nome de Cardápio digital B2B');
+    expect(totais()).not.toHaveTextContent('Desconto combo');
+    expect(totais()).not.toHaveTextContent('Subtotal');
+    expect(screen.getByRole('button', { name: 'Tirar desconto' })).toBeInTheDocument();
+    expect(screen.getByText('O desconto entra com 2 ou mais serviços pagos uma vez.')).toBeInTheDocument();
+  });
+
+  it('respostas fora de ordem: vale a do último pedido', async () => {
+    const respostaA = { ...filinto, itens: filinto.itens.map((i) => (i.id === 33 ? { ...i, valor_unico_centavos: 160000 } : i)),
+      totais: { ...filinto.totais, total_unico_centavos: 173700 } };
+    const respostaB = { ...filinto, itens: filinto.itens.map((i) => (i.id === 32 ? { ...i, valor_unico_centavos: 30000 } : i)),
+      totais: { ...filinto.totais, total_unico_centavos: 169200 } };
+    mockApi(rotas({ 'PUT /orcamentos/7/itens/33': respostaA, 'PUT /orcamentos/7/itens/32': respostaB }));
+    const pendentes = segurarEscritas();
+    abrir();
+    const user = userEvent.setup();
+    const valorA = await screen.findByLabelText('Valor único de Cardápio digital B2B');
+    await user.clear(valorA);
+    await user.type(valorA, '1600');
+    const valorB = screen.getByLabelText('Valor único de Configuração do Google Meu Negócio');
+    await user.clear(valorB);
+    await user.type(valorB, '300');
+    await user.tab();
+    await vi.waitFor(() => expect(pendentes).toHaveLength(2));
+    expect(screen.getByRole('button', { name: 'Remover Cardápio digital B2B' })).toBeDisabled();
+
+    pendentes[1].soltar();
+    await vi.waitFor(() => expect(within(totais()).getByText('Total pago uma vez').closest('div')).toHaveTextContent(/R\$\s1\.692,00/));
+    pendentes[0].soltar();
+    // deixa a resposta atrasada de A chegar e ser processada antes de conferir
+    await act(() => new Promise((r) => { setTimeout(r, 20); }));
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Remover Cardápio digital B2B' })).toBeEnabled());
+    expect(within(totais()).getByText('Total pago uma vez').closest('div')).toHaveTextContent(/R\$\s1\.692,00/);
+    expect(screen.getByLabelText('Valor único de Configuração do Google Meu Negócio')).toHaveValue('300,00');
+  });
+
+  it('botão de hospedagem fica travado enquanto o pedido está em andamento', async () => {
+    mockApi(rotas({ 'GET /orcamentos/7': { ...filinto, sugerir_hospedagem: true }, 'POST /orcamentos/7/itens': filinto }));
+    const pendentes = segurarEscritas();
+    abrir();
+    const faixa = (await screen.findByText(/Este site pode ter hospedagem e suporte\./)).closest('div');
+    const botao = within(faixa).getByRole('button', { name: 'Adicionar' });
+    const user = userEvent.setup();
+    await user.click(botao);
+    expect(botao).toBeDisabled();
+    await user.click(botao);
+    expect(pendentes).toHaveLength(1);
+    pendentes[0].soltar();
+    await vi.waitFor(() => expect(screen.queryByText(/Este site pode ter hospedagem/)).toBeNull());
   });
 
   it('mostra a sugestão de hospedagem e adiciona', async () => {

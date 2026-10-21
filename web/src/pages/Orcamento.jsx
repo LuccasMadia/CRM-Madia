@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
-import { useEnvio } from '../hooks/useEnvio.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Campo } from '../components/Campo.jsx';
 import { formatarDinheiro, paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
@@ -63,7 +62,12 @@ export function Orcamento() {
   const { dados: tabela, erro: erroTabela } = useCarregar(() => api('/tabela-precos'), []);
   // Depois de cada mudança, a tela mostra o orçamento que o servidor devolveu (sem recalcular aqui).
   const [atual, setAtual] = useState(null);
-  const envio = useEnvio();
+  // Vários campos salvam ao sair, então pedidos podem se cruzar: só a resposta do último pedido vale,
+  // e os botões ficam travados enquanto houver qualquer pedido em andamento.
+  const ultimoPedido = useRef(0);
+  const [emAndamento, setEmAndamento] = useState(0);
+  const [falha, setFalha] = useState(null);
+  const ocupado = emAndamento > 0;
 
   const doId = (o) => (o?.id === Number(id) ? o : null);
   const orcamento = doId(atual) ?? doId(carregado);
@@ -74,18 +78,41 @@ export function Orcamento() {
   const numero = numeroOrcamento(orcamento.numero);
   const voltar = `/clientes/${orcamento.cliente_id}?aba=orcamentos`;
   const hospedagem = tabela?.servicos.find((s) => s.tipo === 'hospedagem' && s.ativo);
-  const erroEnvio = envio.erro && (envio.erros.length ? { message: envio.erros.map((e) => e.mensagem).join('\n') } : envio.erro);
+  const erroEnvio = falha && (falha.erros?.length ? { message: falha.erros.map((e) => e.mensagem).join('\n') } : falha);
 
-  const aplicar = (caminho, opcoes) => envio.executar(async () => {
-    const resposta = await api(caminho, opcoes);
-    setAtual(resposta);
-    return resposta;
-  });
+  async function rodar(fn) {
+    setFalha(null);
+    setEmAndamento((n) => n + 1);
+    try {
+      return await fn();
+    } catch (e) {
+      setFalha(e);
+      return undefined;
+    } finally {
+      setEmAndamento((n) => n - 1);
+    }
+  }
+
+  const aplicar = (caminho, opcoes) => {
+    const pedido = ++ultimoPedido.current;
+    const ehUltimo = () => pedido === ultimoPedido.current;
+    return rodar(async () => {
+      try {
+        const resposta = await api(caminho, opcoes);
+        if (ehUltimo()) setAtual(resposta);
+        return resposta;
+      } catch (e) {
+        // O último falhou, mas um anterior pode ter gravado e sido ignorado: relê o que está no servidor.
+        if (ehUltimo()) api(`/orcamentos/${id}`).then((o) => ehUltimo() && setAtual(o), () => {});
+        throw e;
+      }
+    });
+  };
   const salvar = (campos) => aplicar(`/orcamentos/${id}`, { method: 'PUT', body: campos });
   const adicionarItem = (corpo) => aplicar(`/orcamentos/${id}/itens`, { method: 'POST', body: corpo });
 
   function duplicar() {
-    envio.executar(async () => {
+    rodar(async () => {
       const copia = await api(`/orcamentos/${id}/duplicar`, { method: 'POST' });
       setAtual(copia);
       navegar(`/orcamentos/${copia.id}`);
@@ -94,7 +121,7 @@ export function Orcamento() {
 
   function excluir() {
     if (!window.confirm(`Excluir o orçamento nº ${numero}?`)) return;
-    envio.executar(async () => {
+    rodar(async () => {
       await api(`/orcamentos/${id}`, { method: 'DELETE' });
       navegar(voltar);
     });
@@ -116,8 +143,8 @@ export function Orcamento() {
             </select>
           </Campo>
           <a className="btn btn--primario" href={`/api/orcamentos/${id}/pdf`} download>Baixar PDF</a>
-          <button type="button" className="btn" onClick={duplicar} disabled={envio.enviando}>Duplicar</button>
-          <button type="button" className="btn btn--perigo" onClick={excluir} disabled={envio.enviando}>Excluir</button>
+          <button type="button" className="btn" onClick={duplicar} disabled={ocupado}>Duplicar</button>
+          <button type="button" className="btn btn--perigo" onClick={excluir} disabled={ocupado}>Excluir</button>
         </div>
       </header>
       <Aviso erro={erroTabela} />
@@ -125,18 +152,18 @@ export function Orcamento() {
 
       <div className="cartao">
         <h2>Itens</h2>
-        {tabela && <Adicionar tabela={tabela} enviando={envio.enviando} onItem={adicionarItem} onPacote={(corpo) => aplicar(`/orcamentos/${id}/pacote`, { method: 'POST', body: corpo })} />}
+        {tabela && <Adicionar tabela={tabela} enviando={ocupado} onItem={adicionarItem} onPacote={(corpo) => aplicar(`/orcamentos/${id}/pacote`, { method: 'POST', body: corpo })} />}
         {orcamento.sugerir_hospedagem && hospedagem && (
           <div className="aviso orcamento__sugestao">
             <span>Este site pode ter hospedagem e suporte.</span>{' '}
-            <button type="button" className="btn btn--pequeno" onClick={() => adicionarItem({ servico_id: hospedagem.id })}>Adicionar</button>
+            <button type="button" className="btn btn--pequeno" disabled={ocupado} onClick={() => adicionarItem({ servico_id: hospedagem.id })}>Adicionar</button>
           </div>
         )}
         {orcamento.itens.length === 0 && <p className="vazio">Nenhum item ainda. Escolha um serviço ou pacote acima.</p>}
         <ul className="orcamento__itens">
           {orcamento.itens.map((item) => (
             <ItemLinha
-              key={item.id} item={item}
+              key={item.id} item={item} ocupado={ocupado}
               onSalvar={(campos) => aplicar(`/orcamentos/${id}/itens/${item.id}`, { method: 'PUT', body: campos })}
               onRemover={() => aplicar(`/orcamentos/${id}/itens/${item.id}`, { method: 'DELETE' })}
             />
@@ -144,7 +171,7 @@ export function Orcamento() {
         </ul>
       </div>
 
-      <Totais orcamento={orcamento} descontoPadrao={tabela?.desconto_combo_pct ?? 10} onSalvar={salvar} />
+      <Totais orcamento={orcamento} ocupado={ocupado} descontoPadrao={tabela?.desconto_combo_pct ?? 10} onSalvar={salvar} />
 
       <div className="cartao">
         <h2>Condições</h2>
@@ -194,7 +221,7 @@ function Adicionar({ tabela, enviando, onItem, onPacote }) {
         </select>
       </Campo>
       {escolha?.tipo === 'placa' && (
-        <FormPlaca servico={escolha.servico} enviando={enviando} onCancelar={() => setEscolha(null)} onEnviar={(corpo) => concluir(onItem(corpo))} />
+        <FormPlaca key={escolha.servico.id} servico={escolha.servico} enviando={enviando} onCancelar={() => setEscolha(null)} onEnviar={(corpo) => concluir(onItem(corpo))} />
       )}
       {escolha?.tipo === 'pacote' && (
         <FormPacote
@@ -333,7 +360,7 @@ function FormLivre({ enviando, onCancelar, onEnviar }) {
   );
 }
 
-function ItemLinha({ item, onSalvar, onRemover }) {
+function ItemLinha({ item, ocupado, onSalvar, onRemover }) {
   const ocultos = useValoresOcultos();
   const campo = (nome) => ({
     id: `item-${item.id}-${nome}`, original: item[nome], onSalvar: (v) => onSalvar({ [nome]: v }),
@@ -348,7 +375,7 @@ function ItemLinha({ item, onSalvar, onRemover }) {
       <CampoAoSair key={`quantidade-${item.quantidade}`} {...campo('quantidade')} rotulo="Qtd." rotuloAcessivel={`Quantidade de ${item.nome}`} inputMode="numeric" texto={String(item.quantidade)} converter={comoInteiro(1)} />
       {dinheiro('valor_unico_centavos', 'Valor único (R$)', 'Valor único')}
       {dinheiro('valor_mensal_centavos', 'Por mês (R$)', 'Valor mensal')}
-      <button type="button" className="btn btn--pequeno btn--perigo orcamento__remover" aria-label={`Remover ${item.nome}`} onClick={onRemover}>Remover</button>
+      <button type="button" className="btn btn--pequeno btn--perigo orcamento__remover" aria-label={`Remover ${item.nome}`} disabled={ocupado} onClick={onRemover}>Remover</button>
       <div className="orcamento__frase">
         <CampoAoSair key={`frase-${item.frase}`} {...campo('frase')} rotulo="Frase" rotuloAcessivel={`Frase de ${item.nome}`} texto={item.frase} />
         {item.tipo_servico === 'placa' && <small className="vazio">Mudar a quantidade não muda o valor: ajuste o valor se precisar.</small>}
@@ -357,7 +384,7 @@ function ItemLinha({ item, onSalvar, onRemover }) {
   );
 }
 
-function Totais({ orcamento, descontoPadrao, onSalvar }) {
+function Totais({ orcamento, ocupado, descontoPadrao, onSalvar }) {
   const { totais, desconto_pct: pct } = orcamento;
   return (
     <section className="cartao orcamento__totais" aria-label="Totais">
@@ -367,22 +394,24 @@ function Totais({ orcamento, descontoPadrao, onSalvar }) {
       )}
       {pct != null ? (
         <>
-          <div className="orcamento__linha">
-            <span>{`Desconto combo (${pct}%)`}</span>
-            <span>{`− ${formatarDinheiro(totais.desconto_centavos)}`}</span>
-          </div>
+          {totais.desconto_centavos > 0 && (
+            <div className="orcamento__linha">
+              <span>{`Desconto combo (${pct}%)`}</span>
+              <span>{`− ${formatarDinheiro(totais.desconto_centavos)}`}</span>
+            </div>
+          )}
           <div className="orcamento__desconto">
             <CampoAoSair
               id="orcamento-desconto" key={`desconto-${pct}`} rotulo="Desconto (%)" inputMode="numeric" texto={String(pct)}
               original={pct} converter={comoInteiro(0, 100)} onSalvar={(v) => onSalvar({ desconto_pct: v })}
             />
-            <button type="button" className="btn btn--pequeno" onClick={() => onSalvar({ desconto_pct: null })}>Tirar desconto</button>
+            <button type="button" className="btn btn--pequeno" disabled={ocupado} onClick={() => onSalvar({ desconto_pct: null })}>Tirar desconto</button>
           </div>
           {totais.desconto_centavos === 0 && <p className="vazio">O desconto entra com 2 ou mais serviços pagos uma vez.</p>}
         </>
       ) : (
         <div className="orcamento__desconto">
-          <button type="button" className="btn btn--pequeno" onClick={() => onSalvar({ desconto_pct: descontoPadrao })}>Aplicar desconto</button>
+          <button type="button" className="btn btn--pequeno" disabled={ocupado} onClick={() => onSalvar({ desconto_pct: descontoPadrao })}>Aplicar desconto</button>
         </div>
       )}
       <div className="orcamento__linha orcamento__linha--total">
