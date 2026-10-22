@@ -60,7 +60,7 @@ export function Clientes() {
                   <span className="cliente-nome">
                     <FotoCliente cliente={c} tamanho={32} />
                     <Link to={`/clientes/${c.id}`}>{c.nome || 'Sem empresa'}</Link>
-                    {c.proprio ? <span className="etiqueta etiqueta--andamento">Você</span> : null}
+                    {c.proprio ? <span className="etiqueta etiqueta--voce">Você</span> : null}
                   </span>
                 </td>
                 <td>{c.responsavel ?? '—'}</td>

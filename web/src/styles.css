@@ -18,6 +18,17 @@
   --serie-saida: #9a7af5;
   --ok: #4ade80;
   --atencao: #fbbf24;
+  /* cores só das etiquetas (o resto do tema segue preto, cinza e turquesa) */
+  --tag-verde: #4ade80;
+  --tag-vermelho: #f87171;
+  --tag-ambar: #fbbf24;
+  --tag-azul: #60a5fa;
+  --tag-violeta: #a78bfa;
+  --tag-rosa: #f472b6;
+  --tag-laranja: #fb923c;
+  --tag-ceu: #38bdf8;
+  --tag-lima: #a3e635;
+  --tag-fucsia: #e879f9;
   --raio: 16px;
   --raio-controle: 10px;
   --sombra: 0 8px 24px rgb(0 0 0 / 0.35);
@@ -126,11 +137,20 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .lista-cadastro li { display: flex; align-items: center; gap: 8px; }
 .lista-cadastro__nome { flex: 1; }
 
+/* Etiquetas: o tema segue preto/cinza/turquesa, mas cada tipo de etiqueta tem a sua cor.
+   O modificador só define --cor; texto e fundo saem dela. Sem --cor, a etiqueta fica cinza. */
 .etiqueta { font-size: 0.75rem; font-weight: 500; padding: 3px 10px; border-radius: 999px; border: 0; background: var(--superficie-2); color: var(--texto-suave); white-space: nowrap; }
-.etiqueta--entregue, .etiqueta--paga, .etiqueta--publicado { color: var(--ok); background: rgb(74 222 128 / 0.12); }
-.etiqueta--atrasada, .etiqueta--perdido { color: var(--perigo); background: rgb(248 113 113 / 0.12); }
-.etiqueta--andamento, .etiqueta--agendado, .etiqueta--pronto { color: var(--primaria); background: var(--primaria-suave); }
-.etiqueta--proposta { color: var(--atencao); background: rgb(251 191 36 / 0.12); }
+.etiqueta[class*='etiqueta--'] { color: var(--cor, var(--texto-suave)); background: color-mix(in srgb, var(--cor, var(--superficie-2)) 15%, var(--superficie-2)); }
+.etiqueta--entregue, .etiqueta--paga, .etiqueta--publicado { --cor: var(--tag-verde); }
+.etiqueta--atrasada, .etiqueta--perdido { --cor: var(--tag-vermelho); }
+.etiqueta--proposta, .etiqueta--valor_definido { --cor: var(--tag-ambar); }
+.etiqueta--andamento, .etiqueta--agendado { --cor: var(--tag-azul); }
+.etiqueta--pronto, .etiqueta--voce { --cor: var(--primaria); }
+.etiqueta--aguardando, .etiqueta--apresentado { --cor: var(--tag-violeta); }
+.etiqueta--prototipo { --cor: var(--tag-ceu); }
+.etiqueta--teste { --cor: var(--tag-laranja); }
+.etiqueta--instagram { --cor: var(--tag-rosa); }
+.etiqueta--portfolio { --cor: var(--tag-lima); }
 .item-atrasado { color: var(--perigo); font-weight: 600; }
 .tabela__linha--inativa { opacity: 0.55; }
 
@@ -151,13 +171,14 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .tabela__valor { color: var(--texto-suave); }
 .etapa { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--texto-suave); white-space: nowrap; }
 .etapa::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--texto-suave); }
-.etapa--prototipo::before { background: var(--t5); }
-.etapa--apresentado::before { background: var(--t3); }
-.etapa--valor_definido::before { background: var(--atencao); }
-.etapa--teste::before { background: var(--t1); }
-.etapa--andamento::before { background: var(--primaria); }
-.etapa--entregue::before { background: var(--ok); }
-.etapa--perdido::before { background: var(--perigo); }
+/* mesmas cores das etiquetas das etapas */
+.etapa--prototipo::before { background: var(--tag-ceu); }
+.etapa--apresentado::before { background: var(--tag-violeta); }
+.etapa--valor_definido::before { background: var(--tag-ambar); }
+.etapa--teste::before { background: var(--tag-laranja); }
+.etapa--andamento::before { background: var(--tag-azul); }
+.etapa--entregue::before { background: var(--tag-verde); }
+.etapa--perdido::before { background: var(--tag-vermelho); }
 .selo-divulgacao { display: inline-flex; color: var(--texto-suave); margin-right: 8px; vertical-align: middle; }
 .tabela__divisoria td { padding: 4px 12px; font-size: 0.75rem; color: var(--texto-suave); border-bottom: 1px solid var(--borda); }
 
@@ -220,7 +241,7 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
   .kanban__card { position: relative; }
   .kanban__mover:not(:focus-visible) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
 }
-.etiqueta--empresa { color: var(--primaria); background: var(--primaria-suave); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.etiqueta--empresa { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .calendario__cabecalho { font-size: 0.8rem; color: var(--texto-suave); text-align: center; }

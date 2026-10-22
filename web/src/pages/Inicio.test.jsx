@@ -71,7 +71,7 @@ describe('Inicio', () => {
       expect(entregas.getByText('Revisar')).toBeInTheDocument();
       // a etapa do quadro aparece como etiqueta; "A fazer" fica sem etiqueta
       expect(entregas.getByText('Fazendo agora')).toHaveClass('etiqueta');
-      expect(entregas.getByText('Aguardando cliente')).toHaveClass('etiqueta');
+      expect(entregas.getByText('Aguardando cliente')).toHaveClass('etiqueta--aguardando');
       expect(entregas.queryByText('A fazer')).not.toBeInTheDocument();
       expect(entregas.getByText('30/09/2026')).toBeInTheDocument();
       expect(entregas.getByText('20/09/2026 · atrasada')).toHaveClass('item-atrasado');

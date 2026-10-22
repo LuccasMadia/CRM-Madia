@@ -21,7 +21,7 @@ const ROTULO_CANAL = { instagram: 'Instagram', portfolio: 'Portfólio' };
 const paginaDoServico = (item) => `/clientes/${item.cliente_id}?aba=${ABA_DO_SERVICO[item.servico]}`;
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 // "A fazer" não ganha etiqueta: só destaca o que já está andando ou parado no cliente.
-const ETIQUETA_ETAPA = { fazendo: 'etiqueta--andamento', aguardando_cliente: 'etiqueta--proposta' };
+const ETIQUETA_ETAPA = { fazendo: 'etiqueta--andamento', aguardando_cliente: 'etiqueta--aguardando' };
 
 function TarefasPorProjeto({ projetos, vazio }) {
   const hoje = hojeISO();
@@ -90,7 +90,7 @@ function Divulgacao({ pendentes, ficticios }) {
             <li key={p.projeto_id} className="divulgacao__linha">
               <Link to={`/projetos/${p.projeto_id}`}>{p.projeto_titulo}</Link>
               <span className="divulgacao__etiquetas">
-                {p.falta.map((canal) => <span key={canal} className="etiqueta etiqueta--andamento">{ROTULO_CANAL[canal]}</span>)}
+                {p.falta.map((canal) => <span key={canal} className={`etiqueta etiqueta--${canal}`}>{ROTULO_CANAL[canal]}</span>)}
                 {p.ficticio && <span className="etiqueta">fictício</span>}
               </span>
             </li>

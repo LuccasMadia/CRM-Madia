@@ -42,7 +42,7 @@ export function rotasTarefas({ db }) {
     const filtro = req.query.projeto_id ? lerId(req.query.projeto_id) : null;
     const linhas = db
       .prepare(
-        `SELECT t.*, p.titulo AS projeto_titulo, c.nome AS cliente_nome
+        `SELECT t.*, p.titulo AS projeto_titulo, p.cliente_id, c.nome AS cliente_nome
          FROM tarefas t JOIN projetos p ON p.id = t.projeto_id JOIN clientes c ON c.id = p.cliente_id
          WHERE p.etapa <> 'perdido'${filtro ? ' AND p.id = ?' : ''}
          ORDER BY p.titulo COLLATE NOCASE, p.id, t.ordem, t.id`,
