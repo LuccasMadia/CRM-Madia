@@ -12,12 +12,10 @@ describe('App', () => {
   afterEach(() => definirValoresOcultos(false));
 
   it('Ctrl+Shift+H oculta e mostra os valores da tela aberta', async () => {
-    const ano = new Date().getFullYear();
     mockApi({
       'GET /parcelas': [{ id: 1, projeto_id: 5, projeto_titulo: 'Site Ana', cliente_nome: 'Ana', descricao: 'Entrada', valor_centavos: 150000, vencimento: '2026-09-10', estado: 'atrasada', servico: 'site_sistema', cliente_id: 1 }],
-      [`GET /financeiro/mensal?ano=${ano}`]: [],
     });
-    abrir('/financeiro');
+    abrir('/financeiro?aba=recebimentos');
     expect((await screen.findAllByText(/1.500,00/)).length).toBeGreaterThan(0);
     const usuario = userEvent.setup();
     await usuario.keyboard('{Control>}{Shift>}H{/Shift}{/Control}');

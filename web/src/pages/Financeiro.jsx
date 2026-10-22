@@ -1,24 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Numero } from '../components/Numero.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
-import { formatarData, hojeISO, nomeMes } from '../lib/datas.js';
+import { formatarData } from '../lib/datas.js';
 import { ROTULO_ESTADO_PARCELA, ROTULO_SERVICO, ABA_DO_SERVICO } from '../lib/rotulos.js';
-import { Ferramentas } from './financeiro/Ferramentas.jsx';
+import { VisaoGeral } from './financeiro/VisaoGeral.jsx';
+import { Custos } from './financeiro/Custos.jsx';
 
 const ABAS = [
+  { aba: 'visao', nome: 'Visão geral' },
   { aba: 'recebimentos', nome: 'Recebimentos' },
-  { aba: 'ferramentas', nome: 'Ferramentas' },
+  { aba: 'custos', nome: 'Custos' },
 ];
+// links antigos para ?aba=ferramentas caem em Custos
+const APELIDOS = { ferramentas: 'custos' };
 
 const parcelas = (n) => `${n} ${n === 1 ? 'parcela' : 'parcelas'}`;
 
 export function Financeiro() {
   const [params, setParams] = useSearchParams();
-  const aba = ABAS.some((a) => a.aba === params.get('aba')) ? params.get('aba') : 'recebimentos';
+  const pedida = APELIDOS[params.get('aba')] ?? params.get('aba');
+  const aba = ABAS.some((a) => a.aba === pedida) ? pedida : 'visao';
 
   return (
     <section>
@@ -33,8 +38,9 @@ export function Financeiro() {
         ))}
       </div>
       <div role="tabpanel">
+        {aba === 'visao' && <VisaoGeral />}
         {aba === 'recebimentos' && <Recebimentos />}
-        {aba === 'ferramentas' && <Ferramentas />}
+        {aba === 'custos' && <Custos />}
       </div>
     </section>
   );
@@ -44,12 +50,10 @@ function Recebimentos() {
   const [estado, setEstado] = useState('');
   const [mes, setMes] = useState('');
   const [servico, setServico] = useState('');
-  const ano = hojeISO().slice(0, 4);
   const consulta = new URLSearchParams(Object.entries({ estado, mes, servico }).filter(([, v]) => v)).toString();
   const limpar = () => { setEstado(''); setMes(''); setServico(''); };
 
   const { dados: lista, erro } = useCarregar(() => api(`/parcelas${consulta ? `?${consulta}` : ''}`), [consulta]);
-  const { dados: mensal } = useCarregar(() => api(`/financeiro/mensal?ano=${ano}`), [ano]);
   const total = (lista ?? []).reduce((s, p) => s + p.valor_centavos, 0);
   // somas da lista que está na tela (já filtrada), por estado
   const somaDo = (e) => {
@@ -131,7 +135,6 @@ function Recebimentos() {
         ) : <p className="vazio">Nenhuma parcela com esses filtros.</p>)}
       </section>
 
-      {mensal && <RecebidoPorMes ano={ano} mensal={mensal} />}
     </section>
   );
 }
@@ -141,42 +144,5 @@ function Resumo({ rotulo, tom, centavos, quantidade }) {
     <Numero rotulo={rotulo} tom={quantidade ? tom : undefined} detalhe={parcelas(quantidade)}>
       {formatarDinheiro(centavos)}
     </Numero>
-  );
-}
-
-function RecebidoPorMes({ ano, mensal }) {
-  const maior = Math.max(1, ...mensal.map((m) => m.recebido_centavos));
-  const totalAno = mensal.reduce((s, m) => s + m.recebido_centavos, 0);
-  const mesAtual = hojeISO().slice(0, 7);
-  const lista = useRef(null);
-  // no celular as colunas rolam de lado: abre com o mês atual no meio
-  useEffect(() => {
-    const ol = lista.current;
-    const atual = ol?.querySelector('.colunas-mes__mes--atual');
-    if (atual && ol.scrollWidth > ol.clientWidth) ol.scrollLeft = atual.offsetLeft - ol.offsetLeft - (ol.clientWidth - atual.offsetWidth) / 2;
-  }, []);
-
-  return (
-    <section className="cartao">
-      <div className="cartao-grafico__topo">
-        <h2>Recebido em {ano}</h2>
-        <p className="colunas-mes__total">{formatarDinheiro(totalAno)}</p>
-      </div>
-      <ol ref={lista} className="colunas-mes" aria-label="Recebido por mês">
-        {mensal.map((m) => {
-          const vazio = !m.recebido_centavos;
-          const classes = ['colunas-mes__mes', vazio && 'colunas-mes__mes--vazio', m.mes === mesAtual && 'colunas-mes__mes--atual'];
-          return (
-            <li key={m.mes} className={classes.filter(Boolean).join(' ')} title={`${nomeMes(m.mes)}: ${formatarDinheiro(m.recebido_centavos)}`}>
-              <span className="colunas-mes__valor">{vazio ? '—' : formatarDinheiro(m.recebido_centavos)}</span>
-              <span className="colunas-mes__trilho">
-                <span className="colunas-mes__barra" style={{ height: `${(m.recebido_centavos / maior) * 100}%` }} />
-              </span>
-              <span className="colunas-mes__nome">{nomeMes(m.mes).slice(0, 3)}</span>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
   );
 }
