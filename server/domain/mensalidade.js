@@ -24,3 +24,21 @@ export function mensalidadesDevidas(projeto, hoje) {
   }
   return datas;
 }
+
+// Mensalidades já criadas acompanham o projeto: as que ainda não venceram passam a usar o valor e o dia novos
+// (a 1ª, que vence no gatilho, mantém a data); as atrasadas ficam como foram combinadas. Ao desligar a
+// mensalidade, as que ainda não venceram só saem se o Lucca pedir (`apagarAbertas`).
+export function planejarMensalidadesAbertas(abertas, antes, depois, hoje, { apagarAbertas = false } = {}) {
+  const aVencer = abertas.filter((p) => !p.pago_em && p.vencimento >= hoje);
+  if (!depois.mensalidade_ativa) {
+    return antes.mensalidade_ativa && apagarAbertas ? aVencer.map((p) => ({ acao: 'remover', id: p.id })) : [];
+  }
+  const primeira = inicioMensalidade(antes);
+  const mudouDia = depois.mensalidade_dia_vencimento && depois.mensalidade_dia_vencimento !== antes.mensalidade_dia_vencimento;
+  return aVencer.flatMap((p) => {
+    const vencimento = mudouDia && p.vencimento !== primeira ? dataNoMes(mesDe(p.vencimento), depois.mensalidade_dia_vencimento) : p.vencimento;
+    const valor_centavos = depois.mensalidade_valor_centavos;
+    if (vencimento === p.vencimento && valor_centavos === p.valor_centavos) return [];
+    return [{ acao: 'atualizar', id: p.id, valor_centavos, vencimento }];
+  });
+}

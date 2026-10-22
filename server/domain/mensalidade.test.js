@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MODOS_INICIO_MENSALIDADE, inicioMensalidade, mensalidadesDevidas } from './mensalidade.js';
+import { MODOS_INICIO_MENSALIDADE, inicioMensalidade, mensalidadesDevidas, planejarMensalidadesAbertas } from './mensalidade.js';
 
 const base = {
   mensalidade_ativa: 1, mensalidade_dia_vencimento: 10, mensalidade_inicio_modo: 'entrega',
@@ -47,5 +47,36 @@ describe('mensalidadesDevidas', () => {
   it('desativada ou sem início não gera nada', () => {
     expect(mensalidadesDevidas({ ...base, mensalidade_ativa: 0 }, '2026-10-02')).toEqual([]);
     expect(mensalidadesDevidas({ ...base, data_entrega: null }, '2026-10-02')).toEqual([]);
+  });
+});
+
+describe('planejarMensalidadesAbertas', () => {
+  const antes = { ...base, mensalidade_valor_centavos: 10000 };
+  const parcela = (id, vencimento, extra = {}) => ({ id, vencimento, valor_centavos: 10000, pago_em: null, ...extra });
+  const abertas = [parcela(1, '2026-08-15'), parcela(2, '2026-09-10'), parcela(3, '2026-10-10')];
+
+  it('valor novo vale para as que ainda não venceram; atrasadas e pagas ficam como estão', () => {
+    const lista = [...abertas, parcela(4, '2026-10-12', { pago_em: '2026-10-01' })];
+    expect(planejarMensalidadesAbertas(lista, antes, { ...antes, mensalidade_valor_centavos: 15000 }, '2026-10-02')).toEqual([
+      { acao: 'atualizar', id: 3, valor_centavos: 15000, vencimento: '2026-10-10' },
+    ]);
+  });
+
+  it('dia novo muda o vencimento, menos o da 1ª (que vence no gatilho)', () => {
+    const depois = { ...antes, mensalidade_dia_vencimento: 20 };
+    expect(planejarMensalidadesAbertas(abertas, antes, depois, '2026-08-01')).toEqual([
+      { acao: 'atualizar', id: 2, valor_centavos: 10000, vencimento: '2026-09-20' },
+      { acao: 'atualizar', id: 3, valor_centavos: 10000, vencimento: '2026-10-20' },
+    ]);
+  });
+
+  it('sem mudança não faz nada', () => {
+    expect(planejarMensalidadesAbertas(abertas, antes, antes, '2026-08-01')).toEqual([]);
+  });
+
+  it('desligar só apaga as que não venceram, e só quando pedido', () => {
+    const depois = { ...antes, mensalidade_ativa: 0, mensalidade_valor_centavos: 0 };
+    expect(planejarMensalidadesAbertas(abertas, antes, depois, '2026-09-11')).toEqual([]);
+    expect(planejarMensalidadesAbertas(abertas, antes, depois, '2026-09-11', { apagarAbertas: true })).toEqual([{ acao: 'remover', id: 3 }]);
   });
 });
