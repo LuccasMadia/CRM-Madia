@@ -4,7 +4,7 @@ export function agruparTarefasPorProjeto(linhas) {
     if (!grupos.has(l.projeto_id)) {
       grupos.set(l.projeto_id, { projeto_id: l.projeto_id, projeto_titulo: l.projeto_titulo, ficticio: Boolean(l.ficticio), tarefas: [] });
     }
-    grupos.get(l.projeto_id).tarefas.push({ id: l.id, texto: l.texto, prazo: l.prazo });
+    grupos.get(l.projeto_id).tarefas.push({ id: l.id, texto: l.texto, prazo: l.prazo, etapa: l.etapa });
   }
   const projetos = [...grupos.values()];
   const semFicticio = ({ ficticio, ...resto }) => resto;

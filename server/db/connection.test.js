@@ -183,3 +183,27 @@ describe('migration 019_etapas_funil_sites', () => {
     expect(db.prepare('SELECT COUNT(*) AS n FROM parcelas').get().n).toBe(0);
   });
 });
+
+describe('migration 028_tarefas_etapas', () => {
+  it('põe as concluídas em "concluído" e as outras em "a fazer", sem mexer na ordem', () => {
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys = ON;');
+    migrate(db, { ate: '027_orcamentos.sql' });
+    const t = '2026-10-01T00:00:00.000Z';
+    db.prepare('INSERT INTO clientes (id, nome, criado_em, atualizado_em) VALUES (1, ?, ?, ?)').run('Ana', t, t);
+    db.prepare('INSERT INTO projetos (id, cliente_id, titulo, criado_em, atualizado_em) VALUES (1, 1, ?, ?, ?)').run('Site', t, t);
+    const tarefa = db.prepare('INSERT INTO tarefas (id, projeto_id, texto, prazo, concluida, ordem, criado_em, atualizado_em) VALUES (?, 1, ?, ?, ?, ?, ?, ?)');
+    tarefa.run(1, 'Briefing', null, 1, 0, t, t);
+    tarefa.run(2, 'Layout', '2026-10-30', 0, 1, t, t);
+    tarefa.run(3, 'Deploy', null, 0, 2, t, t);
+
+    migrate(db);
+
+    expect(db.prepare('SELECT id, texto, prazo, concluida, etapa, ordem FROM tarefas ORDER BY id').all().map((r) => ({ ...r }))).toEqual([
+      { id: 1, texto: 'Briefing', prazo: null, concluida: 1, etapa: 'concluido', ordem: 0 },
+      { id: 2, texto: 'Layout', prazo: '2026-10-30', concluida: 0, etapa: 'a_fazer', ordem: 1 },
+      { id: 3, texto: 'Deploy', prazo: null, concluida: 0, etapa: 'a_fazer', ordem: 2 },
+    ]);
+    expect(() => db.prepare("UPDATE tarefas SET etapa = 'outra' WHERE id = 1").run()).toThrow(/CHECK/);
+  });
+});

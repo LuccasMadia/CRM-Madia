@@ -10,7 +10,7 @@ import { Numero } from '../components/Numero.jsx';
 import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
 import { formatarData, hojeISO } from '../lib/datas.js';
-import { ABA_DO_SERVICO } from '../lib/rotulos.js';
+import { ABA_DO_SERVICO, ROTULO_ETAPA_TAREFA } from '../lib/rotulos.js';
 
 // Recharts só é baixado quando a Início abre.
 const GraficoRosca = lazy(() => import('../components/graficos/GraficoRosca.jsx').then((m) => ({ default: m.GraficoRosca })));
@@ -20,6 +20,8 @@ const dataDeHoje = () => new Date().toLocaleDateString('pt-BR', { weekday: 'long
 const ROTULO_CANAL = { instagram: 'Instagram', portfolio: 'Portfólio' };
 const paginaDoServico = (item) => `/clientes/${item.cliente_id}?aba=${ABA_DO_SERVICO[item.servico]}`;
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+// "A fazer" não ganha etiqueta: só destaca o que já está andando ou parado no cliente.
+const ETIQUETA_ETAPA = { fazendo: 'etiqueta--andamento', aguardando_cliente: 'etiqueta--proposta' };
 
 function TarefasPorProjeto({ projetos, vazio }) {
   const hoje = hojeISO();
@@ -33,6 +35,9 @@ function TarefasPorProjeto({ projetos, vazio }) {
             {p.tarefas.map((t) => (
               <li key={t.id}>
                 <span>{t.texto}</span>
+                {ETIQUETA_ETAPA[t.etapa] && (
+                  <span className={`etiqueta ${ETIQUETA_ETAPA[t.etapa]}`}>{ROTULO_ETAPA_TAREFA[t.etapa]}</span>
+                )}
                 {t.prazo && (
                   <span className={t.prazo < hoje ? 'item-atrasado' : 'vazio'}>
                     {formatarData(t.prazo)}{t.prazo < hoje && ' · atrasada'}

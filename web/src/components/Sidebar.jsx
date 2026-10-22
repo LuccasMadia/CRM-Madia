@@ -9,6 +9,7 @@ const NAVEGACAO = [
   { para: '/clientes', rotulo: 'Clientes', icone: 'clientes', principal: true },
   { para: '/servicos', rotulo: 'Serviços', icone: 'servicos', principal: true },
   { para: '/conteudo', rotulo: 'Conteúdo', icone: 'conteudo', principal: true },
+  { para: '/tarefas', rotulo: 'Tarefas', icone: 'tarefas' },
   { para: '/portfolio', rotulo: 'Portfólio', icone: 'portfolio' },
   { para: '/financeiro', rotulo: 'Financeiro', icone: 'financeiro' },
   { para: '/configuracoes', rotulo: 'Configurações', icone: 'configuracoes' },

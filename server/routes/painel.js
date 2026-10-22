@@ -56,7 +56,7 @@ export function rotasPainel({ db, hoje }) {
       },
       tarefas_por_projeto: agruparTarefasPorProjeto(
         todas(
-          `SELECT t.id, t.texto, t.prazo, p.id AS projeto_id, p.titulo AS projeto_titulo, p.ficticio
+          `SELECT t.id, t.texto, t.prazo, t.etapa, p.id AS projeto_id, p.titulo AS projeto_titulo, p.ficticio
            FROM tarefas t JOIN projetos p ON p.id = t.projeto_id
            WHERE t.concluida = 0 AND p.etapa <> 'perdido'
            ORDER BY p.prazo_entrega IS NULL, p.prazo_entrega, p.id, t.ordem, t.id`,
