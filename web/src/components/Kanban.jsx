@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem, recolhidas = [], classe }) {
+export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem, recolhidas = [] }) {
   const [abertas, setAbertas] = useState([]);
   const [alvo, setAlvo] = useState(null);
 
@@ -16,7 +16,7 @@ export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem
     setAbertas((a) => (a.includes(coluna) ? a.filter((c) => c !== coluna) : [...a, coluna]));
 
   return (
-    <div className={classe ? `kanban ${classe}` : 'kanban'}>
+    <div className="kanban">
       {colunas.map((coluna) => {
         const daColuna = itens.filter((i) => colunaDe(i) === coluna.id);
         const recolhivel = recolhidas.includes(coluna.id);

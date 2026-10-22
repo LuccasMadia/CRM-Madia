@@ -217,8 +217,8 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 /* No computador (mouse) o cartão muda de coluna arrastando: o menu "Mover" some da vista,
    mas continua alcançável pelo Tab e reaparece quando recebe o foco do teclado. */
 @media (hover: hover) and (pointer: fine) {
-  .kanban--tarefas .kanban__card { position: relative; }
-  .kanban--tarefas .kanban__mover:not(:focus-visible) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  .kanban__card { position: relative; }
+  .kanban__mover:not(:focus-visible) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
 }
 .etiqueta--empresa { color: var(--primaria); background: var(--primaria-suave); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
