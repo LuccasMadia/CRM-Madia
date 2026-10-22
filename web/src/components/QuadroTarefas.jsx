@@ -35,6 +35,7 @@ export function QuadroTarefas({ tarefas, onMudou, mostrarProjeto = false, recolh
         itens={tarefas}
         colunaDe={(t) => t.etapa}
         tituloDe={(t) => t.texto}
+        classe="kanban--tarefas"
         recolhidas={recolherConcluidas ? ['concluido'] : []}
         onMover={mover}
         renderItem={(t) => {
