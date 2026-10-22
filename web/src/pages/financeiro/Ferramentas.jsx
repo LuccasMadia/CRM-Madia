@@ -7,6 +7,7 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { Campo } from '../../components/Campo.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { Confirmacao } from '../../components/Confirmacao.jsx';
+import { Numero } from '../../components/Numero.jsx';
 import { FormFerramenta } from '../../components/FormFerramenta.jsx';
 import { formatarDinheiro, paraCentavos } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO, nomeMes } from '../../lib/datas.js';
@@ -44,29 +45,33 @@ export function Ferramentas() {
 
   return (
     <section>
-      <div className="form--linha" style={{ justifyContent: 'flex-end', alignItems: 'flex-end', marginBottom: 16 }}>
+      <div className="barra-visao barra-ferramentas">
         <label className="campo">
           <span>Mês</span>
           <input type="month" aria-label="Mês" value={mes} onChange={(e) => e.target.value && setMes(e.target.value)} />
         </label>
-        <button type="button" className="btn btn--primario" onClick={() => setAberto({ tipo: 'nova' })}>+ Ferramenta</button>
+        <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setAberto({ tipo: 'nova' })}>+ Ferramenta</button>
       </div>
       <Aviso erro={erro ?? erroReativar} />
 
+      {dados && <ResumoFerramentas dados={dados} />}
+
       {dados && (
         <section className="cartao">
-          <h2>Gasto em {nomeMes(dados.mes)}: {formatarDinheiro(dados.total_mes_centavos)}</h2>
+          <h2>Ferramentas</h2>
           {dados.ferramentas.length ? (
-            <table className="tabela">
+            <table className="tabela tabela--ferramentas">
               <thead>
                 <tr><th>Ferramenta</th><th>Cobrança</th><th className="num">Valor</th><th className="num">No mês</th><th /></tr>
               </thead>
               <tbody>
                 {dados.ferramentas.map((f) => (
-                  <tr key={f.id} style={f.cancelada_em ? { opacity: 0.55 } : undefined}>
+                  <tr key={f.id} className={f.cancelada_em ? 'tabela__linha--inativa' : undefined}>
                     <td>
-                      {f.nome} {f.cancelada_em && <span className="etiqueta">Cancelada em {formatarData(f.cancelada_em)}</span>}
-                      {f.observacao && <p className="form__ajuda">{f.observacao}</p>}
+                      <span className="tabela__titulo">
+                        {f.nome} {f.cancelada_em && <span className="etiqueta">Cancelada em {formatarData(f.cancelada_em)}</span>}
+                      </span>
+                      {f.observacao && <span className="tabela__sub">{f.observacao}</span>}
                     </td>
                     <td>{descreverCobranca(f)}</td>
                     <td className="num">
@@ -74,17 +79,17 @@ export function Ferramentas() {
                         ? formatarDinheiro(f.valor_centavos)
                         : <span className="form__ajuda">{f.ultima_recarga ? `Última recarga ${formatarData(f.ultima_recarga)}` : 'Sem recargas'}</span>}
                     </td>
-                    <td className="num">{formatarDinheiro(f.gasto_mes_centavos)}</td>
-                    <td className="num">
-                      <div className="form--linha" style={{ justifyContent: 'flex-end' }}>
+                    <td className="num tabela__dinheiro">{formatarDinheiro(f.gasto_mes_centavos)}</td>
+                    <td className="tabela__acoes">
+                      <div className="acoes-linha">
                         {f.cobranca === 'creditos' && (
                           <button type="button" className="btn btn--pequeno" aria-label={`Recargas de ${f.nome}`} onClick={() => setAberto({ tipo: 'recargas', ferramenta: f })}>Recargas</button>
                         )}
                         {f.cobranca === 'mensalidade' && (f.cancelada_em
                           ? <button type="button" className="btn btn--pequeno" aria-label={`Reativar ${f.nome}`} onClick={() => reativar(f)}>Reativar</button>
-                          : <button type="button" className="btn btn--pequeno" aria-label={`Cancelar assinatura de ${f.nome}`} onClick={() => setAberto({ tipo: 'cancelar', ferramenta: f })}>Cancelar assinatura</button>)}
+                          : <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Cancelar assinatura de ${f.nome}`} onClick={() => setAberto({ tipo: 'cancelar', ferramenta: f })}>Cancelar assinatura</button>)}
                         <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Editar ${f.nome}`} onClick={() => setAberto({ tipo: 'editar', ferramenta: f })}>Editar</button>
-                        <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Excluir ${f.nome}`} onClick={() => setAberto({ tipo: 'excluir', ferramenta: f })}>Excluir</button>
+                        <button type="button" className="btn btn--fantasma btn--pequeno btn--perigo-suave" aria-label={`Excluir ${f.nome}`} onClick={() => setAberto({ tipo: 'excluir', ferramenta: f })}>Excluir</button>
                       </div>
                     </td>
                   </tr>
@@ -125,6 +130,20 @@ export function Ferramentas() {
         <Recargas ferramenta={aberto.ferramenta} onMudou={recarregar} onFechar={fechar} />
       )}
     </section>
+  );
+}
+
+function ResumoFerramentas({ dados }) {
+  const ativas = dados.ferramentas.filter((f) => f.cobranca === 'mensalidade' && !f.cancelada_em);
+  const creditos = dados.ferramentas.filter((f) => f.cobranca === 'creditos');
+  const fixo = ativas.reduce((s, f) => s + (f.valor_centavos ?? 0), 0);
+  const gastoCreditos = creditos.reduce((s, f) => s + f.gasto_mes_centavos, 0);
+  return (
+    <div className="cartoes cartoes--resumo">
+      <Numero rotulo={`Gasto em ${nomeMes(dados.mes)}`}>{formatarDinheiro(dados.total_mes_centavos)}</Numero>
+      <Numero rotulo="Assinaturas ativas" detalhe={`${formatarDinheiro(fixo)} por mês`}>{ativas.length}</Numero>
+      <Numero rotulo="Por créditos" detalhe={`${formatarDinheiro(gastoCreditos)} em recargas no mês`}>{creditos.length}</Numero>
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Financeiro } from './Financeiro.jsx';
 import { mockApi } from '../test/mockApi.js';
@@ -39,7 +39,11 @@ describe('Financeiro', () => {
     });
     renderizar(<Financeiro />, { rota: '/financeiro', padrao: '/financeiro' });
     expect(await screen.findByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/5');
-    expect(await screen.findByText(/4\.500,00/)).toBeInTheDocument();
+    const grafico = await screen.findByRole('list', { name: 'Recebido por mês' });
+    expect(within(grafico).getByText(/4\.500,00/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: `Recebido em ${ano}` }).nextSibling).toHaveTextContent('4.500,00');
+    // resumo do topo soma a parcela atrasada que está na lista
+    expect(screen.getByText('Atrasado').nextSibling).toHaveTextContent('1.500,00');
     await userEvent.setup().selectOptions(screen.getByLabelText('Estado'), 'atrasada');
     await screen.findByRole('link', { name: 'Site Ana' });
     expect(chamadas.map((c) => c.caminho)).toContain('/parcelas?estado=atrasada');

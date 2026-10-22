@@ -135,8 +135,6 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .filtros { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .filtros__selects { display: flex; gap: 8px; flex-wrap: wrap; }
 .filtros-recebimentos { justify-content: flex-end; margin-bottom: 16px; }
-.tabela--mensal td:first-child { width: 180px; }
-.tabela--mensal .num { width: 140px; }
 .pilulas { display: flex; gap: 6px; flex-wrap: wrap; }
 .pilula { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borda); background: transparent; color: var(--texto-suave); cursor: pointer; }
 .pilula:hover { color: var(--texto); border-color: var(--t5); }
@@ -351,9 +349,6 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
   .tabela:not(.tabela--fixa) .tabela__acoes { justify-content: flex-end; }
   .tabela:not(.tabela--fixa) tbody tr:hover td { background: none; }
   .tabela:not(.tabela--fixa) .tabela__divisoria { padding: 4px 2px 0; border: 0; background: none; }
-  .tabela--mensal td { padding: 10px 4px; }
-  .tabela--mensal td:first-child { width: 118px; white-space: nowrap; }
-  .tabela--mensal .num { width: 92px; }
 }
 
 /* Telas de toque: alvos com pelo menos 44px */
@@ -528,4 +523,53 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Financeiro: resumos no topo, filtros num cartão, colunas por mês */
+.cartao-numero__detalhe { margin: 4px 0 0; font-size: 0.8rem; color: var(--texto-suave); }
+.cartao-numero--ok .cartao-numero__valor { color: var(--ok); }
+.cartao-numero--perigo .cartao-numero__valor { color: var(--perigo); }
+.cartao-numero--atencao .cartao-numero__valor { color: var(--atencao); }
+.cartoes.cartoes--resumo { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 20px; }
+.cartoes--resumo .cartao { margin-bottom: 0; padding: 16px 20px; }
+.cartoes--resumo .cartao-numero--perigo { border-color: rgb(248 113 113 / 0.35); }
+
+.filtros-recebimentos { justify-content: flex-start; gap: 12px; padding: 12px 16px; margin-bottom: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
+.filtros-recebimentos__limpar { margin-left: auto; }
+
+.tabela__dinheiro { font-weight: 600; color: var(--texto); }
+.tabela__linha--atrasada td:first-child { box-shadow: inset 3px 0 0 var(--perigo); }
+.tabela--recebimentos tfoot th { border-bottom: 0; padding-top: 16px; }
+.tabela--recebimentos tfoot .num { color: var(--texto); font-size: 1.1rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
+
+.colunas-mes__total { margin: 0; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.colunas-mes { list-style: none; margin: 0; padding: 0 0 4px; display: grid; grid-template-columns: repeat(12, minmax(64px, 1fr)); gap: 8px; overflow-x: auto; }
+.colunas-mes__mes { display: grid; grid-template-rows: auto 140px auto; gap: 8px; justify-items: center; text-align: center; }
+.colunas-mes__valor { font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.colunas-mes__trilho { display: flex; align-items: flex-end; width: 100%; max-width: 44px; height: 100%; background: var(--superficie-2); border-radius: 8px; overflow: hidden; }
+.colunas-mes__barra { display: block; width: 100%; background: var(--primaria); border-radius: 8px 8px 0 0; }
+.colunas-mes__nome { font-size: 0.8rem; color: var(--texto-suave); text-transform: capitalize; }
+.colunas-mes__mes--vazio .colunas-mes__valor { color: var(--texto-suave); font-weight: 400; }
+.colunas-mes__mes--atual .colunas-mes__nome { color: var(--primaria); font-weight: 600; }
+.colunas-mes__mes--atual .colunas-mes__trilho { outline: 1px solid var(--primaria-suave); }
+
+.barra-ferramentas { align-items: flex-end; margin-bottom: 20px; }
+.acoes-linha { display: flex; gap: 4px; justify-content: flex-end; }
+.btn--perigo-suave:hover { color: var(--perigo); }
+
+@media (max-width: 760px) {
+  .cartoes.cartoes--resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .cartoes--resumo > :first-child { grid-column: 1 / -1; }
+  .cartoes--resumo .cartao { padding: 14px 16px; }
+  .cartoes--resumo .cartao-numero__valor { font-size: 1.2rem; }
+  .filtros-recebimentos { padding: 12px; }
+  .filtros-recebimentos__limpar { grid-column: 1 / -1; margin-left: 0; }
+  .tabela--recebimentos td:first-child, .tabela--ferramentas td:first-child { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .tabela__linha--atrasada td:first-child { box-shadow: none; }
+  .tabela:not(.tabela--fixa) tr.tabela__linha--atrasada { border-left: 3px solid var(--perigo); }
+  .colunas-mes { grid-template-columns: repeat(12, 72px); }
+  .colunas-mes__mes { grid-template-rows: auto 110px auto; }
+  .barra-ferramentas { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .barra-ferramentas input { width: 100%; }
+  .acoes-linha { flex-wrap: wrap; }
 }
