@@ -52,7 +52,8 @@ describe('GET /api/painel', () => {
     const real = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site real', etapa: 'entregue' })).body;
     const ficticio = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Case fictício', etapa: 'entregue', ficticio: true })).body;
     await ctx.http.post(`/api/projetos/${real.id}/tarefas`).send({ texto: 'Com prazo', prazo: '2026-09-30' });
-    await ctx.http.post(`/api/projetos/${real.id}/tarefas`).send({ texto: 'Sem prazo' });
+    await ctx.http.post(`/api/projetos/${real.id}/tarefas`).send({ texto: 'Sem prazo', etapa: 'aguardando_cliente' });
+    await ctx.http.post(`/api/projetos/${real.id}/tarefas`).send({ texto: 'Feita', etapa: 'concluido' });
     await ctx.http.post(`/api/projetos/${ficticio.id}/tarefas`).send({ texto: 'Tarefa do case' });
     await ctx.http.put(`/api/projetos/${real.id}`).send({ postou_instagram: true });
 
@@ -60,13 +61,13 @@ describe('GET /api/painel', () => {
 
     expect(res.body.tarefas_por_projeto.reais).toEqual([
       { projeto_id: real.id, projeto_titulo: 'Site real', tarefas: [
-        { id: expect.any(Number), texto: 'Com prazo', prazo: '2026-09-30' },
-        { id: expect.any(Number), texto: 'Sem prazo', prazo: null },
+        { id: expect.any(Number), texto: 'Com prazo', prazo: '2026-09-30', etapa: 'a_fazer' },
+        { id: expect.any(Number), texto: 'Sem prazo', prazo: null, etapa: 'aguardando_cliente' },
       ] },
     ]);
     expect(res.body.tarefas_por_projeto.ficticios).toEqual([
       { projeto_id: ficticio.id, projeto_titulo: 'Case fictício', tarefas: [
-        { id: expect.any(Number), texto: 'Tarefa do case', prazo: null },
+        { id: expect.any(Number), texto: 'Tarefa do case', prazo: null, etapa: 'a_fazer' },
       ] },
     ]);
     expect(res.body.divulgacao).toEqual([
