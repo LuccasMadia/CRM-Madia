@@ -213,6 +213,8 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .tarefa__texto { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .tarefa__texto--feita { text-decoration: line-through; color: var(--texto-suave); font-weight: 400; }
 .tarefa__acoes { display: flex; gap: 4px; justify-content: flex-end; }
+.tarefa__origem { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.etiqueta--empresa { color: var(--primaria); background: var(--primaria-suave); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .calendario__cabecalho { font-size: 0.8rem; color: var(--texto-suave); text-align: center; }

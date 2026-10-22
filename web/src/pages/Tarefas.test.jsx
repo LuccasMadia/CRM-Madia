@@ -11,9 +11,9 @@ const projetos = [
   { id: 3, titulo: 'Perdido', etapa: 'perdido' },
 ];
 const todas = [
-  { id: 10, projeto_id: 2, projeto_titulo: 'App Rango', texto: 'Telas', prazo: null, etapa: 'fazendo' },
-  { id: 11, projeto_id: 1, projeto_titulo: 'Site Popy', texto: 'Fotos', prazo: null, etapa: 'aguardando_cliente' },
-  { id: 12, projeto_id: 1, projeto_titulo: 'Site Popy', texto: 'Domínio', prazo: null, etapa: 'concluido' },
+  { id: 10, projeto_id: 2, projeto_titulo: 'App Rango', cliente_nome: 'Rango do Bixo', texto: 'Telas', prazo: null, etapa: 'fazendo' },
+  { id: 11, projeto_id: 1, projeto_titulo: 'Site Popy', cliente_nome: 'Popy', texto: 'Fotos', prazo: null, etapa: 'aguardando_cliente' },
+  { id: 12, projeto_id: 1, projeto_titulo: 'Site Popy', cliente_nome: 'Popy', texto: 'Domínio', prazo: null, etapa: 'concluido' },
 ];
 const abrir = () => renderizar(<Tarefas />, { rota: '/tarefas', padrao: '/tarefas' });
 
@@ -24,6 +24,8 @@ describe('Tarefas (quadro geral)', () => {
     await screen.findByText('Telas');
     const fazendo = within(screen.getByRole('region', { name: 'Fazendo agora' }));
     expect(fazendo.getByRole('link', { name: 'App Rango' })).toHaveAttribute('href', '/projetos/2?aba=tarefas');
+    // a empresa aparece como etiqueta para identificar o cartão de relance
+    expect(fazendo.getByText('Rango do Bixo')).toHaveClass('etiqueta--empresa');
     expect(screen.queryByText('Domínio')).not.toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Mostrar' }));
     expect(screen.getByText('Domínio')).toBeInTheDocument();

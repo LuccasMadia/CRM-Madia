@@ -93,9 +93,9 @@ describe('tarefas no quadro', () => {
     await ctx.http.post(`/api/projetos/${perdido.id}/tarefas`).send({ texto: 'Some' });
 
     const todas = (await ctx.http.get('/api/tarefas').expect(200)).body;
-    expect(todas.map((t) => [t.projeto_titulo, t.texto, t.etapa])).toEqual([
-      ['App', 'Do app', 'fazendo'],
-      ['Site', 'Do site', 'a_fazer'],
+    expect(todas.map((t) => [t.cliente_nome, t.projeto_titulo, t.texto, t.etapa])).toEqual([
+      ['Bia', 'App', 'Do app', 'fazendo'],
+      ['Ana', 'Site', 'Do site', 'a_fazer'],
     ]);
     const filtradas = (await ctx.http.get(`/api/tarefas?projeto_id=${outro.id}`)).body;
     expect(filtradas.map((t) => t.texto)).toEqual(['Do app']);

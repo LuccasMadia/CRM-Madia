@@ -42,7 +42,12 @@ export function QuadroTarefas({ tarefas, onMudou, mostrarProjeto = false, recolh
           return (
             <>
               <p className={`tarefa__texto${t.etapa === 'concluido' ? ' tarefa__texto--feita' : ''}`}>{t.texto}</p>
-              {mostrarProjeto && <p className="kanban__meta"><Link to={`/projetos/${t.projeto_id}?aba=tarefas`}>{t.projeto_titulo}</Link></p>}
+              {mostrarProjeto && (
+                <p className="kanban__meta tarefa__origem">
+                  {t.cliente_nome && <span className="etiqueta etiqueta--empresa" title={t.cliente_nome}>{t.cliente_nome}</span>}
+                  <Link to={`/projetos/${t.projeto_id}?aba=tarefas`}>{t.projeto_titulo}</Link>
+                </p>
+              )}
               {t.prazo && (
                 <p className={`kanban__meta${atrasada ? ' item-atrasado' : ''}`}>
                   {`Prazo ${formatarData(t.prazo)}`}{atrasada && ' · atrasada'}
