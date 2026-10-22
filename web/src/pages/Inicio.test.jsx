@@ -47,9 +47,9 @@ describe('Inicio', () => {
           },
           tarefas_por_projeto: {
             reais: [{ projeto_id: 10, projeto_titulo: 'Site A', tarefas: [
-              { id: 1, texto: 'Revisar', prazo: null },
-              { id: 2, texto: 'Mandar layout', prazo: '2026-09-30' },
-              { id: 3, texto: 'Cobrar conteúdo', prazo: '2026-09-20' },
+              { id: 1, texto: 'Revisar', prazo: null, etapa: 'fazendo' },
+              { id: 2, texto: 'Mandar layout', prazo: '2026-09-30', etapa: 'a_fazer' },
+              { id: 3, texto: 'Cobrar conteúdo', prazo: '2026-09-20', etapa: 'aguardando_cliente' },
             ] }],
             ficticios: [{ projeto_id: 20, projeto_titulo: 'Case em obra', tarefas: [{ id: 4, texto: 'Ajustar', prazo: null }] }],
           },
@@ -69,6 +69,10 @@ describe('Inicio', () => {
       const entregas = within(screen.getByRole('heading', { name: 'Entregas a clientes' }).closest('section'));
       expect(entregas.getByRole('link', { name: 'Site A' })).toHaveAttribute('href', '/projetos/10');
       expect(entregas.getByText('Revisar')).toBeInTheDocument();
+      // a etapa do quadro aparece como etiqueta; "A fazer" fica sem etiqueta
+      expect(entregas.getByText('Fazendo agora')).toHaveClass('etiqueta');
+      expect(entregas.getByText('Aguardando cliente')).toHaveClass('etiqueta');
+      expect(entregas.queryByText('A fazer')).not.toBeInTheDocument();
       expect(entregas.getByText('30/09/2026')).toBeInTheDocument();
       expect(entregas.getByText('20/09/2026 · atrasada')).toHaveClass('item-atrasado');
       expect(entregas.queryByText('Publicar no portfólio')).not.toBeInTheDocument();

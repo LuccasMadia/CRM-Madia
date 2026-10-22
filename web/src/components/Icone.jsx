@@ -114,6 +114,13 @@ const DESENHOS = {
   'seta-cima': <path d="M5 15l7-7 7 7" />,
   'seta-baixo': <path d="M5 9l7 7 7-7" />,
   check: <path d="M4.5 12.5l5 5L19.5 7" />,
+  tarefas: (
+    <>
+      <rect x="3" y="4" width="5" height="16" rx="1.5" />
+      <rect x="10" y="4" width="5" height="10" rx="1.5" />
+      <rect x="17" y="4" width="4" height="13" rx="1.5" />
+    </>
+  ),
   reels: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="4" />

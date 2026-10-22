@@ -30,3 +30,12 @@ export const TIPOS_SERVICO = Object.keys(ROTULO_TIPO_SERVICO);
 export const ROTULO_SERVICO = { site_sistema: 'Site/Sistema', google_meu_negocio: 'GMN', placas_nfc: 'Placas' };
 export const SERVICOS = Object.keys(ROTULO_SERVICO);
 export const ABA_DO_SERVICO = { site_sistema: 'sites', google_meu_negocio: 'gmn', placas_nfc: 'placas' };
+
+// Colunas do quadro de tarefas, na ordem em que aparecem.
+export const ROTULO_ETAPA_TAREFA = {
+  a_fazer: 'A fazer',
+  fazendo: 'Fazendo agora',
+  aguardando_cliente: 'Aguardando cliente',
+  concluido: 'Concluído',
+};
+export const ETAPAS_TAREFA = Object.keys(ROTULO_ETAPA_TAREFA);

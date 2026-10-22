@@ -206,6 +206,13 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .selo-prototipo { font: inherit; font-size: 0.75rem; padding: 3px 9px; border-radius: 999px; border: 1px dashed var(--borda); background: transparent; color: var(--texto-suave); cursor: pointer; }
 .selo-prototipo[aria-pressed='true'] { border-style: solid; border-color: var(--ok); color: var(--ok); background: rgb(74 222 128 / 0.1); }
 .kanban__mover { font-size: 0.8rem; padding: 4px; }
+/* quadro de tarefas */
+.tarefas { display: grid; gap: 16px; min-width: 0; }
+.tarefas .pagina__topo { margin-bottom: 0; }
+.tarefas__filtro { min-width: 200px; }
+.tarefa__texto { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.tarefa__texto--feita { text-decoration: line-through; color: var(--texto-suave); font-weight: 400; }
+.tarefa__acoes { display: flex; gap: 4px; justify-content: flex-end; }
 
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .calendario__cabecalho { font-size: 0.8rem; color: var(--texto-suave); text-align: center; }
@@ -445,6 +452,8 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .cartao > h2 + .inicio__grupo { margin-top: 12px; padding-top: 0; border-top: 0; }
 .tarefas-inicio li { justify-content: space-between; flex-wrap: nowrap; }
 .tarefas-inicio li > span:last-child:not(:first-child) { flex: none; font-size: 0.85rem; }
+.tarefas-inicio li > span:first-child { flex: 1 1 auto; min-width: 0; }
+.tarefas-inicio .etiqueta { flex: none; }
 .divulgacao__linha { justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--borda); }
 .divulgacao__linha:last-child { border-bottom: 0; }
 .divulgacao__etiquetas { display: flex; gap: 6px; flex-wrap: wrap; }
