@@ -17,6 +17,17 @@ describe('AvisosSites', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('mostrar escolhe só os sites fora do ar ou só as cobranças', async () => {
+    mockApi({ 'GET /hospedagem/avisos': { fora_do_ar: [FORA], cobrancas: [COBRANCA] }, 'GET /vercel/estado': { conectado: true, prazo_dias: 7 } });
+    const { unmount } = renderizar(<AvisosSites mostrar="fora_do_ar" />);
+    expect(await screen.findByText(/fora do ar desde/)).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Mensalidades de sites' })).toBeNull();
+    unmount();
+    renderizar(<AvisosSites mostrar="cobrancas" />);
+    expect(await screen.findByRole('region', { name: 'Mensalidades de sites' })).toBeInTheDocument();
+    expect(screen.queryByText(/fora do ar desde/)).toBeNull();
+  });
+
   it('site fora do ar mostra desde, motivo e link para o projeto', async () => {
     mockApi({ 'GET /hospedagem/avisos': { ...VAZIO, fora_do_ar: [FORA] }, 'GET /vercel/estado': { conectado: true, prazo_dias: 7 } });
     renderizar(<AvisosSites />);

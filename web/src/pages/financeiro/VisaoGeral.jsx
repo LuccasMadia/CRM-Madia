@@ -47,7 +47,6 @@ export function VisaoGeral() {
           <strong aria-live="polite">{ano}</strong>
           <button type="button" className="btn btn--fantasma btn--pequeno" aria-label="Próximo ano" disabled={ano >= anoHoje} onClick={() => setAno((a) => a + 1)}>›</button>
         </div>
-        <p className="visao-topo__nota">Regime de caixa: o que entrou e o que saiu em cada mês.</p>
       </div>
       <Aviso erro={erro} />
       {!resumo && !erro && <Carregando />}
@@ -71,14 +70,14 @@ function Painel({ resumo, ano }) {
           {formatarDinheiro(totais.custo)}
         </Numero>
         <Numero
-          rotulo="Resultado"
+          rotulo="Sobrou"
           tom={totais.resultado < 0 ? 'perigo' : totais.resultado > 0 ? 'ok' : undefined}
-          detalhe={totais.margem === null ? 'sem faturamento no ano' : `margem de ${porcento(totais.margem)}`}
+          detalhe={totais.margem === null ? 'sem faturamento no ano' : `${porcento(totais.margem)} do que entrou`}
         >
           {formatarDinheiro(totais.resultado)}
         </Numero>
         <Numero
-          rotulo="Em aberto"
+          rotulo="A receber"
           detalhe={aberto.atrasado
             ? <span className="texto-perigo">{formatarDinheiro(aberto.atrasado)} atrasado</span>
             : `${aberto.quantidade} ${aberto.quantidade === 1 ? 'parcela' : 'parcelas'} a receber`}

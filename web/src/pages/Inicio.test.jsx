@@ -23,20 +23,12 @@ const GRAFICOS = {
     ],
     perdidos: 1,
   },
-  recebido_por_mes: ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'].map((mes, i) => ({ mes, total_centavos: i * 1000 })),
   origens: { total: 4, fatias: [{ nome: 'Instagram', quantidade: 3 }, { nome: 'Não informado', quantidade: 1 }] },
-  por_servico: [
-    { servico: 'site_sistema', total_centavos: 150000 },
-    { servico: 'google_meu_negocio', total_centavos: 20000 },
-    { servico: 'placas_nfc', total_centavos: 0 },
-  ],
 };
 
 const GRAFICOS_VAZIOS = {
   funil: { etapas: GRAFICOS.funil.etapas.map((e) => ({ ...e, quantidade: 0, percentual: 0 })), perdidos: 0 },
-  recebido_por_mes: GRAFICOS.recebido_por_mes.map((m) => ({ ...m, total_centavos: 0 })),
   origens: { total: 0, fatias: [] },
-  por_servico: GRAFICOS.por_servico.map((s) => ({ ...s, total_centavos: 0 })),
 };
 
 describe('Inicio', () => {
@@ -68,8 +60,11 @@ describe('Inicio', () => {
         },
       });
       renderizar(<Inicio />);
-      expect(await screen.findByText(/3\.000,00/)).toBeInTheDocument();
-      expect(screen.getByText(/1 · R\$\s500,00/)).toBeInTheDocument(); // \s cobre o espaço não separável do Intl
+      expect(await screen.findByText('1 cobrança atrasada.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Ver no Financeiro' })).toHaveAttribute('href', '/financeiro?aba=recebimentos');
+      // dinheiro mora no Financeiro: nenhum valor em R$ na Início
+      expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
+      expect(screen.queryByText('A receber este mês')).not.toBeInTheDocument();
 
       const entregas = within(screen.getByRole('heading', { name: 'Entregas a clientes' }).closest('section'));
       expect(entregas.getByRole('link', { name: 'Site A' })).toHaveAttribute('href', '/projetos/10');
@@ -120,26 +115,26 @@ describe('Inicio', () => {
     expect(screen.getByRole('heading', { name: 'Google Meu Negócio' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Placas NFC' })).toBeInTheDocument();
     expect(screen.queryByText('Nenhuma placa pendente.')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '1 venda de placas a receber' })).toHaveAttribute('href', '/servicos?aba=placas&placas=vendas');
+    expect(screen.queryByText(/a receber/)).not.toBeInTheDocument();
   });
 
-  it('mostra os 4 gráficos com os dados do painel', async () => {
+  it('mostra o funil e a origem dos clientes; gráficos de dinheiro ficam no Financeiro', async () => {
     mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);
     expect(await screen.findByRole('heading', { name: 'Funil de oportunidades' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Faturamento por serviço' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'De onde vêm os clientes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Recebido por mês' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Faturamento por serviço' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Recebido por mês' })).not.toBeInTheDocument();
     expect(screen.getByText('1 perdido')).toBeInTheDocument();
     expect(await screen.findByText('Instagram')).toBeInTheDocument(); // rosca é carregada sob demanda
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.queryByText('Ainda sem dados')).not.toBeInTheDocument();
   });
 
-  it('com tudo zerado mostra "Ainda sem dados" nos 4 gráficos', async () => {
+  it('com tudo zerado mostra "Ainda sem dados" nos 2 gráficos', async () => {
     mockApi({ 'GET /conteudos/avisos': { atrasados: [], falhas: [] }, 'GET /hospedagem/avisos': { fora_do_ar: [], cobrancas: [] }, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS_VAZIOS });
     renderizar(<Inicio />);
-    expect(await screen.findAllByText('Ainda sem dados')).toHaveLength(4);
+    expect(await screen.findAllByText('Ainda sem dados')).toHaveLength(2);
   });
 
   it('erro nos gráficos não esconde o resto da Início', async () => {

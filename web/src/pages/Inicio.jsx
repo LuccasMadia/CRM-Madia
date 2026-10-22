@@ -9,17 +9,12 @@ import { AvisosSites } from '../components/AvisosSites.jsx';
 import { Numero } from '../components/Numero.jsx';
 import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
-import { formatarDinheiro } from '../lib/dinheiro.js';
 import { formatarData, hojeISO } from '../lib/datas.js';
-import { ABA_DO_SERVICO, ROTULO_SERVICO } from '../lib/rotulos.js';
+import { ABA_DO_SERVICO } from '../lib/rotulos.js';
 
 // Recharts só é baixado quando a Início abre.
-const GraficoLinha = lazy(() => import('../components/graficos/GraficoLinha.jsx').then((m) => ({ default: m.GraficoLinha })));
 const GraficoRosca = lazy(() => import('../components/graficos/GraficoRosca.jsx').then((m) => ({ default: m.GraficoRosca })));
-const GraficoBarras = lazy(() => import('../components/graficos/GraficoBarras.jsx').then((m) => ({ default: m.GraficoBarras })));
 
-const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-const rotuloMes = (anoMes) => MESES[Number(anoMes.slice(5, 7)) - 1];
 const dataDeHoje = () => new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 const ROTULO_CANAL = { instagram: 'Instagram', portfolio: 'Portfólio' };
@@ -63,10 +58,7 @@ function Entregas({ projetos, paraEntregar }) {
       <h3 className="cartao__titulo inicio__grupo">Google Meu Negócio</h3>
       <ClientesDoServico itens={gmn} vazio="Nenhum GMN pendente." />
       <h3 className="cartao__titulo inicio__grupo">Placas NFC</h3>
-      <ClientesDoServico itens={placas} vazio={paraEntregar.placas ? null : 'Nenhuma placa pendente.'} />
-      {paraEntregar.placas > 0 && (
-        <p><Link to="/servicos?aba=placas&placas=vendas">{plural(paraEntregar.placas, 'venda de placas a receber', 'vendas de placas a receber')}</Link></p>
-      )}
+      <ClientesDoServico itens={placas} vazio="Nenhuma placa pendente." />
     </section>
   );
 }
@@ -110,34 +102,20 @@ function Graficos() {
   const { dados, erro } = useCarregar(() => api('/painel/graficos'), []);
   if (erro) return <Aviso erro={erro} />;
   if (!dados) return <Carregando texto="Carregando gráficos…" />;
-  const { funil, recebido_por_mes: recebido, origens, por_servico: porServico } = dados;
-  const carregando = <Carregando />;
+  const { funil, origens } = dados;
 
+  // faturamento e recebido por mês ficam no Financeiro › Visão geral
   return (
-    <>
-      <div className="grade-graficos">
-        <CartaoGrafico titulo="Funil de oportunidades" subtitulo="sites e sistemas" vazio={funil.etapas[0].quantidade === 0}>
-          <Funil etapas={funil.etapas} perdidos={funil.perdidos} />
-        </CartaoGrafico>
-        <CartaoGrafico titulo="Faturamento por serviço" subtitulo="últimos 12 meses" vazio={porServico.every((s) => s.total_centavos === 0)}>
-          <Suspense fallback={carregando}>
-            <GraficoBarras dados={porServico.map((s) => ({ rotulo: ROTULO_SERVICO[s.servico], valor_centavos: s.total_centavos }))} />
-          </Suspense>
-        </CartaoGrafico>
-      </div>
-      <div className="grade-graficos">
-        <CartaoGrafico titulo="De onde vêm os clientes" vazio={origens.total === 0}>
-          <Suspense fallback={carregando}>
-            <GraficoRosca fatias={origens.fatias} total={origens.total} />
-          </Suspense>
-        </CartaoGrafico>
-        <CartaoGrafico titulo="Recebido por mês" subtitulo="últimos 6 meses" vazio={recebido.every((m) => m.total_centavos === 0)}>
-          <Suspense fallback={carregando}>
-            <GraficoLinha dados={recebido.map((m) => ({ rotulo: rotuloMes(m.mes), valor_centavos: m.total_centavos }))} />
-          </Suspense>
-        </CartaoGrafico>
-      </div>
-    </>
+    <div className="grade-graficos">
+      <CartaoGrafico titulo="Funil de oportunidades" subtitulo="sites e sistemas" vazio={funil.etapas[0].quantidade === 0}>
+        <Funil etapas={funil.etapas} perdidos={funil.perdidos} />
+      </CartaoGrafico>
+      <CartaoGrafico titulo="De onde vêm os clientes" vazio={origens.total === 0}>
+        <Suspense fallback={<Carregando />}>
+          <GraficoRosca fatias={origens.fatias} total={origens.total} />
+        </Suspense>
+      </CartaoGrafico>
+    </div>
   );
 }
 
@@ -157,16 +135,17 @@ export function Inicio() {
         <p className="vazio">{dataDeHoje()}</p>
       </header>
       <AvisosPublicacao />
-      <AvisosSites />
+      <AvisosSites mostrar="fora_do_ar" />
+      {/* dinheiro mora no Financeiro: aqui só o lembrete, sem valores */}
+      {cartoes.atrasadas.quantidade > 0 && (
+        <p className="aviso aviso--erro inicio__lembrete">
+          {plural(cartoes.atrasadas.quantidade, 'cobrança atrasada', 'cobranças atrasadas')}.{' '}
+          <Link to="/financeiro?aba=recebimentos">Ver no Financeiro</Link>
+        </p>
+      )}
       <div className="cartoes">
-        <Numero rotulo="A receber este mês" icone="financeiro">{formatarDinheiro(cartoes.a_receber_mes_centavos)}</Numero>
-        <Numero rotulo="Parcelas atrasadas" icone="alerta">
-          {cartoes.atrasadas.quantidade} · {formatarDinheiro(cartoes.atrasadas.total_centavos)}
-        </Numero>
         <Numero rotulo="Projetos em andamento" icone="projetos">{cartoes.em_andamento}</Numero>
-        <Numero rotulo="Propostas abertas" icone="funil">
-          {cartoes.propostas.quantidade} · {formatarDinheiro(cartoes.propostas.total_centavos)}
-        </Numero>
+        <Numero rotulo="Propostas abertas" icone="funil">{cartoes.propostas.quantidade}</Numero>
       </div>
 
       <Graficos />
