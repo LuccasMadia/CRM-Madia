@@ -20,3 +20,8 @@ export function milhares(centavos) {
   if (reais < 1000) return String(Math.round(reais));
   return `${(reais / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}k`;
 }
+
+// Faturamento x custos: par validado para daltonismo no fundo escuro (espelha --serie-entrada/--serie-saida)
+export const COR_ENTRADA = '#13a596';
+export const COR_SAIDA = '#9a7af5';
+export const COR_ACUMULADO = '#c9cdd3';

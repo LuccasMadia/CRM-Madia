@@ -3,19 +3,27 @@ import { Link, useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { Aviso } from '../components/Aviso.jsx';
+import { Numero } from '../components/Numero.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
-import { formatarData, hojeISO, nomeMes } from '../lib/datas.js';
+import { formatarData } from '../lib/datas.js';
 import { ROTULO_ESTADO_PARCELA, ROTULO_SERVICO, ABA_DO_SERVICO } from '../lib/rotulos.js';
-import { Ferramentas } from './financeiro/Ferramentas.jsx';
+import { VisaoGeral } from './financeiro/VisaoGeral.jsx';
+import { Custos } from './financeiro/Custos.jsx';
 
 const ABAS = [
+  { aba: 'visao', nome: 'Visão geral' },
   { aba: 'recebimentos', nome: 'Recebimentos' },
-  { aba: 'ferramentas', nome: 'Ferramentas' },
+  { aba: 'custos', nome: 'Custos' },
 ];
+// links antigos para ?aba=ferramentas caem em Custos
+const APELIDOS = { ferramentas: 'custos' };
+
+const parcelas = (n) => `${n} ${n === 1 ? 'parcela' : 'parcelas'}`;
 
 export function Financeiro() {
   const [params, setParams] = useSearchParams();
-  const aba = ABAS.some((a) => a.aba === params.get('aba')) ? params.get('aba') : 'recebimentos';
+  const pedida = APELIDOS[params.get('aba')] ?? params.get('aba');
+  const aba = ABAS.some((a) => a.aba === pedida) ? pedida : 'visao';
 
   return (
     <section>
@@ -30,8 +38,9 @@ export function Financeiro() {
         ))}
       </div>
       <div role="tabpanel">
+        {aba === 'visao' && <VisaoGeral />}
         {aba === 'recebimentos' && <Recebimentos />}
-        {aba === 'ferramentas' && <Ferramentas />}
+        {aba === 'custos' && <Custos />}
       </div>
     </section>
   );
@@ -41,13 +50,16 @@ function Recebimentos() {
   const [estado, setEstado] = useState('');
   const [mes, setMes] = useState('');
   const [servico, setServico] = useState('');
-  const ano = hojeISO().slice(0, 4);
   const consulta = new URLSearchParams(Object.entries({ estado, mes, servico }).filter(([, v]) => v)).toString();
+  const limpar = () => { setEstado(''); setMes(''); setServico(''); };
 
-  const { dados: parcelas, erro } = useCarregar(() => api(`/parcelas${consulta ? `?${consulta}` : ''}`), [consulta]);
-  const { dados: mensal } = useCarregar(() => api(`/financeiro/mensal?ano=${ano}`), [ano]);
-  const maior = Math.max(1, ...(mensal ?? []).map((m) => m.recebido_centavos));
-  const total = (parcelas ?? []).reduce((s, p) => s + p.valor_centavos, 0);
+  const { dados: lista, erro } = useCarregar(() => api(`/parcelas${consulta ? `?${consulta}` : ''}`), [consulta]);
+  const total = (lista ?? []).reduce((s, p) => s + p.valor_centavos, 0);
+  // somas da lista que está na tela (já filtrada), por estado
+  const somaDo = (e) => {
+    const doEstado = (lista ?? []).filter((p) => p.estado === e);
+    return { centavos: doEstado.reduce((s, p) => s + p.valor_centavos, 0), quantidade: doEstado.length };
+  };
   const linkDoProjeto = (p) => {
     if (p.tipo === 'venda_placa') return '/servicos?aba=placas&placas=vendas';
     return p.servico === 'site_sistema'
@@ -57,6 +69,14 @@ function Recebimentos() {
 
   return (
     <section>
+      {lista && (
+        <div className="cartoes cartoes--resumo">
+          <Resumo rotulo="Recebido" tom="ok" {...somaDo('paga')} />
+          <Resumo rotulo="A receber" {...somaDo('pendente')} />
+          <Resumo rotulo="Atrasado" tom="perigo" {...somaDo('atrasada')} />
+        </div>
+      )}
+
       <div className="form--linha filtros-recebimentos">
         <label className="campo">
           <span>Estado</span>
@@ -76,51 +96,53 @@ function Recebimentos() {
             {Object.entries(ROTULO_SERVICO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
           </select>
         </label>
+        {consulta && <button type="button" className="btn btn--fantasma filtros-recebimentos__limpar" onClick={limpar}>Limpar filtros</button>}
       </div>
       <Aviso erro={erro} />
 
       <section className="cartao">
-        {parcelas && (parcelas.length ? (
-          <table className="tabela">
+        {lista && (lista.length ? (
+          <table className="tabela tabela--recebimentos">
             <thead>
-              <tr><th>Vencimento</th><th>Serviço</th><th>Projeto</th><th>Cliente</th><th>Descrição</th><th>Estado</th><th className="num">Valor</th></tr>
+              <tr><th>Cliente</th><th>Serviço</th><th>Descrição</th><th>Vencimento</th><th>Estado</th><th className="num">Valor</th></tr>
             </thead>
             <tbody>
-              {parcelas.map((p) => (
-                <tr key={`${p.tipo}-${p.id}`}>
-                  <td>{formatarData(p.vencimento)}</td>
+              {lista.map((p) => (
+                <tr key={`${p.tipo}-${p.id}`} className={p.estado === 'atrasada' ? 'tabela__linha--atrasada' : undefined}>
+                  <td>
+                    {/* projeto com o mesmo nome do cliente: o próprio nome vira o link, sem repetir embaixo */}
+                    {p.projeto_titulo === p.cliente_nome
+                      ? <Link className="tabela__titulo" to={linkDoProjeto(p)}>{p.projeto_titulo}</Link>
+                      : (
+                        <>
+                          <span className="tabela__titulo">{p.cliente_nome}</span>
+                          <Link className="tabela__sub" to={linkDoProjeto(p)}>{p.projeto_titulo}</Link>
+                        </>
+                      )}
+                  </td>
                   <td>{ROTULO_SERVICO[p.servico]}</td>
-                  <td><Link to={linkDoProjeto(p)}>{p.projeto_titulo}</Link></td>
-                  <td>{p.cliente_nome}</td>
                   <td>{p.descricao ?? '—'}</td>
+                  <td>{formatarData(p.vencimento)}</td>
                   <td><span className={`etiqueta etiqueta--${p.estado}`}>{ROTULO_ESTADO_PARCELA[p.estado]}</span></td>
-                  <td className="num">{formatarDinheiro(p.valor_centavos)}</td>
+                  <td className="num tabela__dinheiro">{formatarDinheiro(p.valor_centavos)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr><th colSpan={6}>Total</th><th className="num">{formatarDinheiro(total)}</th></tr>
+              <tr><th colSpan={5}>Total · {parcelas(lista.length)}</th><th className="num">{formatarDinheiro(total)}</th></tr>
             </tfoot>
           </table>
         ) : <p className="vazio">Nenhuma parcela com esses filtros.</p>)}
       </section>
 
-      <section className="cartao">
-        <h2>Recebido por mês em {ano}</h2>
-        {mensal && (
-          <table className="tabela tabela--fixa tabela--mensal">
-            <tbody>
-              {mensal.map((m) => (
-                <tr key={m.mes}>
-                  <td>{nomeMes(m.mes)}</td>
-                  <td><div className="barra" style={{ width: `${(m.recebido_centavos / maior) * 100}%` }} /></td>
-                  <td className="num">{formatarDinheiro(m.recebido_centavos)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
     </section>
+  );
+}
+
+function Resumo({ rotulo, tom, centavos, quantidade }) {
+  return (
+    <Numero rotulo={rotulo} tom={quantidade ? tom : undefined} detalhe={parcelas(quantidade)}>
+      {formatarDinheiro(centavos)}
+    </Numero>
   );
 }
