@@ -9,17 +9,23 @@ import { Carregando } from '../components/Carregando.jsx';
 import { QuadroTarefas } from '../components/QuadroTarefas.jsx';
 import { notificar } from '../lib/notificacoes.js';
 
-// Quadro com as tarefas de todos os projetos; o filtro fica no endereço (?projeto=ID).
+const SEM_PROJETO = 'nenhum';
+const URL_DO_FILTRO = (filtro) =>
+  filtro === SEM_PROJETO ? '/tarefas?sem_projeto=1' : filtro ? `/tarefas?projeto_id=${filtro}` : '/tarefas';
+
+// Quadro com as tarefas de todos os projetos e as internas (sem projeto).
+// O filtro fica no endereço: ?projeto=ID ou ?projeto=nenhum.
 export function Tarefas() {
   const [params, setParams] = useSearchParams();
   const filtro = params.get('projeto') ?? '';
   const projetos = useCarregar(() => api('/projetos'), []);
-  const tarefas = useCarregar(() => api(filtro ? `/tarefas?projeto_id=${filtro}` : '/tarefas'), [filtro]);
-  const { valores, campo, setValores } = useFormulario({ projeto_id: '', texto: '', prazo: '' });
+  const tarefas = useCarregar(() => api(URL_DO_FILTRO(filtro)), [filtro]);
+  // projeto_id null = segue o filtro; '' = escolheu "Sem projeto".
+  const { valores, campo, setValores } = useFormulario({ projeto_id: null, texto: '', prazo: '' });
   const envio = useEnvio();
 
   const abertos = (projetos.dados ?? []).filter((p) => p.etapa !== 'perdido');
-  const projetoDaNova = valores.projeto_id || filtro;
+  const projetoDaNova = valores.projeto_id ?? (filtro === SEM_PROJETO ? '' : filtro);
 
   function filtrar(e) {
     setParams(e.target.value ? { projeto: e.target.value } : {});
@@ -27,14 +33,11 @@ export function Tarefas() {
 
   function adicionar(e) {
     e.preventDefault();
-    if (!projetoDaNova) {
-      envio.setErros([{ campo: 'projeto_id', mensagem: 'Escolha o projeto' }]);
-      return;
-    }
     envio.executar(async () => {
-      await api(`/projetos/${projetoDaNova}/tarefas`, { method: 'POST', body: { texto: valores.texto, prazo: valores.prazo } });
+      const destino = projetoDaNova ? `/projetos/${projetoDaNova}/tarefas` : '/tarefas';
+      await api(destino, { method: 'POST', body: { texto: valores.texto, prazo: valores.prazo } });
       setValores((v) => ({ ...v, texto: '', prazo: '' }));
-      notificar('Tarefa adicionada em A fazer.');
+      notificar(projetoDaNova ? 'Tarefa adicionada em A fazer.' : 'Tarefa interna adicionada em A fazer.');
       tarefas.recarregar();
     });
   }
@@ -49,6 +52,7 @@ export function Tarefas() {
           <label htmlFor="filtro-projeto">Projeto</label>
           <select id="filtro-projeto" value={filtro} onChange={filtrar}>
             <option value="">Todos os projetos</option>
+            <option value={SEM_PROJETO}>Sem projeto (internas)</option>
             {abertos.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
           </select>
         </div>
@@ -62,7 +66,7 @@ export function Tarefas() {
       <form onSubmit={adicionar} className="form form--linha cartao" noValidate>
         <Campo rotulo="Projeto" nome="projeto_id" erros={envio.erros}>
           <select {...campo('projeto_id')} value={projetoDaNova}>
-            <option value="">Escolha…</option>
+            <option value="">Sem projeto (interna)</option>
             {abertos.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
           </select>
         </Campo>

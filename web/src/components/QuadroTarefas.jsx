@@ -43,7 +43,8 @@ export function QuadroTarefas({ tarefas, onMudou, mostrarProjeto = false, recolh
           return (
             <>
               <p className={`tarefa__texto${t.etapa === 'concluido' ? ' tarefa__texto--feita' : ''}`}>{t.texto}</p>
-              {mostrarProjeto && (
+              {mostrarProjeto && !t.projeto_id && <p className="kanban__meta"><span className="etiqueta etiqueta--voce">Interna</span></p>}
+              {mostrarProjeto && t.projeto_id && (
                 <p className="kanban__meta tarefa__origem">
                   {t.cliente_nome && <span className="etiqueta etiqueta--empresa" style={{ '--cor': corDaEmpresa(t.cliente_id) }} title={t.cliente_nome}>{t.cliente_nome}</span>}
                   <Link to={`/projetos/${t.projeto_id}?aba=tarefas`}>{t.projeto_titulo}</Link>

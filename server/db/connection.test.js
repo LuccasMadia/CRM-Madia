@@ -207,3 +207,26 @@ describe('migration 028_tarefas_etapas', () => {
     expect(() => db.prepare("UPDATE tarefas SET etapa = 'outra' WHERE id = 1").run()).toThrow(/CHECK/);
   });
 });
+
+describe('migration 029_tarefas_sem_projeto', () => {
+  it('deixa o projeto opcional sem mexer nas tarefas e mantém o apagar em cascata', () => {
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys = ON;');
+    migrate(db, { ate: '028_tarefas_etapas.sql' });
+    const t = '2026-10-01T00:00:00.000Z';
+    db.prepare('INSERT INTO clientes (id, nome, criado_em, atualizado_em) VALUES (1, ?, ?, ?)').run('Ana', t, t);
+    db.prepare('INSERT INTO projetos (id, cliente_id, titulo, criado_em, atualizado_em) VALUES (1, 1, ?, ?, ?)').run('Site', t, t);
+    db.prepare("INSERT INTO tarefas (id, projeto_id, texto, prazo, concluida, etapa, ordem, criado_em, atualizado_em) VALUES (1, 1, 'Layout', '2026-10-30', 0, 'aguardando_cliente', 3, ?, ?)").run(t, t);
+
+    migrate(db);
+
+    expect({ ...db.prepare('SELECT id, projeto_id, texto, prazo, concluida, etapa, ordem FROM tarefas').get() }).toEqual(
+      { id: 1, projeto_id: 1, texto: 'Layout', prazo: '2026-10-30', concluida: 0, etapa: 'aguardando_cliente', ordem: 3 },
+    );
+    db.prepare("INSERT INTO tarefas (projeto_id, texto, criado_em, atualizado_em) VALUES (NULL, 'Interna', ?, ?)").run(t, t);
+    expect(() => db.prepare("UPDATE tarefas SET etapa = 'outra' WHERE id = 1").run()).toThrow(/CHECK/);
+    expect(() => db.prepare("INSERT INTO tarefas (projeto_id, texto, criado_em, atualizado_em) VALUES (99, 'x', ?, ?)").run(t, t)).toThrow(/FOREIGN KEY/);
+    db.prepare('DELETE FROM projetos WHERE id = 1').run();
+    expect(db.prepare('SELECT texto FROM tarefas').all().map((r) => r.texto)).toEqual(['Interna']);
+  });
+});

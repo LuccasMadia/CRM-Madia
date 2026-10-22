@@ -58,14 +58,51 @@ describe('Tarefas (quadro geral)', () => {
     ]));
   });
 
-  it('pede o projeto antes de criar quando não há filtro', async () => {
-    const { chamadas } = mockApi({ 'GET /projetos': projetos, 'GET /tarefas': [] });
+  it('sem filtro, a tarefa nova nasce interna (sem projeto)', async () => {
+    const { chamadas } = mockApi({ 'GET /projetos': projetos, 'GET /tarefas': [], 'POST /tarefas': { id: 20 } });
     abrir();
     const user = userEvent.setup();
     expect(await screen.findByText('Nenhuma tarefa por aqui.')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Nova tarefa'), 'Algo');
+    expect(screen.getByLabelText('Projeto', { selector: '#campo-projeto_id' })).toHaveDisplayValue('Sem projeto (interna)');
+    await user.type(screen.getByLabelText('Nova tarefa'), 'Testar repo');
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Escolha o projeto');
-    expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false);
+    await waitFor(() => expect(chamadas.filter((c) => c.metodo === 'POST')).toEqual([
+      { metodo: 'POST', caminho: '/tarefas', corpo: { texto: 'Testar repo', prazo: '' } },
+    ]));
+  });
+
+  it('com filtro num projeto dá para trocar para "Sem projeto" na hora de criar', async () => {
+    const { chamadas } = mockApi({
+      'GET /projetos': projetos,
+      'GET /tarefas?projeto_id=1': [],
+      'POST /tarefas': { id: 21 },
+    });
+    renderizar(<Tarefas />, { rota: '/tarefas?projeto=1', padrao: '/tarefas' });
+    const user = userEvent.setup();
+    await screen.findByText('Nenhuma tarefa por aqui.');
+    const projeto = screen.getByLabelText('Projeto', { selector: '#campo-projeto_id' });
+    await waitFor(() => expect(projeto).toHaveDisplayValue('Site Popy'));
+    await user.selectOptions(projeto, 'Sem projeto (interna)');
+    await user.type(screen.getByLabelText('Nova tarefa'), 'Organizar backup');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await waitFor(() => expect(chamadas.filter((c) => c.metodo === 'POST').map((c) => c.caminho)).toEqual(['/tarefas']));
+  });
+
+  it('marca as internas com a etiqueta "Interna" e filtra só por elas', async () => {
+    const interna = { id: 30, projeto_id: null, projeto_titulo: null, cliente_id: null, cliente_nome: null, texto: 'Testar repo', prazo: null, etapa: 'a_fazer' };
+    mockApi({
+      'GET /projetos': projetos,
+      'GET /tarefas': [...todas, interna],
+      'GET /tarefas?sem_projeto=1': [interna],
+    });
+    abrir();
+    const user = userEvent.setup();
+    const cartao = (await screen.findByText('Testar repo')).closest('article');
+    expect(within(cartao).getByText('Interna')).toHaveClass('etiqueta--voce');
+    expect(within(cartao).queryByRole('link')).not.toBeInTheDocument();
+
+    await user.selectOptions(document.getElementById('filtro-projeto'), 'Sem projeto (internas)');
+    await waitFor(() => expect(screen.queryByText('Telas')).not.toBeInTheDocument());
+    expect(screen.getByText('Testar repo')).toBeInTheDocument();
   });
 });

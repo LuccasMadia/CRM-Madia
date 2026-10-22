@@ -101,3 +101,30 @@ describe('tarefas no quadro', () => {
     expect(filtradas.map((t) => t.texto)).toEqual(['Do app']);
   });
 });
+
+describe('tarefas internas (sem projeto)', () => {
+  it('cria sem projeto, entra no fim das internas e muda de coluna e de posição', async () => {
+    const a = (await ctx.http.post('/api/tarefas').send({ texto: 'Testar repo' }).expect(201)).body;
+    const b = (await ctx.http.post('/api/tarefas').send({ texto: 'Organizar backup', etapa: 'fazendo' }).expect(201)).body;
+    expect([a.projeto_id, a.ordem, a.etapa, b.ordem, b.concluida]).toEqual([null, 0, 'a_fazer', 1, 0]);
+    await ctx.http.post('/api/tarefas').send({ texto: '' }).expect(400);
+
+    await ctx.http.put(`/api/tarefas/${a.id}`).send({ etapa: 'fazendo' }).expect(200);
+    await ctx.http.put(`/api/tarefas/${a.id}/posicao`).send({ direcao: 'cima' }).expect(200);
+    const internas = (await ctx.http.get('/api/tarefas?sem_projeto=1')).body;
+    expect(internas.map((t) => [t.texto, t.etapa, t.projeto_titulo])).toEqual([
+      ['Testar repo', 'fazendo', null],
+      ['Organizar backup', 'fazendo', null],
+    ]);
+  });
+
+  it('aparecem no fim do quadro geral, mas não no filtro de um projeto nem no Início', async () => {
+    await ctx.http.post('/api/tarefas').send({ texto: 'Interna' });
+    await ctx.http.post(url()).send({ texto: 'Do site' });
+
+    expect((await ctx.http.get('/api/tarefas')).body.map((t) => t.texto)).toEqual(['Do site', 'Interna']);
+    expect((await ctx.http.get(`/api/tarefas?projeto_id=${projeto.id}`)).body.map((t) => t.texto)).toEqual(['Do site']);
+    const painel = (await ctx.http.get('/api/painel')).body.tarefas_por_projeto;
+    expect([...painel.reais, ...painel.ficticios].flatMap((p) => p.tarefas.map((t) => t.texto))).toEqual(['Do site']);
+  });
+});
