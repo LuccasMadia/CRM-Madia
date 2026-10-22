@@ -274,3 +274,35 @@ describe('GET /api/parcelas por serviço', () => {
     await ctx.http.get('/api/parcelas?servico=nada').expect(400);
   });
 });
+
+describe('GET /financeiro/mensalidades', () => {
+  const mensal = (extra) => ({ mensalidade_ativa: true, mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 5, ...extra });
+
+  it('lista quem cobra, por tipo, com a situação lida das cobranças do projeto', async () => {
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Bar do Zé' })).body;
+    const saas = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'App', categorias: [1, 4], ...mensal({ mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-08-05' }),
+    }).expect(201)).body;
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site novo', ...mensal() }).expect(201);
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio', ...mensal({ mensalidade_valor_centavos: 5000 }) }).expect(201);
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Fictício', ficticio: true, ...mensal() }).expect(201);
+
+    const { body } = await ctx.http.get('/api/financeiro/mensalidades').expect(200);
+    expect(body.itens.map((m) => [m.titulo, m.tipo, m.situacao])).toEqual([
+      ['App', 'saas', 'atrasada'], ['Site novo', 'site', 'aguardando'], ['GMN', 'gmn', 'em_dia'],
+    ]);
+    expect(body.itens[0]).toMatchObject({ projeto_id: saas.id, atrasadas: 2, atrasado_centavos: 30000, atrasada_desde: '2026-08-05' });
+    expect(body.resumo).toMatchObject({
+      por_mes_centavos: 20000, cobrando: 2, a_comecar_centavos: 15000, a_comecar: 1, atrasado_centavos: 30000, atrasadas: 1,
+    });
+  });
+
+  it('desligada continua aparecendo enquanto tiver cobrança em aberto', async () => {
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send(mensal({ mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-09-05' })).expect(200);
+    await ctx.http.get('/api/financeiro/mensalidades');
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send({ mensalidade_ativa: false }).expect(200);
+    const { body } = await ctx.http.get('/api/financeiro/mensalidades').expect(200);
+    expect(body.itens).toEqual([expect.objectContaining({ projeto_id: projeto.id, situacao: 'desligada', atrasadas: 1 })]);
+    expect(body.resumo.por_mes_centavos).toBe(0);
+  });
+});

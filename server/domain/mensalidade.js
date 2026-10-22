@@ -42,3 +42,41 @@ export function planejarMensalidadesAbertas(abertas, antes, depois, hoje, { apag
     return [{ acao: 'atualizar', id: p.id, valor_centavos, vencimento }];
   });
 }
+
+export const TIPOS_MENSALIDADE = ['site', 'sistema', 'saas', 'gmn', 'placas'];
+
+// Site com várias categorias vai para o grupo mais "pesado": SaaS > Sistema > Site (landing page conta como site).
+export function tipoDaMensalidade(servico, nomesCategorias = []) {
+  if (servico === 'google_meu_negocio') return 'gmn';
+  if (servico === 'placas_nfc') return 'placas';
+  const nomes = nomesCategorias.map((n) => n.trim().toLowerCase());
+  if (nomes.includes('saas')) return 'saas';
+  if (nomes.includes('sistema')) return 'sistema';
+  return 'site';
+}
+
+// Situação de um projeto que cobra (ou já cobrou) mensalidade, lida das cobranças que existem.
+// aguardando: ligada, mas o gatilho de início ainda não aconteceu · desligada: não cobra mais, mas ficou algo em aberto.
+export function situacaoMensalidade(projeto, mensalidades, hoje) {
+  const abertas = mensalidades.filter((p) => !p.pago_em).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  const atrasadas = abertas.filter((p) => p.vencimento < hoje);
+  const pagas = mensalidades.filter((p) => p.pago_em).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  const inicio = inicioMensalidade(projeto);
+  let situacao = 'em_dia';
+  if (!projeto.mensalidade_ativa) situacao = 'desligada';
+  else if (atrasadas.length) situacao = 'atrasada';
+  else if (!inicio || inicio > hoje) situacao = 'aguardando';
+  const proxima = abertas.find((p) => p.vencimento >= hoje) ?? null;
+  const ultimaPaga = pagas.at(-1) ?? null;
+  return {
+    situacao,
+    inicio,
+    atrasadas: atrasadas.length,
+    atrasado_centavos: atrasadas.reduce((s, p) => s + p.valor_centavos, 0),
+    atrasada_desde: atrasadas[0]?.vencimento ?? null,
+    proxima: proxima && { id: proxima.id, vencimento: proxima.vencimento, valor_centavos: proxima.valor_centavos },
+    // parcela mais antiga em aberto: é a que o "Marcar paga" quita
+    em_aberto: abertas[0] ? { id: abertas[0].id, vencimento: abertas[0].vencimento, valor_centavos: abertas[0].valor_centavos } : null,
+    ultima_paga: ultimaPaga && { vencimento: ultimaPaga.vencimento, pago_em: ultimaPaga.pago_em },
+  };
+}

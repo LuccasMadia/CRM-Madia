@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MODOS_INICIO_MENSALIDADE, inicioMensalidade, mensalidadesDevidas, planejarMensalidadesAbertas } from './mensalidade.js';
+import { MODOS_INICIO_MENSALIDADE, inicioMensalidade, mensalidadesDevidas, planejarMensalidadesAbertas, situacaoMensalidade, tipoDaMensalidade } from './mensalidade.js';
 
 const base = {
   mensalidade_ativa: 1, mensalidade_dia_vencimento: 10, mensalidade_inicio_modo: 'entrega',
@@ -78,5 +78,40 @@ describe('planejarMensalidadesAbertas', () => {
     const depois = { ...antes, mensalidade_ativa: 0, mensalidade_valor_centavos: 0 };
     expect(planejarMensalidadesAbertas(abertas, antes, depois, '2026-09-11')).toEqual([]);
     expect(planejarMensalidadesAbertas(abertas, antes, depois, '2026-09-11', { apagarAbertas: true })).toEqual([{ acao: 'remover', id: 3 }]);
+  });
+});
+
+describe('tipoDaMensalidade', () => {
+  it('GMN e placas pelo serviço; site pela categoria mais pesada', () => {
+    expect(tipoDaMensalidade('google_meu_negocio')).toBe('gmn');
+    expect(tipoDaMensalidade('placas_nfc')).toBe('placas');
+    expect(tipoDaMensalidade('site_sistema', ['Site', 'SaaS'])).toBe('saas');
+    expect(tipoDaMensalidade('site_sistema', ['sistema', 'Landing page'])).toBe('sistema');
+    expect(tipoDaMensalidade('site_sistema', ['Landing page'])).toBe('site');
+    expect(tipoDaMensalidade('site_sistema', [])).toBe('site');
+  });
+});
+
+describe('situacaoMensalidade', () => {
+  const projeto = { ...base, mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-08-10' };
+  const p = (id, vencimento, pago_em = null) => ({ id, vencimento, valor_centavos: 10000, pago_em });
+
+  it('em dia: mostra a próxima e a última paga', () => {
+    const s = situacaoMensalidade(projeto, [p(1, '2026-08-10', '2026-08-09'), p(2, '2026-09-10')], '2026-09-01');
+    expect(s).toMatchObject({
+      situacao: 'em_dia', atrasadas: 0, proxima: { id: 2, vencimento: '2026-09-10' },
+      em_aberto: { id: 2 }, ultima_paga: { vencimento: '2026-08-10', pago_em: '2026-08-09' },
+    });
+  });
+
+  it('atrasada: soma o que venceu e diz desde quando', () => {
+    const s = situacaoMensalidade(projeto, [p(1, '2026-08-10'), p(2, '2026-09-10')], '2026-09-15');
+    expect(s).toMatchObject({ situacao: 'atrasada', atrasadas: 2, atrasado_centavos: 20000, atrasada_desde: '2026-08-10', proxima: null, em_aberto: { id: 1 } });
+  });
+
+  it('aguardando enquanto não chega o início; desligada quando não cobra mais', () => {
+    expect(situacaoMensalidade({ ...base, data_entrega: null }, [], '2026-09-15').situacao).toBe('aguardando');
+    expect(situacaoMensalidade({ ...projeto, mensalidade_inicio_data: '2026-12-01' }, [], '2026-09-15').situacao).toBe('aguardando');
+    expect(situacaoMensalidade({ ...projeto, mensalidade_ativa: 0 }, [p(1, '2026-08-10')], '2026-09-15').situacao).toBe('desligada');
   });
 });
