@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
-import { useEnvio } from '../hooks/useEnvio.js';
+import { useConfirmacao } from '../hooks/useConfirmacao.jsx';
+import { notificar } from '../lib/notificacoes.js';
 import { Aviso } from '../components/Aviso.jsx';
+import { Carregando } from '../components/Carregando.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
@@ -33,26 +35,33 @@ export function ClienteDetalhe() {
     () => api(`/projetos?cliente_id=${id}`), [id],
   );
   const [editando, setEditando] = useState(false);
-  const exclusao = useEnvio();
+  const [confirmar, dialogo] = useConfirmacao();
 
   if (erro || erroProjetos) return <Aviso erro={erro ?? erroProjetos} />;
-  if (!cliente || !projetos) return <p>Carregando…</p>;
+  if (!cliente || !projetos) return <Carregando />;
 
   const doServico = (servico) => projetos.filter((p) => p.servico === servico);
-  const contato = [cliente.responsavel, cliente.telefone, cliente.email].filter(Boolean).join(' · ');
+  // o telefone não pode quebrar no meio da linha (espaço e hífen inquebráveis)
+  const telefone = cliente.telefone?.replace(/ /g, ' ').replace(/-/g, '‑');
+  const contato = [cliente.responsavel, telefone, cliente.email].filter(Boolean).join(' · ');
 
   async function salvar(dados, fotoEscolhida) {
     await api(`/clientes/${id}`, { method: 'PUT', body: dados });
     await salvarFotoCliente(id, fotoEscolhida);
     setEditando(false);
     recarregar();
+    notificar('Cliente salvo');
   }
 
   function excluir() {
-    if (!window.confirm(`Excluir o cliente ${cliente.nome}?`)) return;
-    exclusao.executar(async () => {
-      await api(`/clientes/${id}`, { method: 'DELETE' });
-      navegar('/clientes');
+    confirmar({
+      titulo: `Excluir o cliente ${cliente.nome}?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/clientes/${id}`, { method: 'DELETE' });
+        notificar('Cliente excluído');
+        navegar('/clientes');
+      },
     });
   }
 
@@ -85,7 +94,6 @@ export function ClienteDetalhe() {
           <button type="button" className="btn btn--perigo" onClick={excluir}>Excluir</button>
         </div>
       </header>
-      <Aviso erro={exclusao.erro} />
       <div role="tablist" className="abas">
         {ABAS.map(([chave, rotulo, servico]) => (
           <button
@@ -107,6 +115,7 @@ export function ClienteDetalhe() {
           <FormCliente inicial={cliente} onSalvar={salvar} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

@@ -4,6 +4,8 @@ import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
+import { Icone } from '../../components/Icone.jsx';
 import { formatarData, hojeISO } from '../../lib/datas.js';
 
 export function AbaTarefas({ projetoId }) {
@@ -30,7 +32,7 @@ export function AbaTarefas({ projetoId }) {
   }
 
   if (erro) return <Aviso erro={erro} />;
-  if (!tarefas) return <p>Carregando…</p>;
+  if (!tarefas) return <Carregando />;
   const hoje = hojeISO();
 
   return (
@@ -49,9 +51,9 @@ export function AbaTarefas({ projetoId }) {
               {t.prazo && (
                 <span className={!t.concluida && t.prazo < hoje ? 'item-atrasado' : 'vazio'}>{formatarData(t.prazo)}</span>
               )}
-              <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Mover ${t.texto} para cima`} onClick={() => mover(i, -1)}>↑</button>
-              <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Mover ${t.texto} para baixo`} onClick={() => mover(i, 1)}>↓</button>
-              <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Excluir ${t.texto}`} onClick={() => acao(() => api(`/tarefas/${t.id}`, { method: 'DELETE' }))}>×</button>
+              <button type="button" className="btn btn--icone" aria-label={`Mover ${t.texto} para cima`} onClick={() => mover(i, -1)}><Icone nome="seta-cima" tamanho={18} /></button>
+              <button type="button" className="btn btn--icone" aria-label={`Mover ${t.texto} para baixo`} onClick={() => mover(i, 1)}><Icone nome="seta-baixo" tamanho={18} /></button>
+              <button type="button" className="btn btn--icone btn--icone-perigo" aria-label={`Excluir ${t.texto}`} onClick={() => acao(() => api(`/tarefas/${t.id}`, { method: 'DELETE' }))}><Icone nome="fechar" tamanho={18} /></button>
             </li>
           ))}
         </ul>

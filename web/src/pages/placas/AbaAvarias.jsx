@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaAvaria } from '../../components/FormPlacaAvaria.jsx';
@@ -8,6 +10,7 @@ import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData } from '../../lib/datas.js';
 
 export function AbaAvarias() {
+  const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const [avisosEstoque, setAvisosEstoque] = useState([]);
@@ -18,18 +21,26 @@ export function AbaAvarias() {
     setCriando(false);
     setAvisosEstoque(res.avisos_estoque ?? []);
     recarregar();
+    notificar('Avaria registrada');
   }
 
   async function salvarEdicao(dados) {
     await api(`/placas/avarias/${editando.id}`, { method: 'PUT', body: dados });
     setEditando(null);
     recarregar();
+    notificar('Avaria salva');
   }
 
-  async function remover(avaria) {
-    if (!window.confirm(`Excluir esta avaria de ${avaria.modelo_nome}?`)) return;
-    await api(`/placas/avarias/${avaria.id}`, { method: 'DELETE' });
-    recarregar();
+  function remover(avaria) {
+    confirmar({
+      titulo: `Excluir esta avaria de ${avaria.modelo_nome}?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/placas/avarias/${avaria.id}`, { method: 'DELETE' });
+        notificar('Avaria excluída');
+        recarregar();
+      },
+    });
   }
 
   return (
@@ -76,6 +87,7 @@ export function AbaAvarias() {
           <FormPlacaAvaria inicial={editando} rotuloBotao="Salvar" onSalvar={salvarEdicao} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

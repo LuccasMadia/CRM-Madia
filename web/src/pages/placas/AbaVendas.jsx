@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaVenda } from '../../components/FormPlacaVenda.jsx';
@@ -17,6 +19,7 @@ export function SituacaoVenda({ venda }) {
 }
 
 export function AbaVendas({ novaVendaCliente = null }) {
+  const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(Boolean(novaVendaCliente));
   const [avisosEstoque, setAvisosEstoque] = useState([]);
   const { dados: vendas, erro, recarregar } = useCarregar(() => api('/placas/vendas'), []);
@@ -27,12 +30,19 @@ export function AbaVendas({ novaVendaCliente = null }) {
     setCriando(false);
     setAvisosEstoque(res.avisos_estoque ?? []);
     recarregar();
+    notificar('Venda registrada');
   }
 
-  async function remover(venda) {
-    if (!window.confirm(`Excluir esta venda de ${venda.modelo_nome}?`)) return;
-    await api(`/placas/vendas/${venda.id}`, { method: 'DELETE' });
-    recarregar();
+  function remover(venda) {
+    confirmar({
+      titulo: `Excluir esta venda de ${venda.modelo_nome}?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/placas/vendas/${venda.id}`, { method: 'DELETE' });
+        notificar('Venda excluída');
+        recarregar();
+      },
+    });
   }
 
   function mudarRecebimento(venda) {
@@ -85,6 +95,7 @@ export function AbaVendas({ novaVendaCliente = null }) {
           <FormPlacaVenda rotuloBotao="Lançar venda" inicial={novaVendaCliente ? { cliente_id: novaVendaCliente } : {}} onSalvar={criar} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

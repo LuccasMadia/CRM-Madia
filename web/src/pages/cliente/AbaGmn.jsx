@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { useParcelas, parcelaUnica } from '../../hooks/useParcelas.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormGmn } from '../../components/FormGmn.jsx';
@@ -12,6 +14,7 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
   const { parcelas, recarregar } = useParcelas(projeto);
   const [editando, setEditando] = useState(false);
   const envio = useEnvio();
+  const [confirmar, dialogo] = useConfirmacao();
 
   function marcarConfigurado() {
     envio.executar(async () => {
@@ -21,10 +24,14 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
   }
 
   function excluir() {
-    if (!window.confirm('Excluir este Google Meu Negócio? As parcelas dele também serão excluídas.')) return;
-    envio.executar(async () => {
-      await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
-      onMudou();
+    confirmar({
+      titulo: 'Excluir Google Meu Negócio?',
+      mensagem: 'As parcelas dele também serão excluídas.',
+      onConfirmar: async () => {
+        await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
+        notificar('Google Meu Negócio excluído');
+        onMudou();
+      },
     });
   }
 
@@ -32,6 +39,7 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
     await api(`/projetos/${projeto.id}`, { method: 'PUT', body: corpo });
     setEditando(false);
     onMudou();
+    notificar('Google Meu Negócio salvo');
   }
 
   return (
@@ -57,6 +65,7 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
           <FormGmn clienteId={clienteId} projeto={projeto} parcela={parcelaUnica(parcelas)} onSalvar={salvar} />
         </Modal>
       )}
+      {dialogo}
     </li>
   );
 }
@@ -68,6 +77,7 @@ export function AbaGmn({ cliente, projetos, onMudou }) {
     await api('/projetos', { method: 'POST', body: corpo });
     setCriando(false);
     onMudou();
+    notificar('Google Meu Negócio criado');
   }
 
   return (

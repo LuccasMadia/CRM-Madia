@@ -74,8 +74,8 @@ export function FormCliente({ inicial = {}, rotuloBotao = 'Salvar', onSalvar }) 
       </div>
       <Campo rotulo="Empresa" nome="nome" erros={erros} {...campo('nome')} />
       <Campo rotulo="Responsável" nome="responsavel" erros={erros} {...campo('responsavel')} />
-      <Campo rotulo="Email" nome="email" erros={erros} type="email" {...campo('email')} />
-      <Campo rotulo="Telefone / WhatsApp" nome="telefone" erros={erros} {...campo('telefone')} />
+      <Campo rotulo="Email" nome="email" erros={erros} type="email" autoComplete="off" {...campo('email')} />
+      <Campo rotulo="Telefone / WhatsApp" nome="telefone" erros={erros} type="tel" inputMode="tel" autoComplete="off" {...campo('telefone')} />
       <Campo rotulo="Instagram" nome="instagram" erros={erros} {...campo('instagram')} />
       <Campo rotulo="Origem" nome="origem" erros={erros} list="origens" {...campo('origem')} />
       <datalist id="origens">{ORIGENS.map((o) => <option key={o} value={o} />)}</datalist>

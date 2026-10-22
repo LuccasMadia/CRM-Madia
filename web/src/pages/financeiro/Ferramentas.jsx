@@ -10,6 +10,7 @@ import { Confirmacao } from '../../components/Confirmacao.jsx';
 import { FormFerramenta } from '../../components/FormFerramenta.jsx';
 import { formatarDinheiro, paraCentavos } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO, nomeMes } from '../../lib/datas.js';
+import { notificar } from '../../lib/notificacoes.js';
 
 const descreverCobranca = (f) => (f.cobranca === 'creditos'
   ? 'Créditos'
@@ -38,6 +39,7 @@ export function Ferramentas() {
     else await api(`/ferramentas/${aberto.ferramenta.id}`, { method: 'PUT', body: corpo });
     fechar();
     recarregar();
+    notificar('Ferramenta salva');
   }
 
   return (

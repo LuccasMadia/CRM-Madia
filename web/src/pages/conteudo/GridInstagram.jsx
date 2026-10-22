@@ -1,7 +1,8 @@
 import { diaLocal, formatarData } from '../../lib/datas.js';
 import { ROTULO_TIPO } from '../../lib/rotulos.js';
+import { Icone } from '../../components/Icone.jsx';
 
-const ICONE_TIPO = { reels: '▶', carrossel: '❐' };
+const ICONE_TIPO = { reels: 'reels', carrossel: 'carrossel' };
 
 const dataHoraCurta = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -23,10 +24,10 @@ function Pronto({ item, indice, total, onEditar, onMover }) {
       {indice != null && (
         <span className="grid-ig__setas">
           {indice > 0 && (
-            <button type="button" className="btn btn--fantasma" aria-label={`Mover ${item.titulo} para antes`} onClick={() => onMover(indice, -1)}>←</button>
+            <button type="button" className="btn btn--fantasma" aria-label={`Mover ${item.titulo} para antes`} onClick={() => onMover(indice, -1)}><Icone nome="seta-esquerda" tamanho={16} /></button>
           )}
           {indice < total - 1 && (
-            <button type="button" className="btn btn--fantasma" aria-label={`Mover ${item.titulo} para depois`} onClick={() => onMover(indice, 1)}>→</button>
+            <button type="button" className="btn btn--fantasma" aria-label={`Mover ${item.titulo} para depois`} onClick={() => onMover(indice, 1)}><Icone nome="seta-direita" tamanho={16} /></button>
           )}
         </span>
       )}
@@ -40,7 +41,7 @@ function Publicado({ midia, selecionado, onSelecionar }) {
     <li className={`grid-ig__item${selecionado ? ' grid-ig__item--selecionado' : ''}`}>
       <button type="button" className="grid-ig__abrir" aria-label={`Ver post ${nome}`} aria-pressed={selecionado} onClick={() => onSelecionar(midia.id)}>
         {midia.capa_url ? <img src={midia.capa_url} alt={nome} /> : <span className="grid-ig__titulo">{nome}</span>}
-        {ICONE_TIPO[midia.tipo] && <span className="grid-ig__icone" aria-hidden="true">{ICONE_TIPO[midia.tipo]}</span>}
+        {ICONE_TIPO[midia.tipo] && <span className="grid-ig__icone" aria-hidden="true"><Icone nome={ICONE_TIPO[midia.tipo]} tamanho={18} /></span>}
       </button>
     </li>
   );

@@ -2,8 +2,12 @@ import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useFormulario } from '../../hooks/useFormulario.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Campo } from '../../components/Campo.jsx';
+import { Icone } from '../../components/Icone.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { Numero } from '../../components/Numero.jsx';
 import { formatarDinheiro, paraCentavos } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO } from '../../lib/datas.js';
@@ -21,6 +25,19 @@ export function AbaFinanceiro({ projeto }) {
 
   const acao = (fn) => envio.executar(async () => { await fn(); recarregar(); });
   const atualizar = (parcela, corpo) => acao(() => api(`/parcelas/${parcela.id}`, { method: 'PUT', body: corpo }));
+  const [confirmar, dialogo] = useConfirmacao();
+
+  function excluir(parcela, nome) {
+    confirmar({
+      titulo: `Excluir ${nome}?`,
+      mensagem: `${formatarDinheiro(parcela.valor_centavos)} com vencimento em ${formatarData(parcela.vencimento)}.`,
+      onConfirmar: async () => {
+        await api(`/parcelas/${parcela.id}`, { method: 'DELETE' });
+        notificar('Parcela excluída');
+        recarregar();
+      },
+    });
+  }
 
   function adicionar(e) {
     e.preventDefault();
@@ -60,7 +77,7 @@ export function AbaFinanceiro({ projeto }) {
   }
 
   if (erro) return <Aviso erro={erro} />;
-  if (!dados) return <p>Carregando…</p>;
+  if (!dados) return <Carregando />;
   const { parcelas, resumo } = dados;
   const acima = resumo.nao_parcelado_centavos < 0;
 
@@ -117,7 +134,9 @@ export function AbaFinanceiro({ projeto }) {
                       )}
                     </td>
                     <td>
-                      <button type="button" className="btn btn--fantasma btn--pequeno" aria-label={`Excluir ${nome}`} onClick={() => acao(() => api(`/parcelas/${p.id}`, { method: 'DELETE' }))}>×</button>
+                      <button type="button" className="btn btn--icone" aria-label={`Excluir ${nome}`} onClick={() => excluir(p, nome)}>
+                        <Icone nome="fechar" tamanho={18} />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -135,6 +154,7 @@ export function AbaFinanceiro({ projeto }) {
         </form>
         <Aviso erro={envio.erro} />
       </div>
+      {dialogo}
     </>
   );
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaLote } from '../../components/FormPlacaLote.jsx';
@@ -9,6 +11,7 @@ import { formatarData } from '../../lib/datas.js';
 import { agruparLotesPorNome, nomesLoteDistintos } from '../../lib/agruparLotes.js';
 
 export function AbaLotes() {
+  const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const { dados: materiais } = useCarregar(() => api('/placas/materiais'), []);
@@ -22,18 +25,26 @@ export function AbaLotes() {
     await api('/placas/lotes', { method: 'POST', body: dados });
     setCriando(false);
     recarregar();
+    notificar('Lote registrado');
   }
 
   async function salvarEdicao(dados) {
     await api(`/placas/lotes/${editando.id}`, { method: 'PUT', body: dados });
     setEditando(null);
     recarregar();
+    notificar('Lote salvo');
   }
 
-  async function remover(lote) {
-    if (!window.confirm(`Excluir este lote de ${nomeMaterial(lote.material_id)}?`)) return;
-    await api(`/placas/lotes/${lote.id}`, { method: 'DELETE' });
-    recarregar();
+  function remover(lote) {
+    confirmar({
+      titulo: `Excluir este lote de ${nomeMaterial(lote.material_id)}?`,
+      mensagem: 'Essa ação não pode ser desfeita.',
+      onConfirmar: async () => {
+        await api(`/placas/lotes/${lote.id}`, { method: 'DELETE' });
+        notificar('Lote excluído');
+        recarregar();
+      },
+    });
   }
 
   function linhaLote(l) {
@@ -102,6 +113,7 @@ export function AbaLotes() {
           <FormPlacaLote inicial={editando} rotuloBotao="Salvar" onSalvar={salvarEdicao} sugestoesNomeLote={sugestoesNomeLote} />
         </Modal>
       )}
+      {dialogo}
     </section>
   );
 }

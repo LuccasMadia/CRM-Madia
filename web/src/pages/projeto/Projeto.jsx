@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import { AbaGeral } from './AbaGeral.jsx';
@@ -21,11 +21,15 @@ const ABA_HOSPEDAGEM = ['hospedagem', 'Hospedagem'];
 
 export function Projeto() {
   const { id } = useParams();
-  const [aba, setAba] = useState('geral');
+  const [params, setParams] = useSearchParams();
   const { dados: projeto, erro, recarregar } = useCarregar(() => api(`/projetos/${id}`), [id]);
 
   if (erro) return <Aviso erro={erro} />;
-  if (!projeto) return <p>Carregando…</p>;
+  if (!projeto) return <Carregando />;
+
+  const abas = projeto.servico === 'site_sistema' ? [...ABAS, ABA_HOSPEDAGEM] : ABAS;
+  // a aba fica no endereço: voltar, recarregar ou mandar o link abre no mesmo lugar
+  const aba = abas.some(([chave]) => chave === params.get('aba')) ? params.get('aba') : 'geral';
 
   return (
     <section>
@@ -40,8 +44,8 @@ export function Projeto() {
         </div>
       </header>
       <div role="tablist" className="abas">
-        {(projeto.servico === 'site_sistema' ? [...ABAS, ABA_HOSPEDAGEM] : ABAS).map(([chave, rotulo]) => (
-          <button key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave} onClick={() => setAba(chave)}>
+        {abas.map(([chave, rotulo]) => (
+          <button key={chave} role="tab" type="button" className="abas__aba" aria-selected={aba === chave} onClick={() => setParams({ aba: chave })}>
             {rotulo}
           </button>
         ))}

@@ -13,7 +13,7 @@ describe('ClienteDetalhe', () => {
     mockApi(rotasPerfil());
     abrir();
     expect(await screen.findByRole('heading', { name: 'Padaria da Ana' })).toBeInTheDocument();
-    expect(screen.getByText(/Ana · 11 99999-0000/)).toBeInTheDocument();
+    expect(screen.getByText(/Ana · 11\s99999.0000/)).toBeInTheDocument();
     expect(screen.getByText(/1\.500,50/)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Sites e Sistemas (1)' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Google Meu Negócio (1)' })).toBeInTheDocument();
@@ -53,11 +53,13 @@ describe('ClienteDetalhe', () => {
   });
 
   it('mostra a mensagem quando o servidor recusa a exclusão', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockApi(rotasPerfil({ 'DELETE /clientes/1': resposta(409, { erro: 'Este cliente tem projetos.' }) }));
     abrir();
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Excluir' }));
-    expect(await screen.findByText('Este cliente tem projetos.')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Excluir' }));
+    const dialogo = screen.getByRole('dialog', { name: /Excluir o cliente/ });
+    await user.click(within(dialogo).getByRole('button', { name: 'Excluir' }));
+    expect(await within(dialogo).findByText('Este cliente tem projetos.')).toBeInTheDocument();
   });
 
   it('o topo só mostra a foto (ou as iniciais), sem controles de foto', async () => {

@@ -1,3 +1,5 @@
+import { comAtividade } from '../lib/atividade.js';
+
 export class ErroApi extends Error {
   constructor(status, corpo) {
     super(corpo?.erro ?? (corpo?.erros ? 'Verifique os campos destacados' : `Erro ${status}`));
@@ -35,7 +37,7 @@ export async function api(caminho, { method = 'GET', body } = {}) {
   }
   let resposta;
   try {
-    resposta = await fetch(`/api${caminho}`, opcoes);
+    resposta = await comAtividade(fetch(`/api${caminho}`, opcoes));
   } catch {
     throw new ErroApi(0, { erro: 'Não foi possível falar com o servidor do CRM. Ele está rodando (npm start)?' });
   }

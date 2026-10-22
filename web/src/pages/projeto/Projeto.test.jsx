@@ -42,6 +42,13 @@ describe('Projeto', () => {
     expect(put.corpo).not.toHaveProperty('valor');
   });
 
+  it('abre direto na aba que está no endereço', async () => {
+    mockApi(rotasBase({ 'GET /projetos/5/parcelas': [] }));
+    renderizar(<Projeto />, { rota: '/projetos/5?aba=financeiro', padrao: '/projetos/:id' });
+    expect(await screen.findByRole('tab', { name: 'Financeiro' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Visão geral' })).toHaveAttribute('aria-selected', 'false');
+  });
+
   it('troca de aba', async () => {
     mockApi(rotasBase({ 'GET /projetos/5/tarefas': [] }));
     renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });

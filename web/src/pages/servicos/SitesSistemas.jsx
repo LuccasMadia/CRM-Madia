@@ -11,6 +11,7 @@ import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import { BolinhaStatus, textoStatus } from '../../lib/hospedagem.js';
 import { PainelReceber } from './PainelReceber.jsx';
 import { QuadroFunil } from './QuadroFunil.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 
 // Rótulos curtos só para as pílulas do filtro.
 const FILTROS_ETAPA = [
@@ -145,6 +146,7 @@ export function SitesSistemas() {
   async function criar(dados) {
     const projeto = await api('/projetos', { method: 'POST', body: dados });
     navegar(`/projetos/${projeto.id}`);
+    notificar('Projeto criado');
   }
 
   return (

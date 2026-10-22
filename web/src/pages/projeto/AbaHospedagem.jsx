@@ -4,6 +4,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { Carregando } from '../../components/Carregando.jsx';
 import { AcoesCobranca } from '../../components/AcoesCobranca.jsx';
 import { TextoCobranca } from '../../components/TextoCobranca.jsx';
 import { BolinhaStatus, textoStatus, dataHoraCurta } from '../../lib/hospedagem.js';
@@ -77,7 +78,7 @@ export function AbaHospedagem({ projeto }) {
 
   const dados = atual ?? carregado.dados;
   if (carregado.erro) return <Aviso erro={carregado.erro} />;
-  if (!dados) return <p>Carregando…</p>;
+  if (!dados) return <Carregando />;
 
   const { hospedagem, pausas, cobranca } = dados;
   const pausado = hospedagem?.status === 'pausado';

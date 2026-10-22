@@ -7,6 +7,7 @@ import { FormConteudo } from '../../components/FormConteudo.jsx';
 import { diaLocal, formatarData } from '../../lib/datas.js';
 import { CLASSE_ESTADO_CONTEUDO, salvarConteudo } from '../../lib/conteudos.js';
 import { ROTULO_ESTADO_CONTEUDO, ROTULO_TIPO } from '../../lib/rotulos.js';
+import { notificar } from '../../lib/notificacoes.js';
 
 export function AbaConteudos({ projetoId }) {
   const planejados = useCarregar(() => api(`/conteudos?projeto_id=${projetoId}`), [projetoId]);
@@ -18,6 +19,7 @@ export function AbaConteudos({ projetoId }) {
     const salvo = await salvarConteudo(editando.id, dados);
     setEditando(criando ? salvo : null);
     planejados.recarregar();
+    notificar('Conteúdo salvo');
   }
 
   function midiasMudaram(atualizado) {

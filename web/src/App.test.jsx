@@ -52,6 +52,7 @@ describe('App', () => {
   it('QR codes não têm mais página', () => {
     mockApi({});
     abrir('/qrcodes');
-    expect(screen.getByText('Página não encontrada.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Voltar para o Início' })).toHaveAttribute('href', '/');
   });
 });

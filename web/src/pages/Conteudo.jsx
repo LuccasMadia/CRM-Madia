@@ -15,6 +15,7 @@ import { ResumoCrescimento } from './conteudo/ResumoCrescimento.jsx';
 import { GridInstagram } from './conteudo/GridInstagram.jsx';
 import { PainelMidia } from './conteudo/PainelMidia.jsx';
 import { ListaRascunhos } from './conteudo/ListaRascunhos.jsx';
+import { notificar } from '../lib/notificacoes.js';
 
 const dataHora = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -89,6 +90,7 @@ export function Conteudo() {
     const salvo = await salvarConteudo(editando.id, dados);
     setEditando(criando ? salvo : null);
     recarregarPlanejados();
+    notificar('Conteúdo salvo');
   }
 
   function midiasMudaram(atualizado) {

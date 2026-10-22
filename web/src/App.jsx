@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { Sidebar } from './components/Sidebar.jsx';
+import { BarraCarregando } from './components/Carregando.jsx';
+import { Notificacoes } from './components/Notificacoes.jsx';
 import { Inicio } from './pages/Inicio.jsx';
 import { Clientes } from './pages/Clientes.jsx';
 import { ClienteDetalhe } from './pages/ClienteDetalhe.jsx';
@@ -12,6 +14,8 @@ import { Financeiro } from './pages/Financeiro.jsx';
 import { Config } from './pages/Config.jsx';
 import { Orcamento } from './pages/Orcamento.jsx';
 import { alternarValoresOcultos, useValoresOcultos } from './lib/privacidade.js';
+import { rotularTabelas } from './lib/rotularTabelas.js';
+import { manterAbasVisiveis, mostrarAbasSelecionadas } from './lib/abasVisiveis.js';
 
 export function App() {
   // assinar aqui faz a tela inteira redesenhar quando o modo muda, já que todo valor passa por formatarDinheiro
@@ -28,8 +32,18 @@ export function App() {
     return () => window.removeEventListener('keydown', atalho);
   }, []);
 
+  useEffect(() => rotularTabelas(), []);
+  useEffect(() => manterAbasVisiveis(), []);
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    // as abas podem só aparecer depois que os dados da página chegam: confere algumas vezes
+    const esperas = [50, 400, 1200].map((ms) => setTimeout(mostrarAbasSelecionadas, ms));
+    return () => esperas.forEach(clearTimeout);
+  }, [pathname, search]);
+
   return (
     <div className={`app${ocultos ? ' app--valores-ocultos' : ''}`}>
+      <BarraCarregando />
       <Sidebar />
       <main className="conteudo">
         <Routes>
@@ -46,9 +60,20 @@ export function App() {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/configuracoes" element={<Config />} />
-          <Route path="*" element={<p>Página não encontrada.</p>} />
+          <Route path="*" element={<NaoEncontrada />} />
         </Routes>
       </main>
+      <Notificacoes />
     </div>
+  );
+}
+
+function NaoEncontrada() {
+  return (
+    <section>
+      <header className="pagina__topo"><h1>Página não encontrada</h1></header>
+      <p className="vazio">Esse endereço não existe no CRM.</p>
+      <Link className="btn btn--primario" to="/">Voltar para o Início</Link>
+    </section>
   );
 }

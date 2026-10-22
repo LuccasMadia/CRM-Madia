@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
+import { useAtrasado } from '../hooks/useAtrasado.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { FormCliente } from '../components/FormCliente.jsx';
@@ -9,18 +10,21 @@ import { Icone } from '../components/Icone.jsx';
 import { FotoCliente } from '../components/FotoCliente.jsx';
 import { LinkInstagram } from '../components/LinkInstagram.jsx';
 import { salvarFotoCliente } from '../lib/clientes.js';
+import { notificar } from '../lib/notificacoes.js';
 
 export function Clientes() {
   const [busca, setBusca] = useState('');
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const navegar = useNavigate();
-  const { dados: clientes, erro, recarregar } = useCarregar(() => api(`/clientes?busca=${encodeURIComponent(busca)}`), [busca]);
+  const termo = useAtrasado(busca.trim());
+  const { dados: clientes, erro, recarregar } = useCarregar(() => api(`/clientes?busca=${encodeURIComponent(termo)}`), [termo]);
 
   async function criar(dados, fotoEscolhida) {
     const cliente = await api('/clientes', { method: 'POST', body: dados });
     await salvarFotoCliente(cliente.id, fotoEscolhida);
     navegar(`/clientes/${cliente.id}`);
+    notificar('Cliente criado');
   }
 
   async function salvar(dados, fotoEscolhida) {
@@ -28,6 +32,7 @@ export function Clientes() {
     await salvarFotoCliente(editando.id, fotoEscolhida);
     setEditando(null);
     recarregar();
+    notificar('Cliente salvo');
   }
 
   return (
@@ -76,7 +81,14 @@ export function Clientes() {
             ))}
           </tbody>
         </table>
-      ) : <p className="vazio">Nenhum cliente encontrado.</p>)}
+      ) : termo ? (
+        <p className="vazio">Nenhum cliente encontrado para “{termo}”.</p>
+      ) : (
+        <div className="estado-vazio">
+          <p className="vazio">Nenhum cliente cadastrado ainda.</p>
+          <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>Cadastrar o primeiro cliente</button>
+        </div>
+      ))}
       {editando && (
         <Modal titulo="Editar cliente" onFechar={() => setEditando(null)}>
           <FormCliente inicial={editando} onSalvar={salvar} />

@@ -5,6 +5,7 @@ import { Modal } from '../../components/Modal.jsx';
 import { FormOportunidade } from '../../components/FormOportunidade.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { notificar } from '../../lib/notificacoes.js';
 
 export function AbaSites({ cliente, projetos }) {
   const [criando, setCriando] = useState(false);
@@ -13,6 +14,7 @@ export function AbaSites({ cliente, projetos }) {
   async function criar(dados) {
     const projeto = await api('/projetos', { method: 'POST', body: dados });
     navegar(`/projetos/${projeto.id}`);
+    notificar('Projeto criado');
   }
 
   return (
