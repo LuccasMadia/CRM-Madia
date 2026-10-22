@@ -32,6 +32,7 @@ function valoresIniciais(projeto) {
     dia_manual: Boolean(projeto.mensalidade_dia_vencimento),
     mensalidade_inicio_modo: projeto.mensalidade_inicio_modo ?? 'entrega',
     mensalidade_inicio_data: projeto.mensalidade_inicio_data ?? '',
+    apagar_mensalidades_abertas: false,
     postou_instagram: Boolean(projeto.postou_instagram),
     ficticio: Boolean(projeto.ficticio),
   };
@@ -136,7 +137,7 @@ export function AbaGeral({ projeto, onSalvo }) {
         <section className="cartao">
           <h2 className="cartao__titulo">Cobrança</h2>
           <Campo rotulo="Valor (R$)" nome="valor_total_centavos" erros={erros} inputMode="decimal" {...texto('valor')} />
-          <CobrancaMensal valores={valores} alterar={alterar} erros={erros} />
+          <CobrancaMensal valores={valores} alterar={alterar} erros={erros} ativaAntes={Boolean(projeto.mensalidade_ativa)} />
         </section>
       </div>
       <aside className="visao-geral__lado">

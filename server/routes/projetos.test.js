@@ -572,3 +572,41 @@ describe('/api/projetos — etapas do funil de sites', () => {
     expect(linha).toMatchObject({ parcelas_total: 2, parcelas_pagas: 1 });
   });
 });
+
+describe('/api/projetos — mensalidades já criadas acompanham o projeto', () => {
+  let dia;
+  beforeEach(async () => {
+    dia = '2026-09-23';
+    ctx = criarContexto({ hoje: () => dia });
+    cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+  });
+  const mensalidadesDe = async (id) => (await ctx.http.get(`/api/projetos/${id}/parcelas`)).body.parcelas.filter((p) => p.mensalidade);
+
+  async function siteCobrando() {
+    const criado = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Site', mensalidade_ativa: true, mensalidade_valor_centavos: 10000,
+      mensalidade_dia_vencimento: 10, mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-08-10',
+    }).expect(201)).body;
+    await mensalidadesDe(criado.id); // gera ago e set
+    dia = '2026-10-01';
+    await mensalidadesDe(criado.id); // gera out (ainda não venceu)
+    return criado;
+  }
+
+  it('mudar o valor atualiza só a que ainda não venceu', async () => {
+    const criado = await siteCobrando();
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ mensalidade_valor_centavos: 15000 }).expect(200);
+    expect((await mensalidadesDe(criado.id)).map((p) => [p.vencimento, p.valor_centavos])).toEqual([
+      ['2026-08-10', 10000], ['2026-09-10', 10000], ['2026-10-10', 15000],
+    ]);
+  });
+
+  it('desligar mantém as cobranças, a não ser que peça para apagar as que não venceram', async () => {
+    const criado = await siteCobrando();
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ mensalidade_ativa: false }).expect(200);
+    expect(await mensalidadesDe(criado.id)).toHaveLength(3);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ mensalidade_ativa: true }).expect(200);
+    await ctx.http.put(`/api/projetos/${criado.id}`).send({ mensalidade_ativa: false, apagar_mensalidades_abertas: true }).expect(200);
+    expect((await mensalidadesDe(criado.id)).map((p) => p.vencimento)).toEqual(['2026-08-10', '2026-09-10']);
+  });
+});

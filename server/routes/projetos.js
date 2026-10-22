@@ -13,7 +13,7 @@ import { ETAPAS, aplicarRegrasProjeto } from '../domain/regras.js';
 import { SERVICOS, TIPOS_SERVICO, calcularValorTotal, errosDoServico, valorLinhaServico } from '../domain/servicos.js';
 import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { repoCategorias, repoNichos, repoProjetosCategorias } from '../repos/categorias.js';
-import { MODOS_INICIO_MENSALIDADE } from '../domain/mensalidade.js';
+import { MODOS_INICIO_MENSALIDADE, planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { REGRAS_CLIENTE } from './clientes.js';
 
 const REGRAS_PROJETO = {
@@ -118,6 +118,16 @@ export function rotasProjetos({ db, hoje }) {
       parcelas.atualizar(plano.id, { valor_centavos: plano.valor_centavos, vencimento: plano.vencimento });
     } else if (plano.acao === 'remover') {
       parcelas.remover(plano.id);
+    }
+  }
+
+  // A mensalidade tem uma fonte só (o projeto): as já criadas e ainda não vencidas acompanham o que mudou.
+  function sincronizarMensalidadesAbertas(antes, apagarAbertas) {
+    const depois = projetos.obter(antes.id);
+    const abertas = parcelas.listar({ projeto_id: antes.id, mensalidade: 1 }).filter((p) => !p.pago_em);
+    for (const passo of planejarMensalidadesAbertas(abertas, antes, depois, hoje(), { apagarAbertas })) {
+      if (passo.acao === 'remover') parcelas.remover(passo.id);
+      else parcelas.atualizar(passo.id, { valor_centavos: passo.valor_centavos, vencimento: passo.vencimento });
     }
   }
 
@@ -358,6 +368,7 @@ export function rotasProjetos({ db, hoje }) {
       projetos.atualizar(id, dados);
       if (categoriasValidadas) projetosCategorias.substituir(id, categoriasValidadas);
       sincronizarCobrancaUnica(id, vencimento);
+      sincronizarMensalidadesAbertas(atual, corpo.apagar_mensalidades_abertas === true);
     });
     res.json(comServicos(projetos.obterComCliente(id)));
   });

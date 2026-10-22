@@ -36,9 +36,9 @@ describe('Visão geral do Financeiro', () => {
     expect(await screen.findByText('Faturamento x custos')).toBeInTheDocument();
     expect(cartao('Faturamento')).toHaveTextContent('1.000,00');
     expect(cartao('Custos')).toHaveTextContent('300,00');
-    expect(cartao('Resultado')).toHaveTextContent('700,00');
-    expect(screen.getByText('margem de 70%')).toBeInTheDocument();
-    expect(cartao('Em aberto')).toHaveTextContent('300,00');
+    expect(cartao('Sobrou')).toHaveTextContent('700,00');
+    expect(screen.getByText('70% do que entrou')).toBeInTheDocument();
+    expect(cartao('A receber')).toHaveTextContent('300,00');
     expect(screen.getByText(/300,00 atrasado/)).toBeInTheDocument();
 
     const demonstrativo = screen.getByRole('table');

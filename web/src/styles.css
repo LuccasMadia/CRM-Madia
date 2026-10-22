@@ -630,3 +630,15 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
   .proximas__texto .tabela__sub { white-space: normal; }
   .participacao__topo { flex-wrap: wrap; }
 }
+
+/* Financeiro: frase que explica a aba e Mensalidades */
+.explicacao { margin: 0 0 16px; max-width: 72ch; color: var(--texto-suave); font-size: 0.9rem; }
+.tabela--mensalidades td { vertical-align: top; }
+.tabela--mensalidades .acoes-linha { flex-wrap: nowrap; }
+@media (max-width: 760px) {
+  .tabela--mensalidades td { flex-wrap: wrap; align-items: center; column-gap: 8px; }
+  .tabela--mensalidades td > .tabela__sub { flex-basis: 100%; text-align: right; }
+  .tabela--mensalidades td:first-child { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 2px; }
+  .tabela--mensalidades td:first-child > .tabela__sub { text-align: left; }
+  .tabela--mensalidades .acoes-linha { width: 100%; }
+}

@@ -8,13 +8,14 @@ import { TextoCobranca } from './TextoCobranca.jsx';
 import { dataHoraCurta } from '../lib/hospedagem.js';
 
 // Faixa de sites fora do ar e de mensalidades que pedem ação; some quando não há nada a avisar.
-export function AvisosSites() {
+// mostrar: 'fora_do_ar' (Início) ou 'cobrancas' (Financeiro › Mensalidades); sem ele mostra os dois.
+export function AvisosSites({ mostrar }) {
   const avisos = useCarregar(() => api('/hospedagem/avisos'), []);
   const estado = useCarregar(() => api('/vercel/estado'), []);
   const { erro, enviando, executar } = useEnvio();
 
-  const foraDoAr = avisos.dados?.fora_do_ar ?? [];
-  const cobrancas = avisos.dados?.cobrancas ?? [];
+  const foraDoAr = mostrar === 'cobrancas' ? [] : (avisos.dados?.fora_do_ar ?? []);
+  const cobrancas = mostrar === 'fora_do_ar' ? [] : (avisos.dados?.cobrancas ?? []);
   if (avisos.erro) return <Aviso erro={avisos.erro} />;
   if (!foraDoAr.length && !cobrancas.length && !erro) return null;
 

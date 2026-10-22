@@ -9,6 +9,9 @@ import { estadoParcela, resumoParcelas, recebidoPorMes } from '../domain/finance
 import { mesDe, somarMeses } from '../domain/datas.js';
 import { SERVICOS } from '../domain/servicos.js';
 import { vendasPlacasComoParcelas } from '../repos/placas.js';
+import { repoProjetosCategorias } from '../repos/categorias.js';
+import { repoHospedagens } from '../repos/hospedagens.js';
+import { situacaoMensalidade, tipoDaMensalidade } from '../domain/mensalidade.js';
 
 const REGRAS_PARCELA = {
   descricao: { tipo: 'texto' },
@@ -97,6 +100,56 @@ export function rotasParcelas({ db, hoje }) {
       .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
       .filter((p) => (!estado || p.estado === estado) && (!mes || mesDe(p.vencimento) === mes) && (!servico || p.servico === servico));
     res.json(lista);
+  });
+
+  // Tudo vem do cadastro do projeto e das mensalidades que ele gerou: aqui nada é guardado à parte.
+  r.get('/financeiro/mensalidades', (req, res) => {
+    gerarTodasMensalidades(db, hoje());
+    const dia = hoje();
+    const categorias = repoProjetosCategorias(db);
+    const hospedagens = repoHospedagens(db);
+    const lista = db
+      .prepare(
+        `SELECT p.*, c.nome AS cliente_nome FROM projetos p JOIN clientes c ON c.id = p.cliente_id
+         WHERE p.ficticio = 0 AND (p.mensalidade_ativa = 1 OR EXISTS (
+           SELECT 1 FROM parcelas pa WHERE pa.projeto_id = p.id AND pa.mensalidade = 1 AND pa.pago_em IS NULL))
+         ORDER BY c.nome COLLATE NOCASE, p.id`,
+      )
+      .all()
+      .map(linha)
+      .map((p) => {
+        const hospedagem = p.servico === 'site_sistema' ? hospedagens.obter(p.id) : null;
+        return {
+          projeto_id: p.id,
+          cliente_id: p.cliente_id,
+          cliente_nome: p.cliente_nome,
+          titulo: p.titulo,
+          servico: p.servico,
+          etapa: p.etapa,
+          tipo: tipoDaMensalidade(p.servico, categorias.listar(p.id).map((c) => c.nome)),
+          mensalidade_ativa: p.mensalidade_ativa,
+          mensalidade_valor_centavos: p.mensalidade_valor_centavos,
+          mensalidade_dia_vencimento: p.mensalidade_dia_vencimento,
+          mensalidade_inicio_modo: p.mensalidade_inicio_modo,
+          mensalidade_inicio_data: p.mensalidade_inicio_data,
+          data_inicio: p.data_inicio,
+          data_entrega: p.data_entrega,
+          hospedagem: hospedagem && { tipo: hospedagem.tipo, status: hospedagem.status, url: hospedagem.url },
+          ...situacaoMensalidade(p, parcelas.listar({ projeto_id: p.id, mensalidade: 1 }), dia),
+        };
+      });
+    const cobrando = lista.filter((m) => ['em_dia', 'atrasada'].includes(m.situacao));
+    res.json({
+      resumo: {
+        por_mes_centavos: cobrando.reduce((s, m) => s + m.mensalidade_valor_centavos, 0),
+        cobrando: cobrando.length,
+        a_comecar_centavos: lista.filter((m) => m.situacao === 'aguardando').reduce((s, m) => s + m.mensalidade_valor_centavos, 0),
+        a_comecar: lista.filter((m) => m.situacao === 'aguardando').length,
+        atrasado_centavos: lista.reduce((s, m) => s + m.atrasado_centavos, 0),
+        atrasadas: lista.filter((m) => m.atrasadas > 0).length,
+      },
+      itens: lista,
+    });
   });
 
   r.get('/financeiro/mensal', (req, res) => {

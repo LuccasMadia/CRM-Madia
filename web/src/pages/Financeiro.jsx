@@ -9,11 +9,14 @@ import { formatarData } from '../lib/datas.js';
 import { ROTULO_ESTADO_PARCELA, ROTULO_SERVICO, ABA_DO_SERVICO } from '../lib/rotulos.js';
 import { VisaoGeral } from './financeiro/VisaoGeral.jsx';
 import { Custos } from './financeiro/Custos.jsx';
+import { Mensalidades } from './financeiro/Mensalidades.jsx';
 
+// `explica` é a frase curta embaixo das abas: o que aquela aba mostra, sem termo técnico.
 const ABAS = [
-  { aba: 'visao', nome: 'Visão geral' },
-  { aba: 'recebimentos', nome: 'Recebimentos' },
-  { aba: 'custos', nome: 'Custos' },
+  { aba: 'visao', nome: 'Visão geral', explica: 'Quanto entrou, quanto saiu e quanto sobrou em cada mês, contando pelo dia em que o dinheiro entrou ou saiu de verdade.' },
+  { aba: 'recebimentos', nome: 'Recebimentos', explica: 'Cada parcela e venda: o que já recebeu, o que ainda vai receber e o que está atrasado.' },
+  { aba: 'mensalidades', nome: 'Mensalidades', explica: 'Quem paga todo mês, quanto, e se está em dia. Tudo vem do cadastro do projeto: mudar aqui ou lá é a mesma coisa.' },
+  { aba: 'custos', nome: 'Custos', explica: 'O que você paga para trabalhar: ferramentas e material das placas.' },
 ];
 // links antigos para ?aba=ferramentas caem em Custos
 const APELIDOS = { ferramentas: 'custos' };
@@ -38,8 +41,10 @@ export function Financeiro() {
         ))}
       </div>
       <div role="tabpanel">
+        <p className="explicacao">{ABAS.find((a) => a.aba === aba).explica}</p>
         {aba === 'visao' && <VisaoGeral />}
         {aba === 'recebimentos' && <Recebimentos />}
+        {aba === 'mensalidades' && <Mensalidades />}
         {aba === 'custos' && <Custos />}
       </div>
     </section>
