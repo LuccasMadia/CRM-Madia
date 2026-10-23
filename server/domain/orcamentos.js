@@ -60,6 +60,33 @@ export function destinoPadrao(it) {
   return destinosDoItem(it)[0];
 }
 
+// ---- Vincular a um projeto que já existe (em vez de criar um novo) ----
+
+// Só site e GMN viram projeto; cada um só pode usar projeto do mesmo serviço.
+export const SERVICO_DO_DESTINO = { site: 'site_sistema', gmn: 'google_meu_negocio' };
+// Etapa de um projeto criado pelo aceite: site em Valor definido, GMN pendente.
+export const ETAPA_DO_DESTINO = { site: 'valor_definido', gmn: 'andamento' };
+const ORDEM_ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
+
+// O projeto vinculado só avança até a etapa do aceite: o que já passou dela fica onde está.
+export function etapaAoVincular(etapaAtual, destino) {
+  const alvo = ETAPA_DO_DESTINO[destino];
+  const atual = ORDEM_ETAPAS.indexOf(etapaAtual);
+  return atual >= 0 && atual < ORDEM_ETAPAS.indexOf(alvo) ? alvo : etapaAtual;
+}
+
+// Por que um projeto não pode ser vinculado a este item; null quando pode.
+export function motivoNaoVincula(projeto, { destino, clienteId }) {
+  if (!SERVICO_DO_DESTINO[destino]) return 'só site e Google Meu Negócio podem usar um projeto existente';
+  if (!projeto) return 'o projeto escolhido não existe';
+  if (projeto.cliente_id !== clienteId) return `"${projeto.titulo}" é de outro cliente`;
+  if (projeto.servico !== SERVICO_DO_DESTINO[destino]) return `"${projeto.titulo}" é de outro serviço`;
+  if (projeto.etapa === 'perdido') return `"${projeto.titulo}" está perdido`;
+  if (projeto.ficticio) return `"${projeto.titulo}" é fictício`;
+  if (projeto.orcamento_id != null) return `"${projeto.titulo}" já está ligado a um orçamento`;
+  return null;
+}
+
 // Placa é gravada como preço por placa: o valor da linha precisa ser múltiplo da quantidade.
 const divisorDoItem = (it) => (it.tipo_servico === 'placa' ? Math.max(1, num(it.quantidade)) : 1);
 

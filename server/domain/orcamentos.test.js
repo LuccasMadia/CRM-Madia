@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   calcularTotais, nomeArquivoPdf, destinosDoItem, destinoPadrao, valoresComDesconto, planejarParcelas, sugerirParcelas,
+  etapaAoVincular, motivoNaoVincula,
   alertasOrcamento,
 } from './orcamentos.js';
 
@@ -146,5 +147,29 @@ describe('aceite', () => {
     expect(alertasOrcamento({ ...base, data: '2026-10-10' }, '2026-10-14')).toMatchObject({ sem_resposta: false, vencendo: false });
     expect(alertasOrcamento({ ...base, situacao: 'rascunho', mexido_em: '2026-10-06' }, '2026-10-14')).toMatchObject({ parado: true, vencendo: false, sem_resposta: false });
     expect(alertasOrcamento({ ...base, situacao: 'rascunho', mexido_em: '2026-10-07' }, '2026-10-14').parado).toBe(false);
+  });
+});
+
+describe('vincular a um projeto existente', () => {
+  it('a etapa só avança até a do aceite, nunca volta', () => {
+    expect(['ideia', 'prototipo', 'apresentado'].map((e) => etapaAoVincular(e, 'site'))).toEqual(Array(3).fill('valor_definido'));
+    expect(['valor_definido', 'teste', 'andamento', 'entregue'].map((e) => etapaAoVincular(e, 'site')))
+      .toEqual(['valor_definido', 'teste', 'andamento', 'entregue']);
+    expect(etapaAoVincular('andamento', 'gmn')).toBe('andamento');
+    expect(etapaAoVincular('entregue', 'gmn')).toBe('entregue');
+    expect(etapaAoVincular('ideia', 'gmn')).toBe('andamento');
+  });
+
+  it('diz por que um projeto não pode ser vinculado', () => {
+    const p = { titulo: 'Cardápio', cliente_id: 1, servico: 'site_sistema', etapa: 'prototipo', ficticio: 0, orcamento_id: null };
+    const motivo = (mud, destino = 'site') => motivoNaoVincula({ ...p, ...mud }, { destino, clienteId: 1 });
+    expect(motivo({})).toBeNull();
+    expect(motivo({ cliente_id: 2 })).toMatch(/outro cliente/);
+    expect(motivo({}, 'gmn')).toMatch(/outro serviço/);
+    expect(motivo({ etapa: 'perdido' })).toMatch(/perdido/);
+    expect(motivo({ ficticio: 1 })).toMatch(/fictício/);
+    expect(motivo({ orcamento_id: 3 })).toMatch(/já está ligado/);
+    expect(motivo({}, 'placa')).toMatch(/só site/);
+    expect(motivoNaoVincula(null, { destino: 'site', clienteId: 1 })).toMatch(/não existe/);
   });
 });

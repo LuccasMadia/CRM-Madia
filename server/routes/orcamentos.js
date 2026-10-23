@@ -10,8 +10,9 @@ import { repoPlacasVendas } from '../repos/placas.js';
 import { repoCategorias, repoProjetosCategorias } from '../repos/categorias.js';
 import {
   calcularTotais, nomeArquivoPdf, DESTINOS, destinosDoItem, valoresComDesconto, MODOS_PARCELAS, planejarParcelas,
-  alertasOrcamento,
+  alertasOrcamento, etapaAoVincular, motivoNaoVincula,
 } from '../domain/orcamentos.js';
+import { planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { aplicarRegrasProjeto } from '../domain/regras.js';
 import { registrarVendaPlaca } from './placas.js';
 import { modeloDocumento, gerarPdf } from '../orcamentos/pdf.js';
@@ -58,6 +59,10 @@ const REGRAS_ESCOLHA = {
   // mensal_site / mensal_gmn: o item (site ou GMN) cujo projeto recebe a mensalidade.
   alvo_item_id: { tipo: 'inteiro', min: 1 },
   dia_vencimento: { tipo: 'inteiro', min: 1, max: 31 },
+  // site / gmn: usa este projeto que já existe em vez de criar um novo.
+  projeto_id: { tipo: 'inteiro', min: 1 },
+  // Item com mensalidade cujo projeto (vinculado) já cobra uma: troca pelo valor do orçamento.
+  substituir_mensalidade: { tipo: 'bool' },
 };
 
 const REGRAS_PARCELAS = {
@@ -85,12 +90,15 @@ export function rotasOrcamentos({ db, hoje }) {
   const categorias = repoCategorias(db);
   const projetosCategorias = repoProjetosCategorias(db);
 
-  // O que o aceite gerou. Só dá para apagar o que ainda não andou: projeto sem parcela paga,
-  // venda não recebida e sem placa montada separada para ela.
+  // O que o aceite gerou. Só dá para apagar o que ainda não andou: projeto criado sem parcela paga,
+  // venda não recebida e sem placa montada separada para ela. Projeto vinculado (já existia) nunca é apagado:
+  // ao desfazer, só é desvinculado e perde as parcelas abertas que o aceite criou.
   function gerados(id) {
     const lista = db.prepare(
-      `SELECT p.id, p.titulo, p.servico, p.cliente_id,
-              EXISTS (SELECT 1 FROM parcelas pa WHERE pa.projeto_id = p.id AND pa.pago_em IS NOT NULL) AS tem_pago
+      `SELECT p.id, p.titulo, p.servico, p.cliente_id, p.orcamento_vinculado AS vinculado,
+              EXISTS (SELECT 1 FROM parcelas pa WHERE pa.projeto_id = p.id AND pa.pago_em IS NOT NULL) AS tem_pago,
+              (SELECT COUNT(*) FROM parcelas pa WHERE pa.projeto_id = p.id AND pa.orcamento_id = p.orcamento_id
+                  AND pa.pago_em IS NULL) AS parcelas_abertas
          FROM projetos p WHERE p.orcamento_id = ? ORDER BY p.id`,
     ).all(id).map(linha);
     const vendidas = db.prepare(
@@ -98,7 +106,9 @@ export function rotasOrcamentos({ db, hoje }) {
          FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id WHERE v.orcamento_id = ? ORDER BY v.id`,
     ).all(id).map(linha);
     return {
-      projetos: lista.map(({ tem_pago, ...p }) => ({ ...p, pode_apagar: !tem_pago })),
+      projetos: lista.map(({ tem_pago, vinculado, parcelas_abertas, ...p }) => (vinculado
+        ? { ...p, vinculado: true, pode_apagar: false, parcelas_abertas }
+        : { ...p, vinculado: false, pode_apagar: !tem_pago })),
       vendas: vendidas.map((v) => ({
         id: v.id, modelo_nome: v.modelo_nome, quantidade: v.quantidade,
         pode_apagar: !v.recebido_em && v.quantidade_montada === 0,
@@ -126,6 +136,23 @@ export function rotasOrcamentos({ db, hoje }) {
     return tem("ts.hospedagem = 'opcional'") && !tem("ts.tipo = 'hospedagem'");
   }
 
+  // Projetos do cliente que um aceite pode usar em vez de criar outro: site ou GMN que não está perdido,
+  // não é fictício e não veio de outro orçamento. Vão com as parcelas avulsas, para a conferência mostrar.
+  function projetosVinculaveis(clienteId) {
+    const lista = db.prepare(
+      `SELECT id, titulo, servico, etapa, valor_total_centavos, mensalidade_ativa, mensalidade_valor_centavos,
+              mensalidade_dia_vencimento
+         FROM projetos
+        WHERE cliente_id = ? AND servico IN ('site_sistema', 'google_meu_negocio') AND etapa <> 'perdido'
+          AND ficticio = 0 AND orcamento_id IS NULL
+        ORDER BY id`,
+    ).all(clienteId).map(linha);
+    const doProjeto = db.prepare(
+      'SELECT id, descricao, valor_centavos, vencimento, pago_em FROM parcelas WHERE projeto_id = ? AND mensalidade = 0 ORDER BY vencimento, id',
+    );
+    return lista.map((p) => ({ ...p, parcelas: doProjeto.all(p.id).map(linha) }));
+  }
+
   function montar(orcamento) {
     const lista = itensDoOrcamento(orcamento.id);
     return {
@@ -136,6 +163,7 @@ export function rotasOrcamentos({ db, hoje }) {
       totais: calcularTotais(lista, orcamento.desconto_pct),
       sugerir_hospedagem: sugerirHospedagem(orcamento.id),
       gerados: gerados(orcamento.id),
+      projetos_vinculaveis: projetosVinculaveis(orcamento.cliente_id),
     };
   }
 
@@ -282,6 +310,18 @@ export function rotasOrcamentos({ db, hoje }) {
       parcelasEscolhidas.primeira ??= hoje();
       porItem.set(item.id, { ...e, item, parcelas: parcelasEscolhidas });
     }
+
+    // Projeto existente: precisa ser deste cliente, do mesmo serviço, aberto, e servir a um item só.
+    const usados = new Set();
+    for (const e of porItem.values()) {
+      if (e.projeto_id == null || e.destino === 'nenhum') continue;
+      const existente = projetos.obter(e.projeto_id);
+      const motivo = motivoNaoVincula(existente, { destino: e.destino, clienteId: orcamento.cliente_id });
+      if (motivo) throw new ErroHttp(400, `${e.item.nome}: ${motivo}.`);
+      if (usados.has(existente.id)) throw new ErroHttp(400, `${e.item.nome}: o mesmo projeto foi escolhido para dois itens.`);
+      usados.add(existente.id);
+      e.existente = existente;
+    }
     const escolhas = lista.map((item) => porItem.get(item.id) ?? { item_id: item.id, destino: 'nenhum', item, parcelas: { modo: 'nenhuma' } });
 
     // Cada mensalidade precisa de um projeto, e cada projeto recebe uma mensalidade só.
@@ -318,18 +358,48 @@ export function rotasOrcamentos({ db, hoje }) {
       ?? categorias.idComNome('Site') ?? todasCategorias[0]?.id ?? null;
     const criados = new Map(); // item.id -> projeto
 
+    // As parcelas que o aceite cria guardam o orçamento: ao desfazer, só essas (e abertas) saem.
+    function criarParcelas(projetoId, valorCentavos, escolhaParcelas) {
+      for (const p of planejarParcelas(valorCentavos, escolhaParcelas)) {
+        parcelas.criar({ ...p, projeto_id: projetoId, orcamento_id: orcamento.id });
+      }
+    }
+
     function criarProjeto(dados, escolhaParcelas) {
       const projeto = projetos.criar(aplicarRegrasProjeto(null, {
         ...dados, cliente_id: orcamento.cliente_id, orcamento_id: orcamento.id,
       }, dia));
-      for (const p of planejarParcelas(dados.valor_total_centavos, escolhaParcelas)) {
-        parcelas.criar({ ...p, projeto_id: projeto.id });
-      }
+      criarParcelas(projeto.id, dados.valor_total_centavos, escolhaParcelas);
       return projeto;
     }
 
+    // Projeto que já existia: ganha o orçamento, o valor do item e avança até a etapa do aceite (nunca volta).
+    // Título, tarefas, parcelas que já tinha, datas e o resto ficam como estão.
+    function vincularProjeto(existente, destino, valor, escolhaParcelas) {
+      projetos.atualizar(existente.id, aplicarRegrasProjeto(existente, {
+        orcamento_id: orcamento.id, orcamento_vinculado: 1, valor_total_centavos: valor,
+        etapa: etapaAoVincular(existente.etapa, destino),
+      }, dia));
+      criarParcelas(existente.id, valor, escolhaParcelas);
+      return projetos.obter(existente.id);
+    }
+
     // Site começa a cobrar na entrega (o padrão do projeto); GMN começa hoje, como ao ligar pelo perfil.
-    function ligarMensalidade(projeto, valorCentavos, diaVencimento) {
+    // Projeto vinculado que já cobra mensalidade fica com a dele, a menos que o Lucca peça para substituir:
+    // aí só valor e dia mudam, e as mensalidades ainda não vencidas acompanham (como ao editar o projeto).
+    function ligarMensalidade(projeto, valorCentavos, diaVencimento, substituir) {
+      if (projeto.mensalidade_ativa) {
+        if (!substituir) return;
+        projetos.atualizar(projeto.id, {
+          mensalidade_valor_centavos: valorCentavos,
+          mensalidade_dia_vencimento: diaVencimento ?? projeto.mensalidade_dia_vencimento,
+        });
+        const abertas = parcelas.listar({ projeto_id: projeto.id, mensalidade: 1 }).filter((p) => !p.pago_em);
+        for (const passo of planejarMensalidadesAbertas(abertas, projeto, projetos.obter(projeto.id), dia)) {
+          parcelas.atualizar(passo.id, { valor_centavos: passo.valor_centavos, vencimento: passo.vencimento });
+        }
+        return;
+      }
       projetos.atualizar(projeto.id, {
         mensalidade_ativa: 1,
         mensalidade_valor_centavos: valorCentavos,
@@ -340,7 +410,13 @@ export function rotasOrcamentos({ db, hoje }) {
 
     for (const e of escolhas) {
       const valor = valores[e.item.id] ?? 0;
-      if (e.destino === 'site') {
+      if (e.existente) {
+        const projeto = vincularProjeto(e.existente, e.destino, valor, e.parcelas);
+        if (e.destino === 'site' && num(e.item.valor_mensal_centavos) > 0) {
+          ligarMensalidade(projeto, e.item.valor_mensal_centavos, e.dia_vencimento, e.substituir_mensalidade);
+        }
+        criados.set(e.item.id, projeto);
+      } else if (e.destino === 'site') {
         const projeto = criarProjeto({
           servico: 'site_sistema', titulo: e.item.nome, descricao: e.item.frase || null,
           etapa: 'valor_definido', valor_total_centavos: valor,
@@ -374,7 +450,7 @@ export function rotasOrcamentos({ db, hoje }) {
       const projeto = e.alvo
         ? projetos.obter(criados.get(e.alvo.item.id).id)
         : criarProjeto({ servico: 'google_meu_negocio', titulo: 'Google Meu Negócio', etapa: 'andamento', valor_total_centavos: 0 }, { modo: 'nenhuma' });
-      ligarMensalidade(projeto, num(e.item.valor_mensal_centavos), e.dia_vencimento);
+      ligarMensalidade(projeto, num(e.item.valor_mensal_centavos), e.dia_vencimento, e.substituir_mensalidade);
     }
     orcamentos.atualizar(orcamento.id, { situacao: 'aceito' });
   }
@@ -389,7 +465,8 @@ export function rotasOrcamentos({ db, hoje }) {
     res.json(montar(orcamentos.obter(orcamento.id)));
   });
 
-  // Sai de "aceito". Com apagar, some o que foi gerado e ainda não andou; o resto fica e continua ligado.
+  // Sai de "aceito". Com apagar, some o que foi gerado e ainda não andou, e o projeto vinculado é só desvinculado
+  // (perde as parcelas abertas do aceite; etapa, valor e mensalidade ficam). O resto fica e continua ligado.
   r.post('/orcamentos/:id/desfazer', (req, res) => {
     const orcamento = carregar(req.params.id);
     const { situacao } = validar(req.body, { situacao: { tipo: 'enum', valores: SITUACOES_SEM_ACEITE, obrigatorio: true } });
@@ -397,6 +474,10 @@ export function rotasOrcamentos({ db, hoje }) {
     emTransacao(db, () => {
       if (apagar) {
         const { projetos: lista, vendas: vendidas } = gerados(orcamento.id);
+        for (const p of lista.filter((x) => x.vinculado)) {
+          db.prepare('DELETE FROM parcelas WHERE projeto_id = ? AND orcamento_id = ? AND pago_em IS NULL').run(p.id, orcamento.id);
+          projetos.atualizar(p.id, { orcamento_id: null, orcamento_vinculado: 0 });
+        }
         for (const p of lista.filter((x) => x.pode_apagar)) projetos.remover(p.id);
         for (const v of vendidas.filter((x) => x.pode_apagar)) vendas.remover(v.id);
       }

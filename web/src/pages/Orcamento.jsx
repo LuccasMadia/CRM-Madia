@@ -9,7 +9,7 @@ import { Campo } from '../components/Campo.jsx';
 import { formatarDinheiro, paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { useValoresOcultos } from '../lib/privacidade.js';
 import { ROTULO_SITUACAO, numeroOrcamento } from './cliente/AbaOrcamentos.jsx';
-import { ConferenciaAceite } from './orcamentos/ConferenciaAceite.jsx';
+import { ConferenciaAceite, sugestoesDeVinculo, rotuloEtapaProjeto } from './orcamentos/ConferenciaAceite.jsx';
 import { ABA_DO_SERVICO } from '../lib/rotulos.js';
 
 // Conversores dos campos que salvam ao sair: devolvem { valor } para enviar ou { erro } para mostrar.
@@ -145,32 +145,52 @@ export function Orcamento() {
     return salvar({ situacao: nova });
   }
 
+  // Projeto vinculado (já existia) nunca é apagado: desfazer só o desvincula e apaga as parcelas abertas do aceite.
   function perguntarDesfazer(nova) {
     const { projetos, vendas } = gerados;
+    const vinculados = projetos.filter((p) => p.vinculado);
     const itens = [
-      ...projetos.map((p) => ({ ...linkDoGerado(p), pode: p.pode_apagar, motivo: 'tem parcela paga' })),
+      ...projetos.filter((p) => !p.vinculado).map((p) => ({ ...linkDoGerado(p), pode: p.pode_apagar, motivo: 'tem parcela paga' })),
       ...vendas.map((v) => ({ ...linkDaVenda(v), pode: v.pode_apagar, motivo: 'já recebida ou com placa montada' })),
     ];
     const apagaveis = itens.filter((i) => i.pode);
     const mantidos = itens.filter((i) => !i.pode);
+    const temDesfazer = apagaveis.length + vinculados.length > 0;
     const desfazer = (apagar) => async () => {
       setAtual(await api(`/orcamentos/${id}/desfazer`, { method: 'POST', body: { situacao: nova, apagar } }));
-      notificar(apagar ? 'Apagado o que ainda não tinha andado' : `Orçamento marcado como ${ROTULO_SITUACAO[nova].toLowerCase()}`);
+      notificar(apagar ? 'Desfeito o que ainda não tinha andado' : `Orçamento marcado como ${ROTULO_SITUACAO[nova].toLowerCase()}`);
     };
+    let mensagem = 'Tudo o que este orçamento gerou já andou e vai continuar existindo.';
+    if (apagaveis.length && vinculados.length) mensagem = 'Este orçamento gerou projetos e vendas e usou um projeto que já existia. Quer desfazer o que ele gerou?';
+    else if (apagaveis.length) mensagem = 'Este orçamento gerou projetos e vendas. Quer apagar o que ele gerou?';
+    else if (vinculados.length) mensagem = 'Este orçamento foi ligado a um projeto que já existia. Quer desfazer essa ligação?';
     confirmar({
       titulo: `Voltar para "${ROTULO_SITUACAO[nova]}"?`,
-      mensagem: apagaveis.length
-        ? 'Este orçamento gerou projetos e vendas. Quer apagar o que ele gerou?'
-        : 'Tudo o que este orçamento gerou já andou e vai continuar existindo.',
+      mensagem,
       detalhe: (
         <div className="desfazer">
+          {vinculados.length > 0 && (
+            <>
+              <p className="desfazer__titulo">Vinculado: não é apagado</p>
+              <ul className="desfazer__lista">
+                {vinculados.map((p) => (
+                  <li key={p.id}>
+                    <Link to={linkDoGerado(p).para}>{p.titulo}</Link>
+                    {` foi vinculado: continua existindo, só é desvinculado; ${p.parcelas_abertas
+                      ? `${p.parcelas_abertas} ${p.parcelas_abertas === 1 ? 'parcela aberta do orçamento é apagada' : 'parcelas abertas do orçamento são apagadas'}`
+                      : 'não há parcela aberta do orçamento para apagar'}. Etapa, valor e mensalidade ficam como estão.`}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {apagaveis.length > 0 && <ListaGerados titulo="Pode ser apagado" itens={apagaveis} />}
           {mantidos.length > 0 && <ListaGerados titulo="Já andou e fica" itens={mantidos} comMotivo />}
         </div>
       ),
-      rotuloConfirmar: 'Apagar o que foi gerado',
-      onConfirmar: apagaveis.length ? desfazer(true) : undefined,
-      alternativa: { rotulo: apagaveis.length ? 'Manter e só mudar a situação' : 'Mudar a situação', onEscolher: desfazer(false) },
+      rotuloConfirmar: vinculados.length ? 'Desfazer o que foi gerado' : 'Apagar o que foi gerado',
+      onConfirmar: temDesfazer ? desfazer(true) : undefined,
+      alternativa: { rotulo: temDesfazer ? 'Manter e só mudar a situação' : 'Mudar a situação', onEscolher: desfazer(false) },
     });
   }
 
@@ -198,6 +218,7 @@ export function Orcamento() {
         </div>
       </header>
       <Gerou gerados={gerados} />
+      <AvisoVinculo orcamento={orcamento} />
       <Aviso erro={erroTabela} />
       <Aviso erro={erroEnvio} />
 
@@ -256,16 +277,27 @@ const linkDaVenda = (v) => ({
   texto: `Venda de ${v.quantidade} ${v.quantidade === 1 ? 'placa' : 'placas'} ${v.modelo_nome}`,
 });
 
-// O que o aceite criou, com link para cada um.
+// O que o aceite criou e os projetos que já existiam e ele passou a usar, com link para cada um.
 function Gerou({ gerados }) {
-  const links = [...gerados.projetos.map(linkDoGerado), ...gerados.vendas.map(linkDaVenda)];
-  if (!links.length) return null;
-  return (
+  const criou = [...gerados.projetos.filter((p) => !p.vinculado).map(linkDoGerado), ...gerados.vendas.map(linkDaVenda)];
+  const vinculou = gerados.projetos.filter((p) => p.vinculado).map(linkDoGerado);
+  const linha = (rotulo, links) => links.length > 0 && (
     <p className="orcamento__gerou">
-      <span>Gerou:</span>
+      <span>{rotulo}</span>
       {links.map((l) => <Link key={l.chave} className="etiqueta etiqueta--aceito" to={l.para}>{l.texto}</Link>)}
     </p>
   );
+  return <>{linha('Vinculou:', vinculou)}{linha('Criou:', criou)}</>;
+}
+
+// Antes de aceitar: avisa que o cliente já tem um projeto aberto que a conferência vai sugerir usar.
+function AvisoVinculo({ orcamento }) {
+  if (orcamento.situacao === 'aceito') return null;
+  return sugestoesDeVinculo(orcamento).map((p) => (
+    <p key={p.id} className="vazio orcamento__vinculo">
+      {`${orcamento.cliente_nome || 'O cliente'} já tem "${p.titulo}" em ${rotuloEtapaProjeto(p)} — ao aceitar você pode usar esse projeto.`}
+    </p>
+  ));
 }
 
 function ListaGerados({ titulo, itens, comMotivo }) {

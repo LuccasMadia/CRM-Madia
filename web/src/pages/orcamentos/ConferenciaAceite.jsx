@@ -6,8 +6,9 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { Campo } from '../../components/Campo.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO } from '../../lib/datas.js';
+import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import {
-  destinosDoItem, destinoPadrao, valoresComDesconto, planejarParcelas, sugerirParcelas,
+  destinosDoItem, destinoPadrao, valoresComDesconto, planejarParcelas, sugerirParcelas, SERVICO_DO_DESTINO, etapaAoVincular,
 } from '../../../../server/domain/orcamentos.js';
 
 const ROTULO_DESTINO = {
@@ -28,17 +29,48 @@ const ROTULO_PARCELAS = {
 const num = (v) => Number(v) || 0;
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
+// GMN não tem funil: andamento é "pendente" e entregue é "configurado".
+export function rotuloEtapaProjeto(projeto, etapa = projeto.etapa) {
+  if (projeto.servico === 'google_meu_negocio' && etapa === 'andamento') return 'Pendente';
+  if (projeto.servico === 'google_meu_negocio' && etapa === 'entregue') return 'Configurado';
+  return ROTULO_ETAPA[etapa];
+}
+
+// Serviço do projeto que o item vira (site ou GMN); null quando o item não vira projeto.
+const servicoDoItem = (it) => SERVICO_DO_DESTINO[destinosDoItem(it)[0]] ?? null;
+
+// Projeto aberto (não entregue) do mesmo serviço que o aceite sugere usar: só quando há exatamente um.
+export function projetoSugerido(orcamento, servico) {
+  const abertos = (orcamento.projetos_vinculaveis ?? []).filter((p) => p.servico === servico && p.etapa !== 'entregue');
+  return abertos.length === 1 ? abertos[0] : null;
+}
+
+// Para o aviso na tela do orçamento: os projetos que o aceite vai sugerir usar, um por serviço do orçamento.
+export function sugestoesDeVinculo(orcamento) {
+  const servicos = new Set(orcamento.itens.filter((it) => destinoPadrao(it) !== 'nenhum').map(servicoDoItem).filter(Boolean));
+  return [...servicos].map((s) => projetoSugerido(orcamento, s)).filter(Boolean);
+}
+
 // O que cada item vira começa pelo padrão (tudo marcado); as parcelas seguem a forma de pagamento escrita.
+// Havendo um só projeto aberto do mesmo serviço, já vem escolhido para ser usado (e, se ele já tem
+// parcelas, o atalho começa em "Sem parcelas" para não cobrar duas vezes).
 function escolhasIniciais(orcamento) {
   const sugestao = sugerirParcelas(orcamento.pagamento);
   const hoje = hojeISO();
+  const usados = new Set();
   return Object.fromEntries(orcamento.itens.map((it) => {
     const padrao = destinoPadrao(it);
+    const servico = servicoDoItem(it);
+    const sugerido = servico && padrao !== 'nenhum' ? projetoSugerido(orcamento, servico) : null;
+    const vinculo = sugerido && !usados.has(sugerido.id) ? sugerido : null;
+    if (vinculo) usados.add(vinculo.id);
     return [it.id, {
       marcado: padrao !== 'nenhum',
       destino: padrao !== 'nenhum' ? padrao : destinosDoItem(it)[0],
       alvo: '',
-      parcelas: { modo: sugestao.modo, quantidade: String(sugestao.quantidade), primeira: hoje },
+      vinculo: vinculo ? String(vinculo.id) : '',
+      substituir: false,
+      parcelas: { modo: vinculo?.parcelas.length ? 'nenhuma' : sugestao.modo, quantidade: String(sugestao.quantidade), primeira: hoje },
       dia: String(Number(hoje.slice(8, 10))),
     }];
   }));
@@ -49,10 +81,26 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
   const [escolhas, setEscolhas] = useState(() => escolhasIniciais(orcamento));
   const { erro, erros, enviando, executar, setErros } = useEnvio();
   const valores = valoresComDesconto(orcamento.itens, orcamento.totais.desconto_centavos);
+  const vinculaveis = orcamento.projetos_vinculaveis ?? [];
   const mudar = (id, parcial) => setEscolhas((atual) => ({ ...atual, [id]: { ...atual[id], ...parcial } }));
   const destinoDe = (it) => (escolhas[it.id].marcado ? escolhas[it.id].destino : 'nenhum');
   const sites = orcamento.itens.filter((it) => destinoDe(it) === 'site');
   const gmns = orcamento.itens.filter((it) => destinoDe(it) === 'gmn');
+
+  // Projeto existente que o item vai usar; null quando cria um novo.
+  function vinculadoDe(it) {
+    if (!['site', 'gmn'].includes(destinoDe(it)) || !escolhas[it.id].vinculo) return null;
+    return vinculaveis.find((p) => String(p.id) === escolhas[it.id].vinculo) ?? null;
+  }
+  const nomeDoProjeto = (it) => vinculadoDe(it)?.titulo ?? it.nome;
+
+  function escolherVinculo(it, valor) {
+    const projeto = vinculaveis.find((p) => String(p.id) === valor);
+    const { modo } = sugerirParcelas(orcamento.pagamento);
+    mudar(it.id, { vinculo: valor, parcelas: { ...escolhas[it.id].parcelas, modo: projeto?.parcelas.length ? 'nenhuma' : modo } });
+  }
+  // Projetos já escolhidos por outro item: não dá para usar o mesmo em dois.
+  const ocupadosPorOutros = (it) => new Set(orcamento.itens.filter((o) => o.id !== it.id).map(vinculadoDe).filter(Boolean).map((p) => p.id));
 
   // Projeto que recebe a mensalidade do item; null quando não há onde pôr (só acontece com site).
   function alvoDe(it) {
@@ -63,11 +111,25 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
   }
   const semSite = (it) => destinoDe(it) === 'mensal_site' && !sites.length;
   const criaAlgo = (it) => destinoDe(it) !== 'nenhum' && !semSite(it);
+  const temMensalidade = (it) => destinoDe(it).startsWith('mensal') || (destinoDe(it) === 'site' && num(it.valor_mensal_centavos) > 0);
+  // Projeto existente que receberia a mensalidade do item (o próprio vinculado, ou o do item alvo).
+  function existenteDaMensalidade(it) {
+    if (destinoDe(it) === 'site') return vinculadoDe(it);
+    const alvo = alvoDe(it);
+    return alvo ? vinculadoDe(alvo) : null;
+  }
+  // O projeto vinculado já cobra mensalidade e o Lucca não pediu para substituir: a do orçamento não entra.
+  const mantemMensalidade = (it) => !!existenteDaMensalidade(it)?.mensalidade_ativa && !escolhas[it.id].substituir;
+  // Ao substituir, o dia começa pelo que o projeto já usa.
+  function substituirMensalidade(it, substituir) {
+    const diaAtual = existenteDaMensalidade(it)?.mensalidade_dia_vencimento;
+    mudar(it.id, { substituir, ...(substituir && diaAtual ? { dia: String(diaAtual) } : {}) });
+  }
 
   const criadoUnico = orcamento.itens.filter((it) => ['site', 'gmn', 'placa'].includes(destinoDe(it)))
     .reduce((s, it) => s + (valores[it.id] ?? 0), 0);
   const criadoMensal = orcamento.itens
-    .filter((it) => criaAlgo(it) && (destinoDe(it).startsWith('mensal') || destinoDe(it) === 'site'))
+    .filter((it) => criaAlgo(it) && temMensalidade(it) && !mantemMensalidade(it))
     .reduce((s, it) => s + num(it.valor_mensal_centavos), 0);
 
   function enviar(e) {
@@ -83,12 +145,14 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
         if (modo === 'mensais' && !(Number.isInteger(n) && n >= 1 && n <= 60)) problemas.push({ campo: `quantidade-${it.id}`, mensagem: 'De 1 a 60 parcelas' });
         if (modo !== 'nenhuma' && !primeira) problemas.push({ campo: `primeira-${it.id}`, mensagem: 'Informe a data' });
         saida.parcelas = { modo, ...(modo === 'mensais' ? { quantidade: n } : {}), ...(modo !== 'nenhuma' ? { primeira } : {}) };
+        const vinculado = vinculadoDe(it);
+        if (vinculado) saida.projeto_id = vinculado.id;
       }
-      const temMensal = destino.startsWith('mensal') || (destino === 'site' && num(it.valor_mensal_centavos) > 0);
-      if (temMensal) {
+      if (temMensalidade(it) && destino !== 'nenhum') {
         const dia = Number(escolha.dia);
         if (!(Number.isInteger(dia) && dia >= 1 && dia <= 31)) problemas.push({ campo: `dia-${it.id}`, mensagem: 'Dia de 1 a 31' });
         saida.dia_vencimento = dia;
+        if (existenteDaMensalidade(it)?.mensalidade_ativa && escolha.substituir) saida.substituir_mensalidade = true;
       }
       const alvo = alvoDe(it);
       if (alvo) saida.alvo_item_id = alvo.id;
@@ -101,6 +165,14 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
     });
   }
 
+  // Mensalidade do item, que pode cair num projeto vinculado que já cobra uma.
+  const mensalidadeDo = (it, texto) => (
+    <Mensalidade
+      id={it.id} item={it} dia={escolhas[it.id].dia} erros={erros} onDia={(dia) => mudar(it.id, { dia })} texto={texto}
+      existente={existenteDaMensalidade(it)} substituir={escolhas[it.id].substituir} onSubstituir={(substituir) => substituirMensalidade(it, substituir)}
+    />
+  );
+
   return (
     <Modal titulo={`Aceitar o orçamento nº ${String(orcamento.numero).padStart(3, '0')}`} onFechar={onFechar}>
       <form className="conferencia" onSubmit={enviar} noValidate>
@@ -110,6 +182,11 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
             const escolha = escolhas[it.id];
             const destino = destinoDe(it);
             const opcoes = destinosDoItem(it).filter((d) => d !== 'nenhum');
+            const vinculado = vinculadoDe(it);
+            const candidatos = vinculaveis.filter((p) => p.servico === SERVICO_DO_DESTINO[destino]);
+            const parcelas = (
+              <Parcelas id={it.id} valor={valores[it.id] ?? 0} escolha={escolha.parcelas} erros={erros} onMudar={(p) => mudar(it.id, { parcelas: { ...escolha.parcelas, ...p } })} />
+            );
             return (
               <li key={it.id} className={`conferencia__item${escolha.marcado ? '' : ' conferencia__item--desmarcado'}`}>
                 <div className="conferencia__cabeca">
@@ -129,19 +206,24 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
                         </select>
                       </Campo>
                     )}
+                    {(destino === 'site' || destino === 'gmn') && candidatos.length > 0 && (
+                      <EscolhaProjeto
+                        id={it.id} candidatos={candidatos} valor={escolha.vinculo} ocupados={ocupadosPorOutros(it)}
+                        sugerido={projetoSugerido(orcamento, SERVICO_DO_DESTINO[destino])} onEscolher={(v) => escolherVinculo(it, v)}
+                      />
+                    )}
+                    {vinculado && <PreviaVinculo projeto={vinculado} destino={destino} valor={valores[it.id] ?? 0} />}
                     {destino === 'site' && (
                       <>
-                        <p className="conferencia__vira">Vira um projeto em Sites, na etapa <strong>Valor definido</strong>.</p>
-                        <Parcelas id={it.id} valor={valores[it.id] ?? 0} escolha={escolha.parcelas} erros={erros} onMudar={(p) => mudar(it.id, { parcelas: { ...escolha.parcelas, ...p } })} />
-                        {num(it.valor_mensal_centavos) > 0 && (
-                          <Mensalidade id={it.id} item={it} dia={escolha.dia} erros={erros} onDia={(dia) => mudar(it.id, { dia })} texto="Mensalidade neste projeto, começa a cobrar quando o site for entregue." />
-                        )}
+                        {!vinculado && <p className="conferencia__vira">Vira um projeto em Sites, na etapa <strong>Valor definido</strong>.</p>}
+                        {parcelas}
+                        {num(it.valor_mensal_centavos) > 0 && mensalidadeDo(it, 'Mensalidade neste projeto, começa a cobrar quando o site for entregue.')}
                       </>
                     )}
                     {destino === 'gmn' && (
                       <>
-                        <p className="conferencia__vira">Vira o Google Meu Negócio do cliente, como <strong>pendente</strong>.</p>
-                        <Parcelas id={it.id} valor={valores[it.id] ?? 0} escolha={escolha.parcelas} erros={erros} onMudar={(p) => mudar(it.id, { parcelas: { ...escolha.parcelas, ...p } })} />
+                        {!vinculado && <p className="conferencia__vira">Vira o Google Meu Negócio do cliente, como <strong>pendente</strong>.</p>}
+                        {parcelas}
                       </>
                     )}
                     {destino === 'placa' && (
@@ -156,18 +238,15 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
                           {sites.length > 1 && (
                             <Campo rotulo="Em qual site" nome={`alvo-${it.id}`}>
                               <select value={String(alvoDe(it).id)} onChange={(e) => mudar(it.id, { alvo: e.target.value })}>
-                                {sites.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                                {sites.map((s) => <option key={s.id} value={s.id}>{nomeDoProjeto(s)}</option>)}
                               </select>
                             </Campo>
                           )}
-                          <Mensalidade id={it.id} item={it} dia={escolha.dia} erros={erros} onDia={(dia) => mudar(it.id, { dia })}
-                            texto={`${sites.length > 1 ? 'Mensalidade no site escolhido' : `Mensalidade em "${sites[0].nome}"`}, começa a cobrar quando o site for entregue.`} />
+                          {mensalidadeDo(it, `${sites.length > 1 ? 'Mensalidade no site escolhido' : `Mensalidade em "${nomeDoProjeto(sites[0])}"`}, começa a cobrar quando o site for entregue.`)}
                         </>
                       ))}
-                    {destino === 'mensal_gmn' && (
-                      <Mensalidade id={it.id} item={it} dia={escolha.dia} erros={erros} onDia={(dia) => mudar(it.id, { dia })}
-                        texto={gmns.length ? 'Mensalidade no Google Meu Negócio acima, começa a cobrar hoje.' : 'Cria um Google Meu Negócio só para esta mensalidade, que começa a cobrar hoje.'} />
-                    )}
+                    {destino === 'mensal_gmn' && mensalidadeDo(it,
+                      gmns.length ? 'Mensalidade no Google Meu Negócio acima, começa a cobrar hoje.' : 'Cria um Google Meu Negócio só para esta mensalidade, que começa a cobrar hoje.')}
                   </div>
                 )}
               </li>
@@ -204,6 +283,59 @@ function ValorItem({ item, valor }) {
   );
 }
 
+// Criar um projeto novo ou usar um que o cliente já tem (do mesmo serviço).
+function EscolhaProjeto({ id, candidatos, valor, ocupados, sugerido, onEscolher }) {
+  return (
+    <>
+      {sugerido && (
+        <p className="conferencia__vira">{`Já existe "${sugerido.titulo}" em ${rotuloEtapaProjeto(sugerido)} — usar esse?`}</p>
+      )}
+      <Campo rotulo="Projeto" nome={`vinculo-${id}`}>
+        <select value={valor} onChange={(e) => onEscolher(e.target.value)}>
+          <option value="">Criar projeto novo</option>
+          {candidatos.map((p) => (
+            <option key={p.id} value={String(p.id)} disabled={ocupados.has(p.id)}>
+              {`Usar projeto existente: ${p.titulo} (${rotuloEtapaProjeto(p)})`}
+            </option>
+          ))}
+        </select>
+      </Campo>
+    </>
+  );
+}
+
+// O que muda no projeto existente: etapa (só avança), valor e as parcelas que ele já tem.
+function PreviaVinculo({ projeto, destino, valor }) {
+  const nova = etapaAoVincular(projeto.etapa, destino);
+  const etapa = nova === projeto.etapa
+    ? `continua ${projeto.servico === 'google_meu_negocio' ? '' : 'em '}${rotuloEtapaProjeto(projeto)}`
+    : `${rotuloEtapaProjeto(projeto)} → ${rotuloEtapaProjeto(projeto, nova)}`;
+  const pagas = projeto.parcelas.filter((p) => p.pago_em).length;
+  return (
+    <div className="conferencia__previa" aria-label="O que muda no projeto">
+      <p className="conferencia__vira">
+        Atualiza <strong>{projeto.titulo}</strong>: título, tarefas, notas e o resto continuam como estão.
+      </p>
+      <ul className="conferencia__mudancas">
+        <li>{`Etapa: ${etapa}`}</li>
+        <li>{valor !== projeto.valor_total_centavos
+          ? `Valor: de ${formatarDinheiro(projeto.valor_total_centavos)} para ${formatarDinheiro(valor)}`
+          : `Valor: continua ${formatarDinheiro(valor)}`}
+        </li>
+        {projeto.parcelas.length > 0 && (
+          <li>
+            {`Já tem ${projeto.parcelas.length} ${plural(projeto.parcelas.length, 'parcela', 'parcelas')}`}
+            {pagas > 0 && ` (${pagas} ${plural(pagas, 'paga', 'pagas')})`}
+            {', que ficam como estão: '}
+            {projeto.parcelas.map((p) => `${formatarData(p.vencimento)}: ${formatarDinheiro(p.valor_centavos)}${p.pago_em ? ' paga' : ''}`).join(' · ')}
+            . As parcelas escolhidas abaixo entram além delas.
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 function Parcelas({ id, valor, escolha, erros, onMudar }) {
   const n = Number(escolha.quantidade);
   const plano = escolha.modo === 'mensais' && !(Number.isInteger(n) && n >= 1 && n <= 60)
@@ -236,14 +368,29 @@ function Parcelas({ id, valor, escolha, erros, onMudar }) {
   );
 }
 
-function Mensalidade({ id, item, dia, erros, onDia, texto }) {
+// Projeto vinculado que já cobra mensalidade: por padrão fica a atual; dá para trocar pela do orçamento.
+function Mensalidade({ id, item, dia, erros, onDia, texto, existente, substituir, onSubstituir }) {
+  const valor = formatarDinheiro(num(item.valor_mensal_centavos));
+  const jaCobra = !!existente?.mensalidade_ativa;
   return (
     <div className="conferencia__mensal">
-      <p className="conferencia__vira">{texto}</p>
-      <div className="conferencia__campos">
-        <Campo rotulo={`Dia do vencimento (${formatarDinheiro(num(item.valor_mensal_centavos))}/mês)`} nome={`dia-${id}`} erros={erros}
-          type="number" min="1" max="31" value={dia} onChange={(e) => onDia(e.target.value)} />
-      </div>
+      {jaCobra ? (
+        <>
+          <p className="conferencia__vira">
+            {`"${existente.titulo}" já cobra ${formatarDinheiro(existente.mensalidade_valor_centavos)}/mês: fica a atual.`}
+          </p>
+          <label className="campo--check">
+            <input type="checkbox" checked={substituir} onChange={(e) => onSubstituir(e.target.checked)} />
+            {`Substituir pelo valor do orçamento (${valor}/mês)`}
+          </label>
+        </>
+      ) : <p className="conferencia__vira">{texto}</p>}
+      {(!jaCobra || substituir) && (
+        <div className="conferencia__campos">
+          <Campo rotulo={`Dia do vencimento (${valor}/mês)`} nome={`dia-${id}`} erros={erros}
+            type="number" min="1" max="31" value={dia} onChange={(e) => onDia(e.target.value)} />
+        </div>
+      )}
     </div>
   );
 }

@@ -559,6 +559,8 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .orcamento__campos input, .orcamento__campos textarea { width: 100%; min-width: 0; }
 .orcamento__gerou { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 20px; color: var(--texto-suave); }
 .orcamento__gerou a.etiqueta:hover { text-decoration: none; filter: brightness(1.15); }
+.orcamento__vinculo { margin: 0 0 16px; font-size: 0.9rem; }
+.orcamento__gerou + .orcamento__gerou { margin-top: -12px; }
 /* conferência do aceite: um bloco por item */
 .conferencia { display: grid; gap: 14px; }
 .conferencia > p { margin: 0; }
@@ -581,6 +583,8 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .conferencia__plano { font-size: 0.85rem; color: var(--primaria); font-variant-numeric: tabular-nums; }
 .conferencia__plano.vazio { color: var(--texto-suave); }
 .conferencia__aviso { margin: 0; border-color: var(--atencao); color: var(--atencao); }
+.conferencia__previa { display: grid; gap: 4px; padding: 8px 10px; border-left: 3px solid var(--primaria); background: var(--primaria-suave); border-radius: 0 var(--raio-controle) var(--raio-controle) 0; }
+.conferencia__mudancas { margin: 0; padding-left: 18px; font-size: 0.9rem; display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
 .conferencia__total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 12px; border-top: 1px solid var(--borda); }
 .conferencia__total strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; text-align: right; }
 .desfazer__titulo { margin: 12px 0 4px; font-size: 0.85rem; color: var(--texto-suave); font-weight: 600; }

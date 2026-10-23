@@ -88,8 +88,8 @@ describe('POST /orcamentos/:id/aceitar', () => {
 
     expect(res.gerados).toEqual({
       projetos: [
-        { id: site.id, titulo: 'Cardápio / catálogo digital', servico: 'site_sistema', cliente_id: cliente.id, pode_apagar: true },
-        { id: google.id, titulo: 'Google Meu Negócio', servico: 'google_meu_negocio', cliente_id: cliente.id, pode_apagar: true },
+        { id: site.id, titulo: 'Cardápio / catálogo digital', servico: 'site_sistema', cliente_id: cliente.id, vinculado: false, pode_apagar: true },
+        { id: google.id, titulo: 'Google Meu Negócio', servico: 'google_meu_negocio', cliente_id: cliente.id, vinculado: false, pode_apagar: true },
       ],
       vendas: [{ id: venda.id, modelo_nome: 'Redonda', quantidade: 3, pode_apagar: true }],
     });
@@ -299,5 +299,204 @@ describe('GET /orcamentos', () => {
     expect(lista[2]).toMatchObject({ cliente_nome: 'Popy', vence_em: '2026-10-23', dias_para_vencer: 2, sem_resposta: false, vencendo: true });
     expect(lista[1]).toMatchObject({ situacao: 'rascunho', parado: true, vencendo: false });
     expect(lista[0]).toMatchObject({ parado: false });
+  });
+});
+
+describe('aceite vinculando a um projeto que já existe', () => {
+  // "Cardápio digital p/ empresas" em protótipo, com tarefa, nota e prazo, como o do Filinto.
+  async function cardapioExistente(campos = {}) {
+    const projeto = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'Cardápio digital p/ empresas', etapa: 'prototipo', valor_total_centavos: 150000,
+      notas: 'cliente quer o admin simples', prazo_entrega: '2026-11-30', ...campos,
+    }).expect(201)).body;
+    await ctx.http.post(`/api/projetos/${projeto.id}/tarefas`).send({ texto: 'Pegar lista de produtos reais' }).expect(201);
+    return projeto;
+  }
+  // uma parcela paga e uma aberta, combinadas antes do orçamento
+  const comParcelas = async (projeto) => {
+    const paga = (await ctx.http.post(`/api/projetos/${projeto.id}/parcelas`).send({ descricao: 'Sinal', valor_centavos: 20000, vencimento: '2026-10-01' }).expect(201)).body;
+    await ctx.http.put(`/api/parcelas/${paga.id}`).send({ pago_em: '2026-10-01' }).expect(200);
+    await ctx.http.post(`/api/projetos/${projeto.id}/parcelas`).send({ descricao: 'Combinado antes', valor_centavos: 30000, vencimento: '2026-12-01' }).expect(201);
+  };
+  const projeto = (id) => ({ ...ctx.db.prepare('SELECT * FROM projetos WHERE id = ?').get(id) });
+  const tarefasDe = (id) => ctx.db.prepare('SELECT texto FROM tarefas WHERE projeto_id = ?').all(id).map((t) => t.texto);
+  const escolhasDo = (orc, cardapioExtra = {}, hospedagemExtra = {}) => [
+    { item_id: itemDe(orc, 'Cardápio / catálogo digital').id, destino: 'site', parcelas: { modo: 'entrada_entrega', primeira: '2026-10-25' }, ...cardapioExtra },
+    { item_id: itemDe(orc, 'Hospedagem e suporte').id, destino: 'mensal_site', dia_vencimento: 10, ...hospedagemExtra },
+  ];
+
+  it('mostra os projetos que podem ser vinculados (sem perdido, fictício, já ligado ou de outro serviço/cliente)', async () => {
+    const existente = await cardapioExistente();
+    await comParcelas(existente);
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Velho', etapa: 'perdido' }).expect(201);
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Demo', etapa: 'andamento', ficticio: true }).expect(201);
+    const t = '2026-10-01T00:00:00.000Z';
+    ctx.db.prepare("INSERT INTO projetos (cliente_id, titulo, servico, etapa, criado_em, atualizado_em) VALUES (?, 'Placas', 'placas_nfc', 'andamento', ?, ?)")
+      .run(cliente.id, t, t);
+    const outro = (await ctx.http.post('/api/clientes').send({ nome: 'Popy' }).expect(201)).body;
+    await ctx.http.post('/api/projetos').send({ cliente_id: outro.id, titulo: 'Site da Popy' }).expect(201);
+    const orc = await novoOrcamento();
+    expect(orc.projetos_vinculaveis).toEqual([{
+      id: existente.id, titulo: 'Cardápio digital p/ empresas', servico: 'site_sistema', etapa: 'prototipo',
+      valor_total_centavos: 150000, mensalidade_ativa: 0, mensalidade_valor_centavos: 0, mensalidade_dia_vencimento: null,
+      parcelas: [
+        { id: expect.any(Number), descricao: 'Sinal', valor_centavos: 20000, vencimento: '2026-10-01', pago_em: '2026-10-01' },
+        { id: expect.any(Number), descricao: 'Combinado antes', valor_centavos: 30000, vencimento: '2026-12-01', pago_em: null },
+      ],
+    }]);
+  });
+
+  it('site em protótipo vai para Valor definido com o valor do orçamento, sem perder tarefas, parcelas e dados', async () => {
+    const existente = await cardapioExistente();
+    await comParcelas(existente);
+    const antes = projeto(existente.id);
+    const orc = await orcamentoCompleto();
+    const res = (await aceitar(orc, escolhasDo(orc, { projeto_id: existente.id })).expect(200)).body;
+
+    // não criou outro site
+    expect(projetosDo().filter((p) => p.servico === 'site_sistema')).toHaveLength(1);
+    const depois = projeto(existente.id);
+    expect(depois).toEqual({
+      ...antes,
+      etapa: 'valor_definido', valor_total_centavos: 81000, orcamento_id: orc.id, orcamento_vinculado: 1,
+      mensalidade_ativa: 1, mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 10,
+      atualizado_em: depois.atualizado_em,
+    });
+    expect(tarefasDe(existente.id)).toEqual(['Pegar lista de produtos reais']);
+    // as parcelas antigas ficam e as do aceite entram além delas
+    expect(parcelasDe(existente.id)).toEqual([
+      { descricao: 'Sinal', valor_centavos: 20000, vencimento: '2026-10-01' },
+      { descricao: 'Entrada (50%)', valor_centavos: 40500, vencimento: '2026-10-25' },
+      { descricao: 'Na entrega (50%)', valor_centavos: 40500, vencimento: '2026-11-25' },
+      { descricao: 'Combinado antes', valor_centavos: 30000, vencimento: '2026-12-01' },
+    ]);
+    expect(res.gerados.projetos).toEqual([{
+      id: existente.id, titulo: 'Cardápio digital p/ empresas', servico: 'site_sistema', cliente_id: cliente.id,
+      vinculado: true, pode_apagar: false, parcelas_abertas: 2,
+    }]);
+    // já vinculado: não aparece mais como opção
+    expect(res.projetos_vinculaveis).toEqual([]);
+  });
+
+  it('projeto já em versão final não muda de etapa; GMN configurado continua configurado', async () => {
+    const existente = await cardapioExistente({ etapa: 'andamento' });
+    const gmn = (await ctx.http.post('/api/projetos').send({
+      cliente_id: cliente.id, titulo: 'GMN antigo', servico: 'google_meu_negocio',
+    }).expect(201)).body;
+    await ctx.http.put(`/api/projetos/${gmn.id}`).send({ etapa: 'entregue' }).expect(200);
+    const orc = await orcamentoCompleto();
+    await aceitar(orc, [
+      ...escolhasDo(orc, { projeto_id: existente.id, parcelas: { modo: 'nenhuma' } }),
+      { item_id: itemDe(orc, 'Configuração do Google Meu Negócio').id, destino: 'gmn', projeto_id: gmn.id },
+    ]).expect(200);
+    expect(projeto(existente.id)).toMatchObject({ etapa: 'andamento', valor_total_centavos: 81000, orcamento_vinculado: 1 });
+    expect(projeto(gmn.id)).toMatchObject({ etapa: 'entregue', valor_total_centavos: 22500, orcamento_id: orc.id });
+    expect(parcelasDe(existente.id)).toEqual([]);
+    expect(projetosDo()).toHaveLength(2);
+  });
+
+  it('mensalidade que o projeto já tem fica, a menos que peça para substituir', async () => {
+    const existente = await cardapioExistente({ mensalidade_ativa: true, mensalidade_valor_centavos: 9000, mensalidade_dia_vencimento: 5 });
+    const orc = await orcamentoCompleto();
+    await aceitar(orc, escolhasDo(orc, { projeto_id: existente.id })).expect(200);
+    expect(projeto(existente.id)).toMatchObject({ mensalidade_ativa: 1, mensalidade_valor_centavos: 9000, mensalidade_dia_vencimento: 5 });
+
+    // substituindo: valor e dia do orçamento, e a mensalidade ainda não vencida acompanha
+    const outro = await cardapioExistente({
+      titulo: 'Outro', mensalidade_ativa: true, mensalidade_valor_centavos: 9000, mensalidade_dia_vencimento: 5,
+      mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-09-05',
+    });
+    const t = '2026-10-01T00:00:00.000Z';
+    const mensal = ctx.db.prepare(`INSERT INTO parcelas (projeto_id, descricao, valor_centavos, vencimento, mensalidade, criado_em, atualizado_em)
+      VALUES (?, 'Mensalidade', 9000, ?, 1, ?, ?)`);
+    mensal.run(outro.id, '2026-10-05', t, t);
+    mensal.run(outro.id, '2026-11-05', t, t);
+    const orc2 = await orcamentoCompleto();
+    await aceitar(orc2, escolhasDo(orc2, { projeto_id: outro.id }, { substituir_mensalidade: true })).expect(200);
+    expect(projeto(outro.id)).toMatchObject({ mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 10 });
+    const mensais = ctx.db.prepare('SELECT valor_centavos, vencimento FROM parcelas WHERE projeto_id = ? AND mensalidade = 1 ORDER BY vencimento')
+      .all(outro.id).map((p) => ({ ...p }));
+    // a atrasada fica como foi combinada; a que ainda não venceu passa para o valor e o dia novos
+    expect(mensais).toEqual([{ valor_centavos: 9000, vencimento: '2026-10-05' }, { valor_centavos: 15000, vencimento: '2026-11-10' }]);
+  });
+
+  it('sem mensalidade no projeto, a do orçamento é ligada como num projeto novo', async () => {
+    const existente = await cardapioExistente();
+    const orc = await orcamentoCompleto();
+    await aceitar(orc, escolhasDo(orc, { projeto_id: existente.id })).expect(200);
+    expect(projeto(existente.id)).toMatchObject({ mensalidade_ativa: 1, mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 10 });
+  });
+
+  it('recusa projeto de outro cliente, de outro serviço, perdido, inexistente, já vinculado ou repetido, sem gravar nada', async () => {
+    const existente = await cardapioExistente();
+    const outroCliente = (await ctx.http.post('/api/clientes').send({ nome: 'Popy' }).expect(201)).body;
+    const daPopy = (await ctx.http.post('/api/projetos').send({ cliente_id: outroCliente.id, titulo: 'Site da Popy' }).expect(201)).body;
+    const perdido = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Velho', etapa: 'perdido' }).expect(201)).body;
+    const gmn = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'GMN', servico: 'google_meu_negocio' }).expect(201)).body;
+    const orc = await orcamentoCompleto();
+    const cardapio = itemDe(orc, 'Cardápio / catálogo digital');
+    const configGmn = itemDe(orc, 'Configuração do Google Meu Negócio');
+    const tentar = async (escolhas, erro) => {
+      const res = await aceitar(orc, escolhas).expect(400);
+      expect(res.body.erro).toMatch(erro);
+    };
+    await tentar([{ item_id: cardapio.id, destino: 'site', projeto_id: daPopy.id }], /é de outro cliente/);
+    await tentar([{ item_id: cardapio.id, destino: 'site', projeto_id: gmn.id }], /é de outro serviço/);
+    await tentar([{ item_id: configGmn.id, destino: 'gmn', projeto_id: existente.id }], /é de outro serviço/);
+    await tentar([{ item_id: cardapio.id, destino: 'site', projeto_id: perdido.id }], /está perdido/);
+    await tentar([{ item_id: cardapio.id, destino: 'site', projeto_id: 9999 }], /não existe/);
+    await tentar([{ item_id: itemDe(orc, 'Placa NFC — Redonda').id, destino: 'placa', projeto_id: existente.id }], /só site e Google Meu Negócio/);
+    const comDois = await addItem(orc, { livre: true, nome: 'Landing', valor_unico_centavos: 10000 });
+    await tentar([
+      { item_id: cardapio.id, destino: 'site', projeto_id: existente.id },
+      { item_id: itemDe(comDois, 'Landing').id, destino: 'site', projeto_id: existente.id },
+    ], /mesmo projeto foi escolhido para dois itens/);
+    expect(projeto(existente.id)).toMatchObject({ etapa: 'prototipo', orcamento_id: null, valor_total_centavos: 150000 });
+
+    // já vinculado a outro orçamento
+    const primeiro = await orcamentoCompleto();
+    await aceitar(primeiro, [{ item_id: itemDe(primeiro, 'Cardápio / catálogo digital').id, destino: 'site', projeto_id: existente.id }]).expect(200);
+    await tentar([{ item_id: cardapio.id, destino: 'site', projeto_id: existente.id }], /já está ligado a um orçamento/);
+    expect((await ctx.http.get(`/api/orcamentos/${orc.id}`)).body.situacao).toBe('rascunho');
+  });
+
+  it('desfazer: o vinculado não é apagado, só desvinculado, e perde só as parcelas abertas do aceite', async () => {
+    const existente = await cardapioExistente();
+    await comParcelas(existente);
+    const orc = await orcamentoCompleto();
+    const aceito = (await aceitar(orc, [
+      ...escolhasDo(orc, { projeto_id: existente.id }),
+      { item_id: itemDe(orc, 'Configuração do Google Meu Negócio').id, destino: 'gmn', parcelas: { modo: 'avista' } },
+    ]).expect(200)).body;
+    // a entrada do aceite foi paga
+    const entrada = ctx.db.prepare("SELECT id FROM parcelas WHERE projeto_id = ? AND descricao = 'Entrada (50%)'").get(existente.id);
+    await ctx.http.put(`/api/parcelas/${entrada.id}`).send({ pago_em: '2026-10-25' }).expect(200);
+    const google = aceito.gerados.projetos.find((p) => p.servico === 'google_meu_negocio');
+
+    const res = (await ctx.http.post(`/api/orcamentos/${orc.id}/desfazer`).send({ situacao: 'enviado', apagar: true }).expect(200)).body;
+    expect(res.gerados).toEqual({ projetos: [], vendas: [] });
+    // o GMN criado sumiu; o vinculado continua, sem orçamento, com etapa, valor e mensalidade do aceite
+    expect(ctx.db.prepare('SELECT COUNT(*) AS n FROM projetos WHERE id = ?').get(google.id).n).toBe(0);
+    expect(projeto(existente.id)).toMatchObject({
+      orcamento_id: null, orcamento_vinculado: 0, etapa: 'valor_definido', valor_total_centavos: 81000, mensalidade_ativa: 1,
+    });
+    expect(tarefasDe(existente.id)).toEqual(['Pegar lista de produtos reais']);
+    expect(parcelasDe(existente.id)).toEqual([
+      { descricao: 'Sinal', valor_centavos: 20000, vencimento: '2026-10-01' },
+      { descricao: 'Entrada (50%)', valor_centavos: 40500, vencimento: '2026-10-25' },
+      { descricao: 'Combinado antes', valor_centavos: 30000, vencimento: '2026-12-01' },
+    ]);
+    // desvinculado, volta a ser opção e o orçamento pode ser aceito de novo
+    expect(res.projetos_vinculaveis.map((p) => p.id)).toEqual([existente.id]);
+    await aceitar(orc, [{ item_id: itemDe(orc, 'Cardápio / catálogo digital').id, destino: 'site', projeto_id: existente.id }]).expect(200);
+  });
+
+  it('desfazer sem apagar mantém o vínculo', async () => {
+    const existente = await cardapioExistente();
+    const orc = await orcamentoCompleto();
+    await aceitar(orc, escolhasDo(orc, { projeto_id: existente.id })).expect(200);
+    const res = (await ctx.http.post(`/api/orcamentos/${orc.id}/desfazer`).send({ situacao: 'enviado' }).expect(200)).body;
+    expect(res.gerados.projetos).toMatchObject([{ id: existente.id, vinculado: true, parcelas_abertas: 2 }]);
+    expect(projeto(existente.id).orcamento_id).toBe(orc.id);
   });
 });
