@@ -39,7 +39,8 @@ describe('Placas — três seções e "Pede atenção"', () => {
     const aReceber = within(faixa).getByRole('link', { name: /1 venda a receber · R\$\s*80,00/ });
     expect(aReceber).toHaveAttribute('href', '/servicos?aba=placas&placas=vendas&sub=a_receber');
     expect(within(faixa).getByRole('link', { name: '1 venda atrasada' })).toHaveClass('pede-atencao__item--perigo');
-    expect(within(faixa).getByRole('link', { name: 'Sem placa montada: Placa 10x15 Acrílico' })).toHaveAttribute('href', '/servicos?aba=placas&placas=estoque');
+    // modelo sem placa montada não é pendência: só se monta quando vende
+    expect(within(faixa).queryByText(/sem placa montada/i)).not.toBeInTheDocument();
     expect(within(faixa).getByRole('link', { name: '1 material com estoque negativo' })).toHaveClass('pede-atencao__item--atencao');
     expect(await screen.findByText('House')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Venda' })).toHaveClass('btn--primario');

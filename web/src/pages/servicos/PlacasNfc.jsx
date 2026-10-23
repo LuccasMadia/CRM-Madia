@@ -43,13 +43,6 @@ function itensAtencao(resumo) {
   }
   const atrasadas = vendas.filter((v) => v.estado === 'atrasada').length;
   if (atrasadas) itens.push({ texto: plural(atrasadas, 'venda atrasada', 'vendas atrasadas'), tom: 'perigo', para: PARA_A_RECEBER });
-  const semMontada = resumo.montadas.filter((m) => m.montadas <= 0);
-  if (semMontada.length) {
-    itens.push({
-      texto: semMontada.length === 1 ? `Sem placa montada: ${semMontada[0].modelo_nome}` : `${semMontada.length} modelos sem placa montada`,
-      tom: 'atencao', para: PARA_ESTOQUE,
-    });
-  }
   const negativos = resumo.materiais.filter((m) => m.estoque_atual < 0).length;
   if (negativos) itens.push({ texto: `${plural(negativos, 'material', 'materiais')} com estoque negativo`, tom: 'atencao', para: PARA_ESTOQUE });
   return itens;
