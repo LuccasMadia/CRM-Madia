@@ -65,7 +65,6 @@ export function TabelaPrecos() {
 
   return (
     <section className="cartao">
-      <h2>Tabela de preços</h2>
       <Aviso erro={erro} />
       <Aviso erro={envio.erro} />
 

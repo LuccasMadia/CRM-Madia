@@ -60,7 +60,7 @@ export function repoPlacasModelosPacks(db) {
 
 export const CAMPOS_VENDA = [
   'modelo_id', 'quantidade', 'preco_vendido_centavos', 'custo_unitario_centavos',
-  'cliente_id', 'comprador_nome', 'data_venda', 'recebido_em', 'quantidade_montada',
+  'cliente_id', 'comprador_nome', 'data_venda', 'recebido_em', 'quantidade_montada', 'orcamento_id',
 ];
 export function repoPlacasVendas(db) {
   const base = criarRepo(db, 'placas_vendas', CAMPOS_VENDA);

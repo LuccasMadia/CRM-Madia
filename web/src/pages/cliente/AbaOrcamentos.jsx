@@ -10,7 +10,7 @@ export const ROTULO_SITUACAO = { rascunho: 'Rascunho', enviado: 'Enviado', aceit
 
 export const numeroOrcamento = (n) => String(n).padStart(3, '0');
 
-function resumoValor(totais) {
+export function resumoValor(totais) {
   const unico = formatarDinheiro(totais.total_unico_centavos);
   return totais.total_mensal_centavos > 0 ? `${unico} + ${formatarDinheiro(totais.total_mensal_centavos)}/mês` : unico;
 }

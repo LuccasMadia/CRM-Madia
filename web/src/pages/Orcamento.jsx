@@ -2,11 +2,15 @@ import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
+import { useConfirmacao } from '../hooks/useConfirmacao.jsx';
+import { notificar } from '../lib/notificacoes.js';
 import { Aviso } from '../components/Aviso.jsx';
 import { Campo } from '../components/Campo.jsx';
 import { formatarDinheiro, paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { useValoresOcultos } from '../lib/privacidade.js';
 import { ROTULO_SITUACAO, numeroOrcamento } from './cliente/AbaOrcamentos.jsx';
+import { ConferenciaAceite } from './orcamentos/ConferenciaAceite.jsx';
+import { ABA_DO_SERVICO } from '../lib/rotulos.js';
 
 // Conversores dos campos que salvam ao sair: devolvem { valor } para enviar ou { erro } para mostrar.
 const comoTexto = (t) => ({ valor: t.trim() === '' ? null : t });
@@ -68,6 +72,8 @@ export function Orcamento() {
   const [emAndamento, setEmAndamento] = useState(0);
   const [falha, setFalha] = useState(null);
   const ocupado = emAndamento > 0;
+  const [conferindo, setConferindo] = useState(false);
+  const [confirmar, dialogo] = useConfirmacao();
 
   const doId = (o) => (o?.id === Number(id) ? o : null);
   const orcamento = doId(atual) ?? doId(carregado);
@@ -76,7 +82,8 @@ export function Orcamento() {
   if (!orcamento) return <p>Carregando…</p>;
 
   const numero = numeroOrcamento(orcamento.numero);
-  const voltar = `/clientes/${orcamento.cliente_id}?aba=orcamentos`;
+  const gerados = orcamento.gerados ?? { projetos: [], vendas: [] };
+  const temGerados = gerados.projetos.length + gerados.vendas.length > 0;  const voltar = `/clientes/${orcamento.cliente_id}?aba=orcamentos`;
   const hospedagem = tabela?.servicos.find((s) => s.tipo === 'hospedagem' && s.ativo);
   const erroEnvio = falha && (falha.erros?.length ? { message: falha.erros.map((e) => e.mensagem).join('\n') } : falha);
 
@@ -120,10 +127,50 @@ export function Orcamento() {
   }
 
   function excluir() {
-    if (!window.confirm(`Excluir o orçamento nº ${numero}?`)) return;
-    rodar(async () => {
-      await api(`/orcamentos/${id}`, { method: 'DELETE' });
-      navegar(voltar);
+    confirmar({
+      titulo: `Excluir o orçamento nº ${numero}?`,
+      mensagem: temGerados ? 'O que ele gerou (projetos e vendas) continua existindo.' : 'Os itens dele também serão excluídos.',
+      onConfirmar: async () => {
+        await api(`/orcamentos/${id}`, { method: 'DELETE' });
+        notificar('Orçamento excluído');
+        navegar(voltar);
+      },
+    });
+  }
+
+  // Aceito passa pela conferência (cria projetos e vendas); sair de aceito pergunta o que fazer com o que foi gerado.
+  function mudarSituacao(nova) {
+    if (nova === 'aceito' && !temGerados) return setConferindo(true);
+    if (orcamento.situacao === 'aceito' && temGerados) return perguntarDesfazer(nova);
+    return salvar({ situacao: nova });
+  }
+
+  function perguntarDesfazer(nova) {
+    const { projetos, vendas } = gerados;
+    const itens = [
+      ...projetos.map((p) => ({ ...linkDoGerado(p), pode: p.pode_apagar, motivo: 'tem parcela paga' })),
+      ...vendas.map((v) => ({ ...linkDaVenda(v), pode: v.pode_apagar, motivo: 'já recebida ou com placa montada' })),
+    ];
+    const apagaveis = itens.filter((i) => i.pode);
+    const mantidos = itens.filter((i) => !i.pode);
+    const desfazer = (apagar) => async () => {
+      setAtual(await api(`/orcamentos/${id}/desfazer`, { method: 'POST', body: { situacao: nova, apagar } }));
+      notificar(apagar ? 'Apagado o que ainda não tinha andado' : `Orçamento marcado como ${ROTULO_SITUACAO[nova].toLowerCase()}`);
+    };
+    confirmar({
+      titulo: `Voltar para "${ROTULO_SITUACAO[nova]}"?`,
+      mensagem: apagaveis.length
+        ? 'Este orçamento gerou projetos e vendas. Quer apagar o que ele gerou?'
+        : 'Tudo o que este orçamento gerou já andou e vai continuar existindo.',
+      detalhe: (
+        <div className="desfazer">
+          {apagaveis.length > 0 && <ListaGerados titulo="Pode ser apagado" itens={apagaveis} />}
+          {mantidos.length > 0 && <ListaGerados titulo="Já andou e fica" itens={mantidos} comMotivo />}
+        </div>
+      ),
+      rotuloConfirmar: 'Apagar o que foi gerado',
+      onConfirmar: apagaveis.length ? desfazer(true) : undefined,
+      alternativa: { rotulo: apagaveis.length ? 'Manter e só mudar a situação' : 'Mudar a situação', onEscolher: desfazer(false) },
     });
   }
 
@@ -138,7 +185,7 @@ export function Orcamento() {
         </div>
         <div className="orcamento__acoes">
           <Campo rotulo="Situação" nome="situacao">
-            <select value={orcamento.situacao} onChange={(e) => salvar({ situacao: e.target.value })}>
+            <select value={orcamento.situacao} onChange={(e) => mudarSituacao(e.target.value)}>
               {Object.entries(ROTULO_SITUACAO).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
             </select>
           </Campo>
@@ -150,6 +197,7 @@ export function Orcamento() {
           <button type="button" className="btn btn--perigo" onClick={excluir} disabled={ocupado}>Excluir</button>
         </div>
       </header>
+      <Gerou gerados={gerados} />
       <Aviso erro={erroTabela} />
       <Aviso erro={erroEnvio} />
 
@@ -186,7 +234,50 @@ export function Orcamento() {
           <CampoAoSair key={`observacao-${orcamento.observacao}`} {...campo('observacao')} rotulo="Observação" texto={orcamento.observacao} multilinha rows={3} />
         </div>
       </div>
+      {conferindo && (
+        <ConferenciaAceite
+          orcamento={orcamento} onFechar={() => setConferindo(false)}
+          onAceito={(resposta) => { setAtual(resposta); setConferindo(false); notificar('Orçamento aceito'); }}
+        />
+      )}
+      {dialogo}
     </section>
+  );
+}
+
+const linkDoGerado = (p) => ({
+  chave: `p${p.id}`,
+  para: p.servico === 'site_sistema' ? `/projetos/${p.id}` : `/clientes/${p.cliente_id}?aba=${ABA_DO_SERVICO[p.servico]}`,
+  texto: p.titulo,
+});
+const linkDaVenda = (v) => ({
+  chave: `v${v.id}`,
+  para: '/servicos?aba=placas&placas=vendas',
+  texto: `Venda de ${v.quantidade} ${v.quantidade === 1 ? 'placa' : 'placas'} ${v.modelo_nome}`,
+});
+
+// O que o aceite criou, com link para cada um.
+function Gerou({ gerados }) {
+  const links = [...gerados.projetos.map(linkDoGerado), ...gerados.vendas.map(linkDaVenda)];
+  if (!links.length) return null;
+  return (
+    <p className="orcamento__gerou">
+      <span>Gerou:</span>
+      {links.map((l) => <Link key={l.chave} className="etiqueta etiqueta--aceito" to={l.para}>{l.texto}</Link>)}
+    </p>
+  );
+}
+
+function ListaGerados({ titulo, itens, comMotivo }) {
+  return (
+    <>
+      <p className="desfazer__titulo">{titulo}</p>
+      <ul className="desfazer__lista">
+        {itens.map((i) => (
+          <li key={i.chave}><Link to={i.para}>{i.texto}</Link>{comMotivo && <span className="vazio">{` (${i.motivo})`}</span>}</li>
+        ))}
+      </ul>
+    </>
   );
 }
 

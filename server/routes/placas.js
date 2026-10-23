@@ -57,6 +57,25 @@ const REGRAS_AVARIA = {
   data_avaria: { tipo: 'data', obrigatorio: true },
 };
 
+// Grava uma venda com o custo de hoje (receita do modelo × último lote de cada material). Usada pela venda
+// manual e pelo orçamento aceito. Sem quantidade_montada, usa as placas montadas que estão livres.
+export function registrarVendaPlaca(db, { modelo, quantidade, quantidade_montada, ...dados }) {
+  const resultadoCusto = calcularCustoUnitarioModelo(modelo.id, repoPlacasModelosItens(db).listar(), repoPlacasLotes(db).listar());
+  if (resultadoCusto.erro === 'sem_receita') {
+    throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
+  }
+  if (resultadoCusto.erro === 'sem_lote') {
+    throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
+  }
+  return repoPlacasVendas(db).criar({
+    ...dados,
+    modelo_id: modelo.id,
+    quantidade,
+    custo_unitario_centavos: resultadoCusto.custoUnitarioCentavos,
+    quantidade_montada: quantidade_montada ?? Math.min(quantidade, Math.max(0, montadasDisponiveis(db, modelo.id))),
+  });
+}
+
 export function rotasPlacas({ db, hoje }) {
   const materiais = repoPlacasMateriais(db);
   const lotes = repoPlacasLotes(db);
@@ -377,26 +396,14 @@ export function rotasPlacas({ db, hoje }) {
     if (!modelo) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
 
     const itensDoModelo = itensModelo.listar({ modelo_id: modelo.id });
-    const resultadoCusto = calcularCustoUnitarioModelo(modelo.id, itensModelo.listar(), lotes.listar());
-    if (resultadoCusto.erro === 'sem_receita') {
-      throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo sem receita cadastrada' }]);
-    }
-    if (resultadoCusto.erro === 'sem_lote') {
-      throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Algum material da receita ainda não tem lote comprado' }]);
-    }
-    const custoUnitario = resultadoCusto.custoUnitarioCentavos;
-
-    const quantidade = dados.quantidade ?? 1;
-    const venda = vendas.criar({
-      modelo_id: modelo.id,
-      quantidade,
+    const venda = registrarVendaPlaca(db, {
+      modelo,
+      quantidade: dados.quantidade ?? 1,
       preco_vendido_centavos: dados.preco_vendido_centavos,
-      custo_unitario_centavos: custoUnitario,
       cliente_id: temCliente ? dados.cliente_id : null,
       comprador_nome: temNome ? dados.comprador_nome.trim() : null,
       data_venda: dados.data_venda,
       recebido_em: req.body.recebido === true ? dados.data_venda : null,
-      quantidade_montada: Math.min(quantidade, Math.max(0, montadasDisponiveis(db, modelo.id))),
     });
 
     res.status(201).json({
