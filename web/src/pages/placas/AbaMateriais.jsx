@@ -8,11 +8,16 @@ import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaMaterial } from '../../components/FormPlacaMaterial.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 
-export function AbaMateriais() {
+export function AbaMateriais({ seletor, onMudou }) {
   const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
-  const { dados: materiais, erro, recarregar } = useCarregar(() => api('/placas/materiais'), []);
+  const { dados: materiais, erro, recarregar: recarregarLista } = useCarregar(() => api('/placas/materiais'), []);
+  // O que muda aqui pode mexer no estoque: a página recarrega o "Pede atenção" junto.
+  function recarregar() {
+    recarregarLista();
+    onMudou?.();
+  }
 
   async function criar(dados) {
     await api('/placas/materiais', { method: 'POST', body: dados });
@@ -76,10 +81,10 @@ export function AbaMateriais() {
 
   return (
     <section>
-      <header className="pagina__topo">
-        <h2>Materiais</h2>
-        <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>+ Material</button>
-      </header>
+      <div className="barra-visao">
+        {seletor}
+        <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Material</button>
+      </div>
       <Aviso erro={erro} />
       {materiais && (materiais.length ? (
         <table className="tabela">

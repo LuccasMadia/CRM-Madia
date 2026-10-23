@@ -55,7 +55,7 @@ describe('Servicos', () => {
     await screen.findByRole('link', { name: 'Bruno' });
     await userEvent.setup().click(screen.getByRole('tab', { name: /Placas NFC/ }));
     expect(screen.getByRole('tab', { name: /Placas NFC/ })).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByRole('tab', { name: 'Resumo' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Estoque' })).toBeInTheDocument();
   });
 
   it('aba GMN lista todos os clientes, com situação e link para o perfil', async () => {

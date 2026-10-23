@@ -9,12 +9,17 @@ import { FormPlacaAvaria } from '../../components/FormPlacaAvaria.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData } from '../../lib/datas.js';
 
-export function AbaAvarias() {
+export function AbaAvarias({ seletor, onMudou }) {
   const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const [avisosEstoque, setAvisosEstoque] = useState([]);
-  const { dados: avarias, erro, recarregar } = useCarregar(() => api('/placas/avarias'), []);
+  const { dados: avarias, erro, recarregar: recarregarLista } = useCarregar(() => api('/placas/avarias'), []);
+  // O que muda aqui pode mexer no estoque: a página recarrega o "Pede atenção" junto.
+  function recarregar() {
+    recarregarLista();
+    onMudou?.();
+  }
 
   async function criar(dados) {
     const res = await api('/placas/avarias', { method: 'POST', body: dados });
@@ -45,10 +50,13 @@ export function AbaAvarias() {
 
   return (
     <section>
-      <header className="pagina__topo">
-        <h2>Avarias</h2>
-        <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>+ Avaria</button>
-      </header>
+      <div className="barra-visao">
+        {seletor}
+        {avarias?.length > 0 && (
+          <span className="vazio">{`Total perdido: ${formatarDinheiro(avarias.reduce((s, a) => s + a.custo_total_centavos, 0))}`}</span>
+        )}
+        <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Avaria</button>
+      </div>
       <Aviso erro={erro} />
       {avisosEstoque.length > 0 && (
         <p className="aviso aviso--erro" role="alert">

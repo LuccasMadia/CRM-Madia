@@ -194,6 +194,12 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .abas--servicos .abas__aba[aria-selected='true'] svg { color: var(--primaria); }
 .contador { font-size: 0.75rem; font-weight: 600; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--superficie-2); color: var(--texto-suave); text-align: center; }
 .abas__aba[aria-selected='true'] .contador { background: var(--primaria-suave); color: var(--primaria); }
+.pede-atencao { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; margin-bottom: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
+.pede-atencao__item { --cor: var(--primaria); display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.9rem; font-weight: 500; color: var(--cor); background: color-mix(in srgb, var(--cor) 12%, transparent); }
+a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srgb, var(--cor) 20%, transparent); }
+.pede-atencao__item--perigo { --cor: var(--perigo); }
+.pede-atencao__item--atencao { --cor: var(--atencao); }
+.pede-atencao__vazio { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-size: 0.9rem; }
 .faixa-numeros { display: flex; flex-wrap: wrap; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); margin-bottom: 20px; }
 .faixa-numeros__item { display: grid; gap: 2px; padding: 14px 22px; border-right: 1px solid var(--borda); }
 .faixa-numeros__item:last-child { border-right: 0; }
@@ -428,13 +434,15 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .painel-midia__numeros dt { color: var(--texto-suave); }
 .painel-midia__numeros dd { margin: 0; font-weight: 600; }
 .painel-midia__vinculo { display: grid; gap: 6px; margin: 0; }
-.painel-placas { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; margin-top: 12px; }
-.painel-placas .cartao-grafico__topo h2 { margin: 0; }
+.painel-placas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 12px; }
 .lista-montadas { list-style: none; margin: 0; padding: 0; display: grid; }
 .lista-montadas li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--borda); }
 .lista-montadas li:last-child { border-bottom: 0; }
 .lista-montadas small { display: block; font-size: 0.8rem; }
 .lista-montadas strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.lista-montadas__zerada { color: var(--texto-suave); }
+.estoque-placas__rodape { margin-top: 16px; font-size: 0.85rem; }
+.situacao-venda__dias { display: block; margin-top: 4px; font-size: 0.8rem; }
 @media (max-width: 900px) { .painel-placas { grid-template-columns: 1fr; } }
 .lista-rascunhos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .lista-rascunhos li { display: flex; gap: 12px; align-items: baseline; }

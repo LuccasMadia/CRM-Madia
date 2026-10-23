@@ -18,11 +18,16 @@ export function AvisoEstoqueMontagem({ avisos }) {
   );
 }
 
-export function AbaMontagem() {
+export function AbaMontagem({ seletor, onMudou }) {
   const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [avisosEstoque, setAvisosEstoque] = useState([]);
-  const { dados: montagens, erro, recarregar } = useCarregar(() => api('/placas/montagens'), []);
+  const { dados: montagens, erro, recarregar: recarregarLista } = useCarregar(() => api('/placas/montagens'), []);
+  // O que muda aqui pode mexer no estoque: a página recarrega o "Pede atenção" junto.
+  function recarregar() {
+    recarregarLista();
+    onMudou?.();
+  }
   const envio = useEnvio();
 
   async function criar(dados) {
@@ -47,10 +52,10 @@ export function AbaMontagem() {
 
   return (
     <section>
-      <header className="pagina__topo">
-        <h2>Montagem</h2>
-        <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>+ Montar</button>
-      </header>
+      <div className="barra-visao">
+        {seletor}
+        <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Montar</button>
+      </div>
       <Aviso erro={erro ?? envio.erro} />
       <AvisoEstoqueMontagem avisos={avisosEstoque} />
       {montagens && (montagens.length ? (

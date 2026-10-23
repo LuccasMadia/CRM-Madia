@@ -5,30 +5,33 @@ import { PlacasNfc } from './PlacasNfc.jsx';
 import { mockApi } from '../../test/mockApi.js';
 import { renderizar } from '../../test/renderizar.jsx';
 
+// Seção pela pílula de cima, sub pelo seletor de visão.
+async function abrir(user, secao, sub) {
+  await user.click(await screen.findByRole('tab', { name: secao }));
+  await user.click(await screen.findByRole('button', { name: sub }));
+}
+
 describe('Placas', () => {
-  it('mostra o resumo de lucro previsto, lucro real, estoque e prejuízo com avarias', async () => {
+  it('mostra o estoque de materiais e o lucro real por modelo nas visões certas', async () => {
     mockApi({
       'GET /placas/resumo': {
-        lucro_previsto_por_modelo: [
-          { modelo_id: 1, modelo_nome: 'Placa 10x10 PVC', preco_venda_centavos: 8000, custo_previsto_centavos: 376, lucro_previsto_centavos: 7624 },
-        ],
+        lucro_previsto_por_modelo: [],
         lucro_real_por_modelo: [
           { modelo_id: 1, modelo_nome: 'Placa 10x10 PVC', quantidade: 2, lucro_total_centavos: 15000, lucro_medio_centavos: 7500 },
         ],
         materiais: [{ material_id: 1, nome: 'Placa 10x10 PVC', estoque_atual: -1 }],
-        prejuizo_avarias: {
-          total_centavos: 1245,
-          por_modelo: [{ modelo_id: 1, modelo_nome: 'Placa 10x10 PVC', quantidade: 1, total_centavos: 1245 }],
-        },
+        prejuizo_avarias: { total_centavos: 0, por_modelo: [] },
         a_receber: { total_centavos: 0, vendas: [] }, montadas: [], mes: { vendidas: 0, lucro_centavos: 0 },
       },
+      'GET /placas/vendas': [],
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
-    expect(await screen.findByText(/R\$\s*76,24/)).toBeInTheDocument();
-    expect(screen.getByText(/R\$\s*75,00/)).toBeInTheDocument();
-    expect(screen.getByText('-1')).toBeInTheDocument();
-    expect(screen.getByText('Prejuízo com avarias')).toBeInTheDocument();
-    expect(screen.getAllByText(/R\$\s*12,45/)).toHaveLength(2);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Lucro por modelo' }));
+    expect(await screen.findByText(/R\$\s*75,00/)).toBeInTheDocument();
+    await abrir(user, 'Estoque', 'Em estoque');
+    expect(await screen.findByText('-1')).toBeInTheDocument();
+    expect(screen.getByText('Materiais em falta').nextSibling).toHaveTextContent('1');
   });
 
   it('cria material na aba Materiais', async () => {
@@ -39,7 +42,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Materiais' }));
+    await abrir(user, 'Cadastros', 'Materiais');
     await user.click(await screen.findByRole('button', { name: '+ Material' }));
     await user.type(screen.getByLabelText('Nome'), 'Placa 10x10 PVC');
     await user.click(screen.getByRole('button', { name: 'Criar material' }));
@@ -60,7 +63,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await abrir(user, 'Estoque', 'Lotes');
     await user.click(await screen.findByRole('button', { name: '+ Lote' }));
     await user.selectOptions(await screen.findByLabelText('Material'), '1');
     await user.type(screen.getByLabelText('Quantidade'), '10');
@@ -82,7 +85,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await abrir(user, 'Estoque', 'Lotes');
     await user.click(await screen.findByRole('button', { name: '+ Lote' }));
     const select = await screen.findByLabelText('Material');
     const opcoes = [...select.querySelectorAll('option')].map((o) => o.textContent);
@@ -99,7 +102,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Materiais' }));
+    await abrir(user, 'Cadastros', 'Materiais');
     expect(await screen.findByText('Inativos')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reativar' }));
     const post = chamadas.find((c) => c.caminho === '/placas/materiais/2/ativar');
@@ -122,7 +125,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Modelos' }));
+    await abrir(user, 'Cadastros', 'Modelos');
     expect(await screen.findByText('Inativos')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reativar' }));
     const post = chamadas.find((c) => c.caminho === '/placas/modelos/2/ativar');
@@ -147,7 +150,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await abrir(user, 'Estoque', 'Lotes');
     expect(await screen.findByText('Compra Outubro')).toBeInTheDocument();
     expect(screen.getByText('Tag NFC')).not.toBeVisible();
     const resumo = screen.getByText('Compra Outubro').closest('summary');
@@ -170,7 +173,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await abrir(user, 'Estoque', 'Lotes');
     expect(await screen.findByText('Placa 10x10 PVC')).toBeVisible();
     expect(document.querySelector('details.cartao')).not.toBeInTheDocument();
   });
@@ -188,7 +191,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Lotes' }));
+    await abrir(user, 'Estoque', 'Lotes');
     await user.click(await screen.findByRole('button', { name: '+ Lote' }));
     const opcoes = [...document.querySelectorAll('#lista-nomes-lote option')].map((o) => o.value);
     expect(opcoes).toEqual(['Compra Outubro']);
@@ -215,7 +218,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Avarias' }));
+    await abrir(user, 'Estoque', 'Avarias');
     await user.click(await screen.findByRole('button', { name: '+ Avaria' }));
     await user.selectOptions(await screen.findByLabelText('Modelo'), '1');
     expect(await screen.findByLabelText('Material do item 1')).toHaveValue('1');
@@ -242,7 +245,7 @@ describe('Placas', () => {
     });
     renderizar(<PlacasNfc />, { rota: '/servicos', padrao: '/servicos' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('tab', { name: 'Modelos' }));
+    await abrir(user, 'Cadastros', 'Modelos');
     await user.click(await screen.findByRole('button', { name: '+ Modelo' }));
     await user.type(screen.getByLabelText('Nome'), 'Placa 10x10 PVC');
     await user.type(screen.getByLabelText('Preço de venda (R$)'), '80');

@@ -10,12 +10,17 @@ import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData } from '../../lib/datas.js';
 import { agruparLotesPorNome, nomesLoteDistintos } from '../../lib/agruparLotes.js';
 
-export function AbaLotes() {
+export function AbaLotes({ seletor, onMudou }) {
   const [confirmar, dialogo] = useConfirmacao();
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState(null);
   const { dados: materiais } = useCarregar(() => api('/placas/materiais'), []);
-  const { dados: lotes, erro, recarregar } = useCarregar(() => api('/placas/lotes'), []);
+  const { dados: lotes, erro, recarregar: recarregarLista } = useCarregar(() => api('/placas/lotes'), []);
+  // O que muda aqui pode mexer no estoque: a página recarrega o "Pede atenção" junto.
+  function recarregar() {
+    recarregarLista();
+    onMudou?.();
+  }
 
   function nomeMaterial(materialId) {
     return (materiais ?? []).find((m) => m.id === materialId)?.nome ?? '—';
@@ -72,10 +77,10 @@ export function AbaLotes() {
 
   return (
     <section>
-      <header className="pagina__topo">
-        <h2>Lotes de compra</h2>
-        <button type="button" className="btn btn--primario" onClick={() => setCriando(true)}>+ Lote</button>
-      </header>
+      <div className="barra-visao">
+        {seletor}
+        <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Lote</button>
+      </div>
       <Aviso erro={erro} />
       {lotes && (entradas.length ? (
         <div className="lista-lotes">
