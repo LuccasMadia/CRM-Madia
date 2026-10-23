@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem, recolhidas = [] }) {
+// destinosExtras: etapas que não viram coluna, mas para onde o card ainda pode ir pelo menu "Mover".
+export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem, recolhidas = [], destinosExtras = [] }) {
   const [abertas, setAbertas] = useState([]);
   const [alvo, setAlvo] = useState(null);
 
@@ -54,7 +55,7 @@ export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem
                   value={colunaDe(item)}
                   onChange={(e) => onMover(item, e.target.value)}
                 >
-                  {colunas.map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
+                  {[...colunas, ...destinosExtras].map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
                 </select>
               </article>
             ))}

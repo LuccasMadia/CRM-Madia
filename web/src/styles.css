@@ -212,9 +212,17 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .faixa-numeros__item--primaria strong { color: var(--primaria); }
 .faixa-numeros__item--ok strong { color: var(--ok); font-size: 1rem; padding-top: 4px; display: inline-flex; align-items: center; gap: 6px; }
 .pilulas--secoes { margin-bottom: 20px; }
-/* Sites e Sistemas: escolha entre lista e funil (quadro) */
+/* Sites e Sistemas: escolha entre em andamento (quadro) e no ar (lista), com os filtros da visão ao lado */
 .barra-visao { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.barra-visao__filtros { display: flex; gap: 8px; flex-wrap: wrap; }
 .barra-visao__acao { margin-left: auto; }
+/* as seis etapas em andamento cabem na tela do computador sem rolar de lado */
+@media (min-width: 761px) { .quadro-sites .kanban { grid-auto-columns: minmax(180px, 1fr); } }
+/* No ar no celular: o cartão não passa da tela e o projeto empilha título, cliente e etapa */
+@media (max-width: 760px) {
+  .tabela.tabela--no-ar tr { grid-template-columns: minmax(0, 1fr); }
+  .tabela.tabela--no-ar td:first-child { flex-direction: column; align-items: flex-start; }
+}
 .segmentado { display: inline-flex; padding: 3px; gap: 2px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-controle); }
 .segmentado button { font: inherit; font-size: 0.85rem; font-weight: 500; padding: 6px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--texto-suave); cursor: pointer; }
 .segmentado button:hover { color: var(--texto); }

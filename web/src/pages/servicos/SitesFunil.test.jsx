@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SitesSistemas } from './SitesSistemas.jsx';
+import { Notificacoes } from '../../components/Notificacoes.jsx';
 import { mockApi as mockApiBase, resposta } from '../../test/mockApi.js';
 import { renderizar } from '../../test/renderizar.jsx';
 import { hojeISO } from '../../lib/datas.js';
@@ -13,21 +14,35 @@ const projetos = [
   { id: 2, titulo: 'Loja antiga', cliente_nome: 'Bruno', etapa: 'perdido', valor_total_centavos: 0, prazo_entrega: null },
 ];
 
-// O painel de a receber fica em cima nas duas visões.
-const mockApi = (rotas) => mockApiBase({ 'GET /parcelas?servico=site_sistema': [], 'GET /projetos?servico=site_sistema': [], ...rotas });
+// A faixa "Pede atenção" fica em cima nas duas visões.
+const mockApi = (rotas) => mockApiBase({
+  'GET /parcelas?servico=site_sistema': [], 'GET /hospedagem/status': [], 'GET /financeiro/mensalidades': { resumo: {}, itens: [] }, ...rotas,
+});
 
-const abrir = () => renderizar(<SitesSistemas />, { rota: '/servicos?aba=sites&ver=funil', padrao: '/servicos' });
+const abrir = () => renderizar(<><SitesSistemas /><Notificacoes /></>, { rota: '/servicos?aba=sites&ver=andamento', padrao: '/servicos' });
+const mostrar = (user, modo) => user.selectOptions(screen.getByLabelText('Mostrar'), modo);
 
-describe('Sites e Sistemas — visão Funil', () => {
-  it('mostra cards por etapa e recolhe "Perdido"', async () => {
+describe('Sites e Sistemas — visão Em andamento', () => {
+  it('mostra cards por etapa, sem as colunas Entregue e Perdido', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos });
     abrir();
     const contato = await screen.findByRole('region', { name: 'Ideia' });
     expect(within(contato).getByRole('link', { name: 'Site Ana' })).toHaveAttribute('href', '/projetos/1');
     expect(within(contato).getByText(/2\.500,00/)).toBeInTheDocument();
     expect(screen.queryByText('Loja antiga')).not.toBeInTheDocument();
-    await userEvent.setup().click(within(screen.getByRole('region', { name: 'Perdido' })).getByRole('button', { name: 'Mostrar' }));
-    expect(screen.getByText('Loja antiga')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Entregue' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Perdido' })).toBeNull();
+  });
+
+  it('o menu do card ainda leva para Entregue e Perdido, e avisa para onde foi', async () => {
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'entregue' } });
+    abrir();
+    const mover = await screen.findByLabelText('Mover Site Ana');
+    expect(within(mover).getAllByRole('option').map((o) => o.textContent))
+      .toEqual(['Ideia', 'Protótipo', 'Apresentado', 'Valor definido', 'Em teste', 'Versão final', 'Entregue', 'Perdido']);
+    await userEvent.setup().selectOptions(mover, 'entregue');
+    expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/1', corpo: { etapa: 'entregue' } });
+    expect(await screen.findByText('Site Ana foi para No ar')).toBeInTheDocument();
   });
 
   it('muda a etapa pelo menu do card', async () => {
@@ -79,14 +94,14 @@ describe('Sites e Sistemas — visão Funil', () => {
     expect(opcoes).toEqual(['Versão final', 'Entregue']);
   });
 
-  it('aba Fictícios carrega só fictícios e mostra colunas reduzidas', async () => {
+  it('"Mostrar: Fictícios" carrega só fictícios e mostra colunas reduzidas', async () => {
     const ficticios = [
       { id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null },
     ];
     mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'GET /projetos?servico=site_sistema&ficticio=1': ficticios });
     abrir();
     await screen.findByRole('region', { name: 'Ideia' });
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
+    await mostrar(userEvent.setup(), 'ficticios');
     expect(await screen.findByRole('link', { name: 'Case Padaria' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Ideia' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Apresentado' })).not.toBeInTheDocument();
@@ -95,14 +110,14 @@ describe('Sites e Sistemas — visão Funil', () => {
     expect(screen.getByRole('region', { name: 'Entregue' })).toBeInTheDocument();
   });
 
-  it('+ Oportunidade na aba Fictícios cria com ficticio travado e etapa andamento', async () => {
+  it('+ Oportunidade com Fictícios cria com ficticio travado e etapa andamento', async () => {
     const { chamadas } = mockApi({
       'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
       'GET /categorias': [{ id: 1, nome: 'Site' }], 'GET /nichos': [],
     });
     abrir();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('tab', { name: 'Fictícios' }));
+    await mostrar(user, 'ficticios');
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
     const checkboxFicticio = screen.getByLabelText('Projeto fictício (só portfólio)');
     expect(checkboxFicticio).toBeChecked();
@@ -125,7 +140,7 @@ describe('Sites e Sistemas — visão Funil', () => {
       'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': ficticios, 'PUT /projetos/5': { ...ficticios[0], etapa: 'entregue' },
     });
     abrir();
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Fictícios' }));
+    await mostrar(userEvent.setup(), 'ficticios');
     await userEvent.setup().selectOptions(await screen.findByLabelText('Mover Case Padaria'), 'entregue');
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/5', corpo: { etapa: 'entregue' } });
   });
