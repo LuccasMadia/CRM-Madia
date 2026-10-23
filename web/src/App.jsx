@@ -13,6 +13,7 @@ import { Portfolio } from './pages/Portfolio.jsx';
 import { Financeiro } from './pages/Financeiro.jsx';
 import { Config } from './pages/Config.jsx';
 import { Orcamento } from './pages/Orcamento.jsx';
+import { Orcamentos } from './pages/Orcamentos.jsx';
 import { Tarefas } from './pages/Tarefas.jsx';
 import { alternarValoresOcultos, useValoresOcultos } from './lib/privacidade.js';
 import { rotularTabelas } from './lib/rotularTabelas.js';
@@ -56,6 +57,7 @@ export function App() {
           <Route path="/clientes/:id" element={<ClienteDetalhe />} />
           <Route path="/placas" element={<Navigate to="/servicos?aba=placas" replace />} />
           <Route path="/projetos/:id" element={<Projeto />} />
+          <Route path="/orcamentos" element={<Orcamentos />} />
           <Route path="/orcamentos/:id" element={<Orcamento />} />
           <Route path="/conteudo" element={<Conteudo />} />
           <Route path="/tarefas" element={<Tarefas />} />

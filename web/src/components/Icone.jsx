@@ -22,6 +22,12 @@ const DESENHOS = {
       <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12.5h18" />
     </>
   ),
+  orcamentos: (
+    <>
+      <path d="M6 3h8.5L19 7.5V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+      <path d="M14 3v5h5M8.5 12.5h7M8.5 16.5h4.5" />
+    </>
+  ),
   site: (
     <>
       <circle cx="12" cy="12" r="9" />

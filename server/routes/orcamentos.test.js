@@ -172,7 +172,7 @@ describe('/api/orcamentos', () => {
   it('duplicar copia itens e volta para rascunho', async () => {
     const orc = await novoOrcamento();
     await addItem(orc, { livre: true, nome: 'Logo', valor_unico_centavos: 10000 }).expect(201);
-    await ctx.http.put(`/api/orcamentos/${orc.id}`).send({ situacao: 'aceito', pagamento: 'Pix', titulo_pacote: 'X' }).expect(200);
+    await ctx.http.put(`/api/orcamentos/${orc.id}`).send({ situacao: 'enviado', pagamento: 'Pix', titulo_pacote: 'X' }).expect(200);
     const copia = (await ctx.http.post(`/api/orcamentos/${orc.id}/duplicar`).expect(201)).body;
     expect(copia.id).not.toBe(orc.id);
     expect(copia).toMatchObject({ situacao: 'rascunho', data: '2026-10-21', pagamento: 'Pix', titulo_pacote: 'X', numero: copia.id });
