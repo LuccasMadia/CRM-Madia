@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import { api } from '../../api/client.js';
-import { useEnvio } from '../../hooks/useEnvio.js';
 import { useParcelas, parcelaUnica } from '../../hooks/useParcelas.js';
-import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
-import { notificar } from '../../lib/notificacoes.js';
+import { useAcoesGmn } from '../../hooks/useAcoesGmn.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormGmn } from '../../components/FormGmn.jsx';
@@ -13,34 +10,7 @@ import { CobrancaServico } from './CobrancaServico.jsx';
 function CartaoGmn({ clienteId, projeto, onMudou }) {
   const { parcelas, recarregar } = useParcelas(projeto);
   const [editando, setEditando] = useState(false);
-  const envio = useEnvio();
-  const [confirmar, dialogo] = useConfirmacao();
-
-  function marcarConfigurado() {
-    envio.executar(async () => {
-      await api(`/projetos/${projeto.id}`, { method: 'PUT', body: { etapa: 'entregue' } });
-      onMudou();
-    });
-  }
-
-  function excluir() {
-    confirmar({
-      titulo: 'Excluir Google Meu Negócio?',
-      mensagem: 'As parcelas dele também serão excluídas.',
-      onConfirmar: async () => {
-        await api(`/projetos/${projeto.id}`, { method: 'DELETE' });
-        notificar('Google Meu Negócio excluído');
-        onMudou();
-      },
-    });
-  }
-
-  async function salvar(corpo) {
-    await api(`/projetos/${projeto.id}`, { method: 'PUT', body: corpo });
-    setEditando(false);
-    onMudou();
-    notificar('Google Meu Negócio salvo');
-  }
+  const { envio, dialogo, marcarConfigurado, excluir, salvar } = useAcoesGmn(onMudou);
 
   return (
     <li className="cartao" style={{ display: 'block' }}>
@@ -49,7 +19,7 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
           ? <span className="etiqueta etiqueta--entregue">{`Configurado em ${formatarData(projeto.data_entrega)}`}</span>
           : <>
               <span className="etiqueta etiqueta--andamento">Pendente</span>{' '}
-              <button type="button" className="btn btn--fantasma btn--pequeno" onClick={marcarConfigurado}>Marcar configurado</button>
+              <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => marcarConfigurado(projeto)}>Marcar configurado</button>
             </>}
       </p>
       {projeto.link_perfil && <p><a href={projeto.link_perfil} target="_blank" rel="noreferrer">{projeto.link_perfil}</a></p>}
@@ -57,12 +27,12 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
       {projeto.notas && <p className="vazio">{projeto.notas}</p>}
       <p>
         <button type="button" className="btn" onClick={() => setEditando(true)}>Editar</button>{' '}
-        <button type="button" className="btn btn--perigo" onClick={excluir}>Excluir</button>
+        <button type="button" className="btn btn--perigo" onClick={() => excluir(projeto)}>Excluir</button>
       </p>
       <Aviso erro={envio.erro} />
       {editando && (
         <Modal titulo="Editar Google Meu Negócio" onFechar={() => setEditando(false)}>
-          <FormGmn clienteId={clienteId} projeto={projeto} parcela={parcelaUnica(parcelas)} onSalvar={salvar} />
+          <FormGmn clienteId={clienteId} projeto={projeto} parcela={parcelaUnica(parcelas)} onSalvar={(corpo) => salvar(projeto, corpo, () => setEditando(false))} />
         </Modal>
       )}
       {dialogo}
@@ -72,13 +42,7 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
 
 export function AbaGmn({ cliente, projetos, onMudou }) {
   const [criando, setCriando] = useState(false);
-
-  async function criar(corpo) {
-    await api('/projetos', { method: 'POST', body: corpo });
-    setCriando(false);
-    onMudou();
-    notificar('Google Meu Negócio criado');
-  }
+  const { criar } = useAcoesGmn(onMudou);
 
   return (
     <div>
@@ -93,7 +57,7 @@ export function AbaGmn({ cliente, projetos, onMudou }) {
       ) : <p className="vazio">Nenhum Google Meu Negócio ainda.</p>}
       {criando && (
         <Modal titulo="Novo Google Meu Negócio" onFechar={() => setCriando(false)}>
-          <FormGmn clienteId={cliente.id} onSalvar={criar} />
+          <FormGmn clienteId={cliente.id} onSalvar={(corpo) => criar(corpo, () => setCriando(false))} />
         </Modal>
       )}
     </div>

@@ -58,35 +58,20 @@ describe('Servicos', () => {
     expect(await screen.findByRole('tab', { name: 'Estoque' })).toBeInTheDocument();
   });
 
-  it('aba GMN lista todos os clientes, com situação e link para o perfil', async () => {
-    mockApi(rotas);
-    abrir('/servicos?aba=gmn');
-    const linhas = await screen.findAllByRole('row');
-    expect(within(linhas[1]).getByRole('link', { name: 'Bruno' })).toHaveAttribute('href', '/clientes/11?aba=gmn');
-    expect(within(linhas[1]).getByText('Configurado em 15/09/2026')).toBeInTheDocument();
-    expect(within(linhas[2]).getByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/10?aba=gmn');
-    expect(within(linhas[2]).getByText('Pendente')).toBeInTheDocument();
-    expect(within(linhas[2]).getByRole('link', { name: 'https://g.page/ana' })).toBeInTheDocument();
-    expect(within(linhas[2]).getByText(/R\$\s*200,00/)).toBeInTheDocument();
-  });
-
-  it('aba GMN filtra pendentes e configurados', async () => {
-    mockApi(rotas);
+  // o detalhe da aba (pede atenção, ações na linha) fica em servicos/GoogleMeuNegocio.test.jsx
+  it('aba GMN mostra pendentes antes dos configurados, com link para o perfil', async () => {
+    mockApi({ ...rotas, 'GET /parcelas?servico=google_meu_negocio': [] });
     abrir('/servicos?aba=gmn');
     await screen.findByRole('link', { name: 'Bruno' });
-    const usuario = userEvent.setup();
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Situação' }), 'pendente');
-    expect(screen.queryByRole('link', { name: 'Bruno' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Ana' })).toBeInTheDocument();
-    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Situação' }), 'configurado');
-    expect(screen.queryByRole('link', { name: 'Ana' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Bruno' })).toBeInTheDocument();
+    const linhas = screen.getAllByRole('row');
+    expect(within(linhas[2]).getByRole('link', { name: 'Ana' })).toHaveAttribute('href', '/clientes/10?aba=gmn');
+    expect(within(linhas[4]).getByText('Configurado em 15/09/2026')).toBeInTheDocument();
   });
 
   it('aba GMN vazia avisa', async () => {
-    mockApi({ ...rotas, 'GET /projetos?servico=google_meu_negocio': [] });
+    mockApi({ ...rotas, 'GET /projetos?servico=google_meu_negocio': [], 'GET /parcelas?servico=google_meu_negocio': [] });
     abrir('/servicos?aba=gmn');
-    expect(await screen.findByText('Nenhum Google Meu Negócio encontrado.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum Google Meu Negócio ainda.')).toBeInTheDocument();
   });
 
   it('cada aba mostra só a contagem do que está pendente, sem dinheiro', async () => {

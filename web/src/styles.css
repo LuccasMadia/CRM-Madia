@@ -181,6 +181,10 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .etapa--perdido::before { background: var(--tag-vermelho); }
 .selo-divulgacao { display: inline-flex; color: var(--texto-suave); margin-right: 8px; vertical-align: middle; }
 .tabela__divisoria td { padding: 4px 12px; font-size: 0.75rem; color: var(--texto-suave); border-bottom: 1px solid var(--borda); }
+/* GMN: ações direto na linha, sempre juntas à direita */
+.gmn__acoes { text-align: right; white-space: nowrap; }
+.gmn__acoes > * { vertical-align: middle; }
+.gmn__acoes .btn--pequeno { margin-right: 4px; }
 
 .abas { display: flex; gap: 4px; border-bottom: 1px solid var(--borda); margin-bottom: 20px; flex-wrap: wrap; }
 .abas__aba { font: inherit; font-weight: 500; background: none; border: none; padding: 10px 14px; cursor: pointer; color: var(--texto-suave); border-bottom: 2px solid transparent; }
