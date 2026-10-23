@@ -4,9 +4,11 @@ import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 
-export function FormGmn({ clienteId, projeto = null, parcela = null, onSalvar }) {
+// Com `clientes` (lista de Serviços), o formulário também pergunta de quem é; no perfil vem o clienteId.
+export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = null, onSalvar }) {
   const mensal = Boolean(projeto?.mensalidade_ativa);
   const { valores, campo, setValores } = useFormulario({
+    cliente_id: clienteId ? String(clienteId) : '',
     cobranca: mensal ? 'mensal' : 'unica',
     valor: projeto ? centavosParaTexto(mensal ? projeto.mensalidade_valor_centavos : projeto.valor_total_centavos) : '',
     vencimento: parcela?.vencimento ?? '',
@@ -20,11 +22,15 @@ export function FormGmn({ clienteId, projeto = null, parcela = null, onSalvar })
   function enviar(e) {
     e.preventDefault();
     const valor = paraCentavos(valores.valor);
+    if (!valores.cliente_id) {
+      setErros([{ campo: 'cliente_id', mensagem: 'Escolha o cliente' }]);
+      return;
+    }
     if (Number.isNaN(valor)) {
       setErros([{ campo: 'valor', mensagem: 'Valor inválido' }]);
       return;
     }
-    const corpo = projeto ? {} : { servico: 'google_meu_negocio', titulo: 'Google Meu Negócio', cliente_id: clienteId };
+    const corpo = projeto ? {} : { servico: 'google_meu_negocio', titulo: 'Google Meu Negócio', cliente_id: Number(valores.cliente_id) };
     if (valores.cobranca === 'mensal') {
       Object.assign(corpo, {
         valor_total_centavos: 0, mensalidade_ativa: true,
@@ -39,6 +45,14 @@ export function FormGmn({ clienteId, projeto = null, parcela = null, onSalvar })
 
   return (
     <form onSubmit={enviar} className="form" noValidate>
+      {clientes && (
+        <Campo rotulo="Cliente" nome="cliente_id" erros={erros}>
+          <select {...campo('cliente_id')}>
+            <option value="">Escolha…</option>
+            {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome || c.responsavel}</option>)}
+          </select>
+        </Campo>
+      )}
       <fieldset className="campo">
         <legend>Cobrança</legend>
         <label>

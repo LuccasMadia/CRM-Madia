@@ -181,6 +181,10 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .etapa--perdido::before { background: var(--tag-vermelho); }
 .selo-divulgacao { display: inline-flex; color: var(--texto-suave); margin-right: 8px; vertical-align: middle; }
 .tabela__divisoria td { padding: 4px 12px; font-size: 0.75rem; color: var(--texto-suave); border-bottom: 1px solid var(--borda); }
+/* GMN: ações direto na linha, sempre juntas à direita */
+.gmn__acoes { text-align: right; white-space: nowrap; }
+.gmn__acoes > * { vertical-align: middle; }
+.gmn__acoes .btn--pequeno { margin-right: 4px; }
 
 .abas { display: flex; gap: 4px; border-bottom: 1px solid var(--borda); margin-bottom: 20px; flex-wrap: wrap; }
 .abas__aba { font: inherit; font-weight: 500; background: none; border: none; padding: 10px 14px; cursor: pointer; color: var(--texto-suave); border-bottom: 2px solid transparent; }
@@ -194,6 +198,12 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .abas--servicos .abas__aba[aria-selected='true'] svg { color: var(--primaria); }
 .contador { font-size: 0.75rem; font-weight: 600; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--superficie-2); color: var(--texto-suave); text-align: center; }
 .abas__aba[aria-selected='true'] .contador { background: var(--primaria-suave); color: var(--primaria); }
+.pede-atencao { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; margin-bottom: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
+.pede-atencao__item { --cor: var(--primaria); display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.9rem; font-weight: 500; color: var(--cor); background: color-mix(in srgb, var(--cor) 12%, transparent); }
+a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srgb, var(--cor) 20%, transparent); }
+.pede-atencao__item--perigo { --cor: var(--perigo); }
+.pede-atencao__item--atencao { --cor: var(--atencao); }
+.pede-atencao__vazio { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-size: 0.9rem; }
 .faixa-numeros { display: flex; flex-wrap: wrap; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); margin-bottom: 20px; }
 .faixa-numeros__item { display: grid; gap: 2px; padding: 14px 22px; border-right: 1px solid var(--borda); }
 .faixa-numeros__item:last-child { border-right: 0; }
