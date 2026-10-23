@@ -8,7 +8,8 @@ import { verificarAgendados } from './instagram/agendador.js';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = process.env.CRM_DATA_DIR ?? path.join(raiz, 'data');
-const PORTA = 5174;
+// CRM_PORTA_API permite subir uma segunda API (ex.: com uma cópia do banco) sem brigar com a do pm2.
+const PORTA = Number(process.env.CRM_PORTA_API) || 5174;
 
 const db = openDb(path.join(dataDir, 'crm.db'));
 const app = criarApp({ db, dataDir, distDir: path.join(raiz, 'dist') });

@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// A mesma variável do server/index.js: o proxy segue a API que estiver rodando.
+const API_PORTA = Number(process.env.CRM_PORTA_API) || 5174;
+
 export default defineConfig({
   root: 'web',
   build: { outDir: '../dist', emptyOutDir: true },
@@ -54,8 +57,8 @@ export default defineConfig({
     strictPort: true,
     open: true,
     proxy: {
-      '/api': 'http://127.0.0.1:5174',
-      '/uploads': 'http://127.0.0.1:5174',
+      '/api': `http://127.0.0.1:${API_PORTA}`,
+      '/uploads': `http://127.0.0.1:${API_PORTA}`,
     },
   },
 });
