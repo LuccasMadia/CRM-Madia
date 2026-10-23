@@ -32,7 +32,7 @@ describe('App', () => {
     expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('endereço antigo /funil abre Sites e Sistemas na visão Funil', async () => {
+  it('endereço antigo /funil abre Sites e Sistemas em andamento (quadro)', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /projetos?servico=site_sistema&ficticio=0': [] });
     abrir('/funil');
     expect(screen.getByRole('tab', { name: /Sites e Sistemas/ })).toHaveAttribute('aria-selected', 'true');

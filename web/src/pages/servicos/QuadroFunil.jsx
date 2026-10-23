@@ -7,8 +7,8 @@ import { Kanban } from '../../components/Kanban.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, diasDesde } from '../../lib/datas.js';
 import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../../lib/rotulos.js';
-
-const DIAS_DE_TESTE = 7;
+import { notificar } from '../../lib/notificacoes.js';
+import { DIAS_DE_TESTE } from './atencaoSites.js';
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 const somarDias = (iso, dias) => new Date(Date.parse(`${iso}T00:00:00Z`) + dias * 86400000).toISOString().slice(0, 10);
 
@@ -61,24 +61,41 @@ function ExtrasDoCard({ projeto: p, ficticio, onMudar }) {
   return null;
 }
 
+const etapas = (ids) => ids.map((id) => ({ id, titulo: ROTULO_ETAPA[id] }));
+const ENCERRADAS = ['entregue', 'perdido'];
+
+// Colunas de cada modo. Entregue vai para a visão "No ar" e perdido é filtro à parte, então no quadro
+// dos reais elas não viram coluna, mas continuam no menu "Mover" (destinos).
+const MODOS = {
+  reais: { colunas: etapas(ETAPAS.filter((e) => !ENCERRADAS.includes(e))), destinos: etapas(ENCERRADAS) },
+  ficticios: { colunas: etapas(ETAPAS_FICTICIO), destinos: [] },
+  perdidos: { colunas: etapas(['perdido']), destinos: etapas(ETAPAS.filter((e) => e !== 'perdido')) },
+};
+
 // Visão em quadro dos sites e sistemas: cada coluna é uma etapa, e o card muda de etapa pelo menu.
-export function QuadroFunil({ ficticio }) {
+// modo: 'reais' (o trabalho em andamento), 'ficticios' (cases do portfólio) ou 'perdidos'.
+export function QuadroFunil({ modo = 'reais', onMudou }) {
+  const ficticio = modo === 'ficticios';
   const { dados: projetos, erro, recarregar } = useCarregar(
     () => api(`/projetos?servico=site_sistema&ficticio=${ficticio ? 1 : 0}`),
     [ficticio],
   );
   const mudanca = useEnvio();
-  const colunas = (ficticio ? ETAPAS_FICTICIO : ETAPAS).map((id) => ({ id, titulo: ROTULO_ETAPA[id] }));
+  const { colunas, destinos } = MODOS[modo] ?? MODOS.reais;
 
   function mudar(projeto, corpo) {
     mudanca.executar(async () => {
       await api(`/projetos/${projeto.id}`, { method: 'PUT', body: corpo });
       recarregar();
+      onMudou?.();
+      // o card some do quadro: diz para onde ele foi
+      if (modo === 'reais' && corpo.etapa === 'entregue') notificar(`${projeto.titulo} foi para No ar`);
+      if (modo === 'reais' && corpo.etapa === 'perdido') notificar(`${projeto.titulo} foi para Perdidos`);
     });
   }
 
   return (
-    <>
+    <div className="quadro-sites">
       <Aviso erro={erro ?? mudanca.erro} />
       {projetos && (
         <Kanban
@@ -86,7 +103,7 @@ export function QuadroFunil({ ficticio }) {
           itens={projetos}
           colunaDe={(p) => p.etapa}
           tituloDe={(p) => p.titulo}
-          recolhidas={ficticio ? [] : ['perdido']}
+          destinosExtras={destinos}
           onMover={(projeto, etapa) => mudar(projeto, { etapa })}
           renderItem={(p) => (
             <>
@@ -98,6 +115,6 @@ export function QuadroFunil({ ficticio }) {
           )}
         />
       )}
-    </>
+    </div>
   );
 }

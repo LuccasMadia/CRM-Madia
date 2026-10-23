@@ -25,6 +25,7 @@ const siteContato = { ...site, id: 2, etapa: 'ideia' };
 const rotas = {
   'GET /projetos': [{ ...site, servico: 'site_sistema' }, { ...site, id: 3, servico: 'site_sistema', etapa: 'prototipo' }, { ...site, id: 4, servico: 'site_sistema', etapa: 'teste' }, siteContato, gmnPendente, gmnConfigurado, placasPendente, placasEntregue],
   'GET /projetos?servico=site_sistema': [site],
+  'GET /projetos?servico=site_sistema&ficticio=0': [site],
   'GET /projetos?servico=google_meu_negocio': [gmnPendente, gmnConfigurado],
   'GET /clientes': [],
   'GET /servicos/resumo': {

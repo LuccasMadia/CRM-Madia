@@ -49,7 +49,7 @@ export function App() {
       <main className="conteudo">
         <Routes>
           <Route path="/" element={<Inicio />} />
-          <Route path="/funil" element={<Navigate to="/servicos?aba=sites&ver=funil" replace />} />
+          <Route path="/funil" element={<Navigate to="/servicos?aba=sites&ver=andamento" replace />} />
           <Route path="/servicos" element={<Servicos />} />
           <Route path="/projetos" element={<Navigate to="/servicos?aba=sites" replace />} />
           <Route path="/clientes" element={<Clientes />} />

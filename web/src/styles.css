@@ -194,6 +194,12 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .abas--servicos .abas__aba[aria-selected='true'] svg { color: var(--primaria); }
 .contador { font-size: 0.75rem; font-weight: 600; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--superficie-2); color: var(--texto-suave); text-align: center; }
 .abas__aba[aria-selected='true'] .contador { background: var(--primaria-suave); color: var(--primaria); }
+.pede-atencao { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; margin-bottom: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
+.pede-atencao__item { --cor: var(--primaria); display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.9rem; font-weight: 500; color: var(--cor); background: color-mix(in srgb, var(--cor) 12%, transparent); }
+a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srgb, var(--cor) 20%, transparent); }
+.pede-atencao__item--perigo { --cor: var(--perigo); }
+.pede-atencao__item--atencao { --cor: var(--atencao); }
+.pede-atencao__vazio { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-size: 0.9rem; }
 .faixa-numeros { display: flex; flex-wrap: wrap; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); margin-bottom: 20px; }
 .faixa-numeros__item { display: grid; gap: 2px; padding: 14px 22px; border-right: 1px solid var(--borda); }
 .faixa-numeros__item:last-child { border-right: 0; }
@@ -202,9 +208,17 @@ legend { color: var(--texto-suave); font-size: 0.85rem; padding: 0 4px; }
 .faixa-numeros__item--primaria strong { color: var(--primaria); }
 .faixa-numeros__item--ok strong { color: var(--ok); font-size: 1rem; padding-top: 4px; display: inline-flex; align-items: center; gap: 6px; }
 .pilulas--secoes { margin-bottom: 20px; }
-/* Sites e Sistemas: escolha entre lista e funil (quadro) */
+/* Sites e Sistemas: escolha entre em andamento (quadro) e no ar (lista), com os filtros da visão ao lado */
 .barra-visao { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.barra-visao__filtros { display: flex; gap: 8px; flex-wrap: wrap; }
 .barra-visao__acao { margin-left: auto; }
+/* as seis etapas em andamento cabem na tela do computador sem rolar de lado */
+@media (min-width: 761px) { .quadro-sites .kanban { grid-auto-columns: minmax(180px, 1fr); } }
+/* No ar no celular: o cartão não passa da tela e o projeto empilha título, cliente e etapa */
+@media (max-width: 760px) {
+  .tabela.tabela--no-ar tr { grid-template-columns: minmax(0, 1fr); }
+  .tabela.tabela--no-ar td:first-child { flex-direction: column; align-items: flex-start; }
+}
 .segmentado { display: inline-flex; padding: 3px; gap: 2px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-controle); }
 .segmentado button { font: inherit; font-size: 0.85rem; font-weight: 500; padding: 6px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--texto-suave); cursor: pointer; }
 .segmentado button:hover { color: var(--texto); }
