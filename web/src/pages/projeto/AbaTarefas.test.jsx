@@ -41,15 +41,16 @@ describe('AbaTarefas', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Mover Layout' }), 'Fazendo agora');
     await user.click(screen.getByRole('button', { name: 'Mover Logo para cima' }));
     expect(screen.queryByRole('button', { name: 'Excluir Briefing' })).toBeNull();
-    await user.type(screen.getByLabelText('Nova tarefa'), 'Deploy');
-    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    // a barra do topo cria já no projeto, sem perguntar a empresa
+    expect(screen.queryByLabelText('Empresa da nova tarefa')).toBeNull();
+    await user.type(screen.getByLabelText('Nova tarefa'), 'Deploy{Enter}');
 
     await waitFor(() => expect(chamadas.some((c) => c.metodo === 'POST')).toBe(true));
     const escritas = chamadas.filter((c) => c.metodo !== 'GET').map((c) => [c.metodo, c.caminho, c.corpo]);
     expect(escritas).toEqual([
       ['PUT', '/tarefas/2', { etapa: 'fazendo' }],
       ['PUT', '/tarefas/3/posicao', { direcao: 'cima' }],
-      ['POST', '/projetos/5/tarefas', { texto: 'Deploy', prazo: '' }],
+      ['POST', '/projetos/5/tarefas', { texto: 'Deploy' }],
     ]);
   });
 

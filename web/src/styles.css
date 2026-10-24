@@ -251,7 +251,7 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .selo-prototipo[aria-pressed='true'] { border-style: solid; border-color: var(--ok); color: var(--ok); background: rgb(74 222 128 / 0.1); }
 .kanban__mover { font-size: 0.8rem; padding: 4px; }
 /* quadro de tarefas */
-.tarefas { display: grid; gap: 16px; min-width: 0; }
+.tarefas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .tarefas .pagina__topo { margin-bottom: 0; }
 .tarefas__filtro { min-width: 200px; }
 .tarefa { display: grid; gap: 6px; cursor: pointer; min-width: 0; }
@@ -276,6 +276,44 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .prioridade--alta { --cor: var(--atencao); }
 .prioridade--baixa { background: none; padding: 0; font-weight: 500; text-transform: none; letter-spacing: 0; opacity: 0.7; }
 .kanban__card:has(.prioridade--urgente) { box-shadow: inset 3px 0 0 var(--perigo); }
+
+/* Barra "+ Nova tarefa": título grande e o resto compacto ao lado */
+.nova-tarefa { display: grid; gap: 6px; }
+.nova-tarefa__barra { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px 8px 14px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
+.nova-tarefa__barra:focus-within { border-color: var(--t5); }
+.nova-tarefa__mais { color: var(--primaria); font-size: 1.3rem; font-weight: 600; line-height: 1; }
+.nova-tarefa__titulo { flex: 1 1 240px; min-width: 0; border-color: transparent; background: transparent; padding: 8px 4px; font-size: 1rem; }
+.nova-tarefa__titulo:focus { outline: none; }
+.nova-tarefa__criada { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.9rem; color: var(--ok); }
+.barra-visao--tarefas { gap: 10px; }
+.pilula--icone { display: inline-flex; align-items: center; gap: 6px; }
+.pilula--urgente[aria-pressed='true'] { color: var(--perigo); border-color: var(--perigo); background: rgb(248 113 113 / 0.1); }
+.pilula--alta[aria-pressed='true'] { color: var(--atencao); border-color: var(--atencao); background: rgb(251 191 36 / 0.1); }
+
+/* Visão Lista: grupos por prazo */
+.lista-tarefas { display: grid; gap: 14px; }
+.lista-tarefas__grupo { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 10px 14px; }
+.lista-tarefas__grupo--atrasadas { border-color: rgb(248 113 113 / 0.4); }
+.lista-tarefas__grupo--atrasadas h2 { color: var(--perigo); }
+.lista-tarefas__topo { display: flex; justify-content: space-between; align-items: center; min-height: 30px; }
+.lista-tarefas__topo h2 { margin: 0; font-size: 0.95rem; }
+.lista-tarefas__itens { list-style: none; margin: 6px 0 0; padding: 0; }
+.lista-tarefas__linha { display: grid; grid-template-columns: auto minmax(0, 2.4fr) minmax(0, 1.6fr) minmax(0, 1fr) 76px 64px; align-items: center; gap: 12px; padding: 8px 4px; border-top: 1px solid var(--borda); }
+.lista-tarefas__titulo { all: unset; cursor: pointer; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lista-tarefas__titulo:hover { color: var(--primaria); }
+.lista-tarefas__titulo:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; border-radius: 4px; }
+.lista-tarefas__origem { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+.lista-tarefas__tipo { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--texto-suave); min-width: 0; white-space: nowrap; overflow: hidden; }
+.lista-tarefas__prazo { font-size: 0.85rem; color: var(--texto-suave); text-align: right; font-variant-numeric: tabular-nums; }
+.lista-tarefas__prazo.item-atrasado { color: var(--perigo); }
+@media (max-width: 760px) {
+  .lista-tarefas__linha { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 4px; }
+  .lista-tarefas__origem { grid-column: 2 / -1; grid-row: 2; }
+  .lista-tarefas__tipo, .lista-tarefas__prioridade { display: none; }
+  .nova-tarefa__mais { display: none; }
+  .nova-tarefa__titulo { flex-basis: 100%; }
+  .nova-tarefa__barra .select-compacto { flex: 1 1 40%; min-width: 0; }
+}
 
 /* Painel lateral da tarefa: abre por cima da página, encostado à direita */
 .painel-lateral__fundo { position: fixed; inset: 0; z-index: 45; background: rgb(0 0 0 / 0.45); }
