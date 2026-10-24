@@ -127,6 +127,27 @@ const DESENHOS = {
       <rect x="17" y="4" width="4" height="13" rx="1.5" />
     </>
   ),
+  comentario: <path d="M4.5 5h15a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H10l-4.5 3.5v-3.5h-1a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />,
+  descricao: <path d="M5 6.5h14M5 11h14M5 15.5h9" />,
+  comercial: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 12h.01" strokeWidth="3" />
+    </>
+  ),
+  relogio: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  calendario: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </>
+  ),
   reels: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="4" />

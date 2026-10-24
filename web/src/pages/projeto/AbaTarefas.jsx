@@ -6,11 +6,14 @@ import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Carregando } from '../../components/Carregando.jsx';
 import { QuadroTarefas } from '../../components/QuadroTarefas.jsx';
+import { PainelTarefa } from '../../components/tarefas/PainelTarefa.jsx';
+import { useTarefaAberta } from '../../hooks/useTarefaAberta.js';
 
 export function AbaTarefas({ projetoId }) {
   const { dados: tarefas, erro, recarregar } = useCarregar(() => api(`/projetos/${projetoId}/tarefas`), [projetoId]);
   const { valores, campo, setValores } = useFormulario({ texto: '', prazo: '' });
   const envio = useEnvio();
+  const painel = useTarefaAberta();
 
   function adicionar(e) {
     e.preventDefault();
@@ -26,7 +29,7 @@ export function AbaTarefas({ projetoId }) {
 
   return (
     <div className="tarefas">
-      {tarefas.length ? <QuadroTarefas tarefas={tarefas} onMudou={recarregar} /> : <p className="vazio">Nenhuma tarefa ainda.</p>}
+      {tarefas.length ? <QuadroTarefas tarefas={tarefas} onMudou={recarregar} onAbrir={(t) => painel.abrir(t.id)} /> : <p className="vazio">Nenhuma tarefa ainda.</p>}
 
       <form onSubmit={adicionar} className="form form--linha cartao" noValidate>
         <Campo rotulo="Nova tarefa" nome="texto" erros={envio.erros} {...campo('texto')} />
@@ -34,6 +37,7 @@ export function AbaTarefas({ projetoId }) {
         <button className="btn btn--primario" disabled={envio.enviando}>Adicionar</button>
       </form>
       <Aviso erro={envio.erro} />
+      {painel.aberta && <PainelTarefa id={painel.aberta} onFechar={painel.fechar} onMudou={recarregar} />}
     </div>
   );
 }

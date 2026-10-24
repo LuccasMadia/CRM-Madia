@@ -24,16 +24,15 @@ describe('AbaTarefas', () => {
     expect(coluna('Aguardando cliente').getByText('Logo')).toBeInTheDocument();
     expect(coluna('Concluído').getByText('Briefing')).toHaveClass('tarefa__texto--feita');
     // prazo vencido fica vermelho enquanto a tarefa não estiver concluída
-    expect(coluna('A fazer').getByText('Prazo 01/10/2026 · atrasada')).toHaveClass('item-atrasado');
+    expect(coluna('A fazer').getByText(/^01\/10(\/2026)? · atrasada$/)).toHaveClass('item-atrasado');
   });
 
-  it('move pelo menu, sobe, exclui sem confirmar e adiciona', async () => {
+  it('move pelo menu, sobe e adiciona; o cartão não tem mais o excluir', async () => {
     const { chamadas } = mockApi({
       'GET /projetos/5/tarefas': tarefas,
       'POST /projetos/5/tarefas': { id: 4 },
       'PUT /tarefas/2': {},
       'PUT /tarefas/3/posicao': {},
-      'DELETE /tarefas/1': null,
     });
     renderizar();
     const user = userEvent.setup();
@@ -41,7 +40,7 @@ describe('AbaTarefas', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Mover Layout' }), 'Fazendo agora');
     await user.click(screen.getByRole('button', { name: 'Mover Logo para cima' }));
-    await user.click(screen.getByRole('button', { name: 'Excluir Briefing' }));
+    expect(screen.queryByRole('button', { name: 'Excluir Briefing' })).toBeNull();
     await user.type(screen.getByLabelText('Nova tarefa'), 'Deploy');
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
 
@@ -50,7 +49,6 @@ describe('AbaTarefas', () => {
     expect(escritas).toEqual([
       ['PUT', '/tarefas/2', { etapa: 'fazendo' }],
       ['PUT', '/tarefas/3/posicao', { direcao: 'cima' }],
-      ['DELETE', '/tarefas/1', undefined],
       ['POST', '/projetos/5/tarefas', { texto: 'Deploy', prazo: '' }],
     ]);
   });

@@ -1,19 +1,30 @@
 import { Router } from 'express';
-import { criarRepo, emTransacao } from '../repos/crud.js';
+import { emTransacao } from '../repos/crud.js';
 import { repoProjetos } from '../repos/projetos.js';
+import { repoClientes } from '../repos/clientes.js';
+import { repoTarefas, TIPOS_TAREFA, PRIORIDADES_TAREFA } from '../repos/tarefas.js';
 import { reordenar, proximaOrdem } from '../repos/ordem.js';
 import { validar, lerId } from '../http/validar.js';
-import { naoEncontrado } from '../http/erros.js';
+import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 
 export const ETAPAS_TAREFA = ['a_fazer', 'fazendo', 'aguardando_cliente', 'concluido'];
 
 const REGRAS_TAREFA = {
   texto: { tipo: 'texto', obrigatorio: true },
+  descricao: { tipo: 'texto' },
   prazo: { tipo: 'data' },
   concluida: { tipo: 'bool' },
   etapa: { tipo: 'enum', valores: ETAPAS_TAREFA },
+  tipo: { tipo: 'enum', valores: TIPOS_TAREFA },
+  prioridade: { tipo: 'enum', valores: PRIORIDADES_TAREFA },
+  cliente_id: { tipo: 'inteiro', min: 1 },
+  projeto_id: { tipo: 'inteiro', min: 1 },
 };
 const REGRAS_POSICAO = { direcao: { tipo: 'enum', valores: ['cima', 'baixo'], obrigatorio: true } };
+const REGRAS_ITEM = { texto: { tipo: 'texto', obrigatorio: true }, feito: { tipo: 'bool' } };
+const REGRAS_COMENTARIO = { texto: { tipo: 'texto', obrigatorio: true } };
+
+const invalido = (campo, mensagem) => new ErroValidacao([{ campo, mensagem }]);
 
 // "concluida" acompanha a etapa: quem manda só um dos dois recebe o outro ajustado.
 function alinharEtapa(dados, atual) {
@@ -25,9 +36,18 @@ function alinharEtapa(dados, atual) {
   return dados;
 }
 
-export function rotasTarefas({ db }) {
-  const tarefas = criarRepo(db, 'tarefas', ['projeto_id', 'texto', 'prazo', 'concluida', 'etapa', 'ordem']);
+// Tipo e prioridade não ficam vazios: "limpar" volta ao padrão.
+function semVazios(dados) {
+  const saida = { ...dados };
+  if (saida.tipo === null) delete saida.tipo;
+  if (saida.prioridade === null) saida.prioridade = 'normal';
+  return saida;
+}
+
+export function rotasTarefas({ db, hoje }) {
+  const tarefas = repoTarefas(db);
   const projetos = repoProjetos(db);
+  const clientes = repoClientes(db);
   const r = Router();
 
   function exigirProjeto(req) {
@@ -35,65 +55,115 @@ export function rotasTarefas({ db }) {
     if (!projeto) throw naoEncontrado('Projeto');
     return projeto;
   }
-  const listar = (projetoId) => tarefas.listar({ projeto_id: projetoId }, 'ordem, id');
-  // "IS ?" também casa com NULL: as tarefas internas (sem projeto) formam uma lista só delas.
-  const daMesmaLista = (projetoId) =>
-    db.prepare('SELECT * FROM tarefas WHERE projeto_id IS ? ORDER BY ordem, id').all(projetoId).map((l) => ({ ...l }));
-  const fimDaLista = (projetoId) =>
-    db.prepare('SELECT COALESCE(MAX(ordem) + 1, 0) AS n FROM tarefas WHERE projeto_id IS ?').get(projetoId).n;
+  function exigirTarefa(id) {
+    const tarefa = tarefas.obter(lerId(id));
+    if (!tarefa) throw naoEncontrado('Tarefa');
+    return tarefa;
+  }
+  function exigirItem(id) {
+    const item = tarefas.checklist.obter(lerId(id));
+    if (!item) throw naoEncontrado('Item');
+    return item;
+  }
 
-  // Quadro geral: tarefas de todos os projetos (menos os perdidos), juntas por projeto, com a empresa.
-  // As internas (sem projeto) vêm no fim; ?sem_projeto=1 mostra só elas.
+  // O projeto manda na empresa: com projeto, cliente_id é o do projeto. Trocar só a empresa
+  // tira a tarefa de um projeto que é de outra empresa; mandar os dois desencontrados é erro.
+  function ajustarVinculo(dados, atual = null) {
+    const saida = { ...dados };
+    const projetoId = 'projeto_id' in saida ? saida.projeto_id : atual?.projeto_id ?? null;
+    if (projetoId) {
+      const projeto = projetos.obter(projetoId);
+      if (!projeto) throw invalido('projeto_id', 'Projeto não encontrado');
+      if ('cliente_id' in saida && saida.cliente_id !== projeto.cliente_id) {
+        if ('projeto_id' in saida) throw invalido('projeto_id', 'Este projeto é de outra empresa');
+        saida.projeto_id = null;
+      } else {
+        saida.cliente_id = projeto.cliente_id;
+      }
+      saida.servicoDoProjeto = saida.projeto_id === null ? null : projeto.servico;
+    }
+    if (saida.cliente_id && !clientes.obter(saida.cliente_id)) throw invalido('cliente_id', 'Cliente não encontrado');
+    return saida;
+  }
+
+  function criar(corpo, projetoFixo = null) {
+    const validados = semVazios(alinharEtapa(validar(corpo, REGRAS_TAREFA)));
+    const { servicoDoProjeto, ...dados } = ajustarVinculo(projetoFixo ? { ...validados, projeto_id: projetoFixo.id } : validados);
+    const dia = hoje();
+    const etapa = dados.etapa ?? 'a_fazer';
+    const criada = tarefas.criar({
+      ...dados,
+      tipo: dados.tipo ?? servicoDoProjeto ?? 'interno',
+      etapa,
+      concluida: etapa === 'concluido' ? 1 : 0,
+      etapa_desde: dia,
+      concluida_em: etapa === 'concluido' ? dia : null,
+      ordem: tarefas.fimDaLista(dados.projeto_id ?? null),
+    });
+    return tarefas.obterCompleta(criada.id);
+  }
+
+  // Quadro geral: tarefas de todos os projetos (menos os perdidos) e as sem projeto, com a empresa.
+  // Filtros: projeto_id, sem_projeto=1, cliente_id, tipo, prioridade (todos juntos valem como "e").
   r.get('/tarefas', (req, res) => {
-    const filtro = req.query.projeto_id ? lerId(req.query.projeto_id) : null;
-    const condicao = filtro ? 'p.id = ?' : req.query.sem_projeto === '1' ? 't.projeto_id IS NULL' : "(p.id IS NULL OR p.etapa <> 'perdido')";
-    const linhas = db
-      .prepare(
-        `SELECT t.*, p.titulo AS projeto_titulo, p.cliente_id, c.nome AS cliente_nome
-         FROM tarefas t LEFT JOIN projetos p ON p.id = t.projeto_id LEFT JOIN clientes c ON c.id = p.cliente_id
-         WHERE ${condicao}
-         ORDER BY t.projeto_id IS NULL, p.titulo COLLATE NOCASE, p.id, t.ordem, t.id`,
-      )
-      .all(...(filtro ? [filtro] : []))
-      .map((l) => ({ ...l }));
-    res.json(linhas);
+    const q = req.query;
+    const condicoes = [];
+    if (q.projeto_id) condicoes.push(['p.id = ?', lerId(q.projeto_id)]);
+    else condicoes.push(["p.id IS NULL OR p.etapa <> 'perdido'"]);
+    if (q.sem_projeto === '1') condicoes.push(['t.projeto_id IS NULL']);
+    if (q.cliente_id) condicoes.push(['t.cliente_id = ?', lerId(q.cliente_id)]);
+    if (q.tipo) {
+      if (!TIPOS_TAREFA.includes(q.tipo)) throw new ErroHttp(400, 'Tipo inválido');
+      condicoes.push(['t.tipo = ?', q.tipo]);
+    }
+    if (q.prioridade) {
+      if (!PRIORIDADES_TAREFA.includes(q.prioridade)) throw new ErroHttp(400, 'Prioridade inválida');
+      condicoes.push(['t.prioridade = ?', q.prioridade]);
+    }
+    res.json(tarefas.listarCompleto(condicoes));
   });
 
-  r.post('/tarefas', (req, res) => {
-    const dados = alinharEtapa(validar(req.body, REGRAS_TAREFA));
-    res.status(201).json(tarefas.criar({ ...dados, projeto_id: null, ordem: fimDaLista(null) }));
-  });
+  r.post('/tarefas', (req, res) => res.status(201).json(criar(req.body)));
 
-  r.get('/projetos/:id/tarefas', (req, res) => res.json(listar(exigirProjeto(req).id)));
+  r.get('/tarefas/:id', (req, res) => res.json(tarefas.obterCompleta(exigirTarefa(req.params.id).id)));
+
+  r.get('/projetos/:id/tarefas', (req, res) => res.json(tarefas.listarCompleto([['p.id = ?', exigirProjeto(req).id]])));
 
   r.post('/projetos/:id/tarefas', (req, res) => {
-    const projeto = exigirProjeto(req);
-    const dados = alinharEtapa(validar(req.body, REGRAS_TAREFA));
-    const criada = tarefas.criar({ ...dados, projeto_id: projeto.id, ordem: proximaOrdem(db, 'tarefas', 'projeto_id', projeto.id) });
-    res.status(201).json(criada);
+    // Dentro do projeto, projeto e empresa vêm do endereço.
+    const { projeto_id: _projeto, cliente_id: _cliente, ...corpo } = req.body ?? {};
+    res.status(201).json(criar(corpo, exigirProjeto(req)));
   });
 
   r.put('/projetos/:id/tarefas/ordem', (req, res) => {
     const projeto = exigirProjeto(req);
     reordenar(db, 'tarefas', 'projeto_id', projeto.id, req.body?.ids);
-    res.json(listar(projeto.id));
+    res.json(tarefas.listarCompleto([['p.id = ?', projeto.id]]));
   });
 
   r.put('/tarefas/:id', (req, res) => {
-    const atual = tarefas.obter(lerId(req.params.id));
-    if (!atual) throw naoEncontrado('Tarefa');
-    const dados = alinharEtapa(validar(req.body, REGRAS_TAREFA, { parcial: true }), atual);
-    // Mudou de coluna: entra no fim da coluna nova.
-    if (dados.etapa && dados.etapa !== atual.etapa) dados.ordem = fimDaLista(atual.projeto_id);
-    res.json(tarefas.atualizar(atual.id, dados));
+    const atual = exigirTarefa(req.params.id);
+    const validados = semVazios(alinharEtapa(validar(req.body, REGRAS_TAREFA, { parcial: true }), atual));
+    const { servicoDoProjeto: _servico, ...dados } = ajustarVinculo(validados, atual);
+    const dia = hoje();
+    if (dados.etapa && dados.etapa !== atual.etapa) {
+      dados.etapa_desde = dia;
+      dados.concluida_em = dados.etapa === 'concluido' ? dia : null;
+    }
+    // Mudou de coluna ou de projeto: entra no fim da lista nova.
+    const novoProjeto = 'projeto_id' in dados && dados.projeto_id !== atual.projeto_id;
+    if (novoProjeto || (dados.etapa && dados.etapa !== atual.etapa)) {
+      dados.ordem = tarefas.fimDaLista('projeto_id' in dados ? dados.projeto_id : atual.projeto_id);
+    }
+    tarefas.atualizar(atual.id, dados);
+    res.json(tarefas.obterCompleta(atual.id));
   });
 
-  // Sobe ou desce a tarefa uma posição dentro da sua coluna (só entre tarefas do mesmo projeto, ou entre as internas).
+  // Sobe ou desce a tarefa uma posição dentro da sua coluna (só entre tarefas do mesmo projeto, ou entre as sem projeto).
   r.put('/tarefas/:id/posicao', (req, res) => {
-    const atual = tarefas.obter(lerId(req.params.id));
-    if (!atual) throw naoEncontrado('Tarefa');
+    const atual = exigirTarefa(req.params.id);
     const { direcao } = validar(req.body, REGRAS_POSICAO);
-    const todas = daMesmaLista(atual.projeto_id);
+    const todas = db.prepare('SELECT id, etapa FROM tarefas WHERE projeto_id IS ? ORDER BY ordem, id').all(atual.projeto_id);
     const daColuna = todas.filter((t) => t.etapa === atual.etapa);
     const vizinha = daColuna[daColuna.findIndex((t) => t.id === atual.id) + (direcao === 'cima' ? -1 : 1)];
     if (vizinha) {
@@ -103,11 +173,48 @@ export function rotasTarefas({ db }) {
       const atualizar = db.prepare('UPDATE tarefas SET ordem = ? WHERE id = ?');
       emTransacao(db, () => ids.forEach((id, indice) => atualizar.run(indice, id)));
     }
-    res.json(tarefas.obter(atual.id));
+    res.json(tarefas.obterCompleta(atual.id));
   });
 
   r.delete('/tarefas/:id', (req, res) => {
     if (!tarefas.remover(lerId(req.params.id))) throw naoEncontrado('Tarefa');
+    res.status(204).end();
+  });
+
+  // Checklist: itens na ordem em que foram criados, reordenáveis.
+  r.post('/tarefas/:id/checklist', (req, res) => {
+    const tarefa = exigirTarefa(req.params.id);
+    const { texto } = validar(req.body, REGRAS_ITEM);
+    const item = tarefas.checklist.criar({ tarefa_id: tarefa.id, texto, feito: 0, ordem: proximaOrdem(db, 'tarefas_checklist', 'tarefa_id', tarefa.id) });
+    res.status(201).json(item);
+  });
+
+  r.put('/tarefas/:id/checklist/ordem', (req, res) => {
+    const tarefa = exigirTarefa(req.params.id);
+    reordenar(db, 'tarefas_checklist', 'tarefa_id', tarefa.id, req.body?.ids);
+    res.json(tarefas.checklist.listar({ tarefa_id: tarefa.id }, 'ordem, id'));
+  });
+
+  r.put('/tarefas/checklist/:id', (req, res) => {
+    const item = exigirItem(req.params.id);
+    res.json(tarefas.checklist.atualizar(item.id, validar(req.body, REGRAS_ITEM, { parcial: true })));
+  });
+
+  r.delete('/tarefas/checklist/:id', (req, res) => {
+    tarefas.checklist.remover(exigirItem(req.params.id).id);
+    res.status(204).end();
+  });
+
+  // Comentários: linha do tempo da tarefa.
+  r.post('/tarefas/:id/comentarios', (req, res) => {
+    const tarefa = exigirTarefa(req.params.id);
+    const { texto } = validar(req.body, REGRAS_COMENTARIO);
+    res.status(201).json(tarefas.comentar(tarefa.id, texto));
+  });
+
+  r.delete('/tarefas/comentarios/:id', (req, res) => {
+    const { changes } = db.prepare('DELETE FROM tarefas_comentarios WHERE id = ?').run(lerId(req.params.id));
+    if (!changes) throw naoEncontrado('Comentário');
     res.status(204).end();
   });
 

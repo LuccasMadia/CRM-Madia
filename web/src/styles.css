@@ -254,10 +254,79 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .tarefas { display: grid; gap: 16px; min-width: 0; }
 .tarefas .pagina__topo { margin-bottom: 0; }
 .tarefas__filtro { min-width: 200px; }
-.tarefa__texto { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.tarefa { display: grid; gap: 6px; cursor: pointer; min-width: 0; }
+.tarefa__topo { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.tarefa__tipo { display: inline-flex; color: var(--texto-suave); }
+.tarefa__texto { all: unset; display: block; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; cursor: pointer; color: var(--texto); }
+.tarefa__texto:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; border-radius: 4px; }
 .tarefa__texto--feita { text-decoration: line-through; color: var(--texto-suave); font-weight: 400; }
-.tarefa__acoes { display: flex; gap: 4px; justify-content: flex-end; }
 .tarefa__origem { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.tarefa__projeto { font-size: 0.8rem; color: var(--texto-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.tarefa__projeto:hover { color: var(--primaria); }
+.tarefa__rodape { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--texto-suave); min-height: 22px; }
+.tarefa__info { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.tarefa__info--atencao { color: var(--atencao); font-weight: 600; }
+.tarefa__info--ok { color: var(--ok); }
+/* setas de ordem: só aparecem de verdade com o mouse sobre o cartão (ou com o foco nelas) */
+.tarefa__setas { margin-left: auto; display: inline-flex; opacity: 0.35; transition: opacity 0.12s; }
+.tarefa__setas .btn--icone { padding: 2px; }
+.kanban__card:hover .tarefa__setas, .tarefa__setas:focus-within { opacity: 1; }
+.prioridade { --cor: var(--texto-suave); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 999px; color: var(--cor); background: color-mix(in srgb, var(--cor) 15%, transparent); }
+.prioridade--urgente { --cor: var(--perigo); }
+.prioridade--alta { --cor: var(--atencao); }
+.prioridade--baixa { background: none; padding: 0; font-weight: 500; text-transform: none; letter-spacing: 0; opacity: 0.7; }
+.kanban__card:has(.prioridade--urgente) { box-shadow: inset 3px 0 0 var(--perigo); }
+
+/* Painel lateral da tarefa: abre por cima da página, encostado à direita */
+.painel-lateral__fundo { position: fixed; inset: 0; z-index: 45; background: rgb(0 0 0 / 0.45); }
+.painel-lateral { position: fixed; top: 0; right: 0; bottom: 0; width: min(540px, 100%); overflow-y: auto; background: var(--superficie); border-left: 1px solid var(--borda); box-shadow: -24px 0 64px rgb(0 0 0 / 0.5); padding: 18px 24px 28px; display: grid; align-content: start; gap: 18px; animation: painel-entra 0.18s ease-out; }
+.painel-lateral:focus { outline: none; }
+@keyframes painel-entra { from { transform: translateX(24px); opacity: 0; } }
+.painel-lateral__topo { display: flex; justify-content: space-between; align-items: center; }
+.painel-tarefa__tipo { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--texto-suave); }
+.painel-tarefa__titulo { display: block; width: calc(100% + 16px); color: var(--texto); resize: none; overflow: hidden; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; padding: 6px 8px; margin: -6px -8px 0; background: transparent; border-color: transparent; }
+.painel-tarefa__titulo:hover { background: var(--superficie-2); }
+.painel-tarefa__props { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px 12px; align-items: center; margin: 0; }
+.painel-tarefa__props dt { font-size: 0.85rem; color: var(--texto-suave); }
+.painel-tarefa__props dd { margin: 0; min-width: 0; }
+.painel-tarefa__props select, .painel-tarefa__props input { max-width: 100%; }
+.painel-tarefa__com-icone { display: flex; align-items: center; gap: 8px; color: var(--texto-suave); }
+.painel-tarefa__abrir { font-size: 0.85rem; }
+.prioridade-select--urgente { color: var(--perigo); }
+.prioridade-select--alta { color: var(--atencao); }
+.painel-tarefa__secao { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--borda); }
+.painel-tarefa__subtitulo { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-suave); }
+.painel-tarefa__contagem { margin-left: auto; text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--texto); }
+.painel-tarefa__descricao { display: grid; gap: 6px; justify-items: start; }
+.painel-tarefa__descricao p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.painel-tarefa__vazio { all: unset; cursor: pointer; padding: 10px 12px; border: 1px dashed var(--borda); border-radius: var(--raio-controle); color: var(--texto-suave); font-size: 0.9rem; }
+.painel-tarefa__vazio:hover, .painel-tarefa__vazio:focus-visible { border-color: var(--t5); color: var(--texto); }
+.painel-tarefa__editor { display: grid; gap: 8px; }
+.painel-tarefa__editor textarea { width: 100%; resize: vertical; }
+.painel-tarefa__rodape { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--borda); font-size: 0.85rem; color: var(--texto-suave); }
+.progresso { height: 6px; border-radius: 999px; background: var(--superficie-2); overflow: hidden; }
+.progresso span { display: block; height: 100%; border-radius: 999px; background: var(--primaria); transition: width 0.2s; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.checklist__item { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border-radius: 8px; }
+.checklist__item:hover { background: var(--superficie-2); }
+.checklist__texto { all: unset; flex: 1; min-width: 0; cursor: text; overflow-wrap: anywhere; }
+.checklist__item--feito .checklist__texto { text-decoration: line-through; color: var(--texto-suave); }
+.checklist__editar { flex: 1; min-width: 0; padding: 4px 8px; }
+.checklist__acoes { display: inline-flex; opacity: 0; }
+.checklist__item:hover .checklist__acoes, .checklist__acoes:focus-within { opacity: 1; }
+.checklist__acoes .btn--icone { padding: 3px; }
+.checklist__novo input { width: 100%; }
+.linha-tempo { list-style: none; margin: 0; padding: 0 0 0 14px; display: grid; gap: 12px; border-left: 2px solid var(--borda); }
+.linha-tempo__item { position: relative; display: grid; gap: 2px; }
+.linha-tempo__item::before { content: ''; position: absolute; left: -20px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--superficie); border: 2px solid var(--t4); }
+.linha-tempo__cabeca { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--texto-suave); }
+.linha-tempo__cabeca .btn--icone { padding: 2px; opacity: 0.5; }
+.linha-tempo__item:hover .btn--icone { opacity: 1; }
+.linha-tempo__item p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .painel-lateral { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .checklist__acoes { opacity: 1; }
+}
 /* No computador (mouse) o cartão muda de coluna arrastando: o menu "Mover" some da vista,
    mas continua alcançável pelo Tab e reaparece quando recebe o foco do teclado. */
 @media (hover: hover) and (pointer: fine) {

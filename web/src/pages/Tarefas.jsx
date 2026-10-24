@@ -7,6 +7,8 @@ import { Campo } from '../components/Campo.jsx';
 import { Aviso } from '../components/Aviso.jsx';
 import { Carregando } from '../components/Carregando.jsx';
 import { QuadroTarefas } from '../components/QuadroTarefas.jsx';
+import { PainelTarefa } from '../components/tarefas/PainelTarefa.jsx';
+import { useTarefaAberta } from '../hooks/useTarefaAberta.js';
 import { notificar } from '../lib/notificacoes.js';
 
 const SEM_PROJETO = 'nenhum';
@@ -23,6 +25,7 @@ export function Tarefas() {
   // projeto_id null = segue o filtro; '' = escolheu "Sem projeto".
   const { valores, campo, setValores } = useFormulario({ projeto_id: null, texto: '', prazo: '' });
   const envio = useEnvio();
+  const painel = useTarefaAberta();
 
   const abertos = (projetos.dados ?? []).filter((p) => p.etapa !== 'perdido');
   const projetoDaNova = valores.projeto_id ?? (filtro === SEM_PROJETO ? '' : filtro);
@@ -60,7 +63,7 @@ export function Tarefas() {
 
       <Aviso erro={erro} />
       {!tarefas.dados ? (!erro && <Carregando />) : tarefas.dados.length ? (
-        <QuadroTarefas tarefas={tarefas.dados} onMudou={tarefas.recarregar} mostrarProjeto={!filtro} recolherConcluidas />
+        <QuadroTarefas tarefas={tarefas.dados} onMudou={tarefas.recarregar} onAbrir={(t) => painel.abrir(t.id)} mostrarProjeto={!filtro} recolherConcluidas />
       ) : <p className="vazio">Nenhuma tarefa por aqui.</p>}
 
       <form onSubmit={adicionar} className="form form--linha cartao" noValidate>
@@ -75,6 +78,7 @@ export function Tarefas() {
         <button className="btn btn--primario" disabled={envio.enviando}>Adicionar</button>
       </form>
       <Aviso erro={envio.erro} />
+      {painel.aberta && <PainelTarefa id={painel.aberta} onFechar={painel.fechar} onMudou={tarefas.recarregar} />}
     </section>
   );
 }
