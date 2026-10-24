@@ -52,7 +52,7 @@ export function Projeto() {
       </div>
       <div role="tabpanel">
         {aba === 'geral' && <AbaGeral key={projeto.atualizado_em} projeto={projeto} onSalvo={recarregar} />}
-        {aba === 'tarefas' && <AbaTarefas projetoId={projeto.id} />}
+        {aba === 'tarefas' && <AbaTarefas projetoId={projeto.id} servico={projeto.servico} />}
         {aba === 'financeiro' && <AbaFinanceiro projeto={projeto} />}
         {aba === 'divulgacao' && <AbaDivulgacao projeto={projeto} />}
         {aba === 'hospedagem' && <AbaHospedagem projeto={projeto} />}

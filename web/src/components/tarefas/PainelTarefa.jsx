@@ -113,6 +113,9 @@ export function PainelTarefa({ id, onFechar, onMudou }) {
                 <input id="tarefa-prazo" type="date" className="select-compacto" value={t.prazo ?? ''}
                   onChange={(e) => salvar({ prazo: e.target.value || null })} />
               </dd>
+              {(t.tipo === 'cobranca' || t.parcela_id || t.placa_venda_id) && (
+                <LigadaA key={`${t.id}-${t.cliente_id}-${t.atualizado_em}`} tarefa={t} onSalvar={salvar} />
+              )}
             </dl>
 
             <Descricao key={`d-${t.id}-${t.atualizado_em}`} texto={t.descricao} onSalvar={(descricao) => salvar({ descricao })} />
@@ -131,6 +134,32 @@ export function PainelTarefa({ id, onFechar, onMudou }) {
       </aside>
       {dialogo}
     </div>
+  );
+}
+
+// Tarefa de cobrança ligada a uma parcela aberta ou venda de placa a receber da empresa:
+// quando o dinheiro entra, ela vai sozinha para Concluído.
+function LigadaA({ tarefa: t, onSalvar }) {
+  const { dados: opcoes } = useCarregar(() => api(`/tarefas/${t.id}/cobrancas`), [t.id]);
+  const atual = t.parcela_id ? `parcela:${t.parcela_id}` : t.placa_venda_id ? `placa_venda:${t.placa_venda_id}` : '';
+  function escolher(valor) {
+    const [tipo, id] = valor.split(':');
+    if (!valor) onSalvar({ parcela_id: null, placa_venda_id: null });
+    else onSalvar({ [tipo === 'parcela' ? 'parcela_id' : 'placa_venda_id']: Number(id) });
+  }
+  return (
+    <>
+      <dt><label htmlFor="tarefa-ligada">Ligada a</label></dt>
+      <dd>
+        <select id="tarefa-ligada" className="select-compacto" value={atual} disabled={!t.cliente_id} onChange={(e) => escolher(e.target.value)}>
+          <option value="">{t.cliente_id ? 'Nada (fecha à mão)' : 'Escolha a empresa antes'}</option>
+          {(opcoes ?? []).map((o) => (
+            <option key={`${o.tipo}:${o.id}`} value={`${o.tipo}:${o.id}`}>{o.pago ? `${o.rotulo} (já recebido)` : o.rotulo}</option>
+          ))}
+        </select>
+        {atual && <p className="painel-tarefa__dica">Conclui sozinha quando o recebimento for registrado.</p>}
+      </dd>
+    </>
   );
 }
 

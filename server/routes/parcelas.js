@@ -12,6 +12,7 @@ import { vendasPlacasComoParcelas } from '../repos/placas.js';
 import { repoProjetosCategorias } from '../repos/categorias.js';
 import { repoHospedagens } from '../repos/hospedagens.js';
 import { situacaoMensalidade, tipoDaMensalidade } from '../domain/mensalidade.js';
+import { concluirPorRecebimento, avisarRecebimentoDesfeito } from '../repos/tarefas.js';
 
 const REGRAS_PARCELA = {
   descricao: { tipo: 'texto' },
@@ -71,8 +72,17 @@ export function rotasParcelas({ db, hoje }) {
   });
 
   r.put('/parcelas/:id', (req, res) => {
-    const atualizada = parcelas.atualizar(lerId(req.params.id), validar(req.body, REGRAS_PARCELA, { parcial: true }));
-    if (!atualizada) throw naoEncontrado('Parcela');
+    const id = lerId(req.params.id);
+    const antes = parcelas.obter(id);
+    if (!antes) throw naoEncontrado('Parcela');
+    const dados = validar(req.body, REGRAS_PARCELA, { parcial: true });
+    // Marcar paga fecha as tarefas de cobrança ligadas; desmarcar só deixa um comentário nelas.
+    const atualizada = emTransacao(db, () => {
+      const nova = parcelas.atualizar(id, dados);
+      if (!antes.pago_em && nova.pago_em) concluirPorRecebimento(db, { parcela_id: id }, hoje());
+      if (antes.pago_em && !nova.pago_em) avisarRecebimentoDesfeito(db, { parcela_id: id }, hoje());
+      return nova;
+    });
     res.json(comEstado(atualizada));
   });
 

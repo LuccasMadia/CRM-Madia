@@ -12,6 +12,7 @@ import { Numero } from '../../components/Numero.jsx';
 import { formatarDinheiro, paraCentavos } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO } from '../../lib/datas.js';
 import { ROTULO_ESTADO_PARCELA } from '../../lib/rotulos.js';
+import { BotaoLembreteCobranca } from '../../components/tarefas/ModeloTarefas.jsx';
 
 const VAZIO = { descricao: '', valor: '', vencimento: '' };
 const VAZIO_LOTE = { quantidade: '', valor: '', primeira_vencimento: '' };
@@ -128,9 +129,12 @@ export function AbaFinanceiro({ projeto }) {
                           <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => atualizar(p, { pago_em: null })}>Desfazer</button>
                         </>
                       ) : (
-                        <button type="button" className="btn btn--pequeno" aria-label={`Marcar ${nome} como paga`} onClick={() => atualizar(p, { pago_em: hojeISO() })}>
-                          Marcar como pago
-                        </button>
+                        <>
+                          <button type="button" className="btn btn--pequeno" aria-label={`Marcar ${nome} como paga`} onClick={() => atualizar(p, { pago_em: hojeISO() })}>
+                            Marcar como pago
+                          </button>{' '}
+                          <BotaoLembreteCobranca parcelaId={p.id} nome={nome} />
+                        </>
                       )}
                     </td>
                     <td>

@@ -7,6 +7,7 @@ import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { SeletorCategorias } from './SeletorCategorias.jsx';
 import { SeletorNicho } from './SeletorNicho.jsx';
+import { CaixaModeloTarefas, modeloPadrao, useModelosTarefas } from './tarefas/ModeloTarefas.jsx';
 import { paraCentavos } from '../lib/dinheiro.js';
 import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
@@ -19,6 +20,9 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
   });
   const [categoriasMarcadas, setCategoriasMarcadas] = useState([]);
   const [nichoId, setNichoId] = useState('');
+  // Projeto novo já nasce com as tarefas do modelo de site (dá para desmarcar); fictício não tem tarefas.
+  const modeloSite = modeloPadrao(useModelosTarefas(), 'site_sistema');
+  const [criarTarefas, setCriarTarefas] = useState(true);
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const clienteNovo = valores.cliente_id === 'novo';
   const etapasDisponiveis = valores.ficticio ? ETAPAS_FICTICIO : ETAPAS;
@@ -46,6 +50,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
       titulo: valores.titulo, etapa: valores.etapa, prazo_entrega: valores.prazo_entrega, ficticio: valores.ficticio,
       categorias: categoriasMarcadas, nicho_id: nichoId ? Number(nichoId) : null, valor_total_centavos: valor ?? 0,
     };
+    if (modeloSite && criarTarefas && !valores.ficticio) corpo.modelo_tarefas_id = modeloSite.id;
     if (clienteNovo) corpo.novo_cliente = { nome: valores.novo_cliente_nome };
     else corpo.cliente_id = valores.cliente_id ? Number(valores.cliente_id) : null;
     executar(() => onSalvar(corpo));
@@ -90,6 +95,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
           Projeto fictício (só portfólio)
         </label>
       </div>
+      {!valores.ficticio && <CaixaModeloTarefas modelo={modeloSite} marcado={criarTarefas} onMudar={setCriarTarefas} />}
       <Aviso erro={erro} />
       <div><button className="btn btn--primario" disabled={enviando}>Criar oportunidade</button></div>
     </form>

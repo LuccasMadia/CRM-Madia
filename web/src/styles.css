@@ -315,6 +315,36 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
   .nova-tarefa__barra .select-compacto { flex: 1 1 40%; min-width: 0; }
 }
 
+/* Modelos de tarefas: aplicar no projeto, caixinha nos formulários e a tela em Configurações */
+.tarefas__topo-projeto { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.tarefas__topo-projeto .nova-tarefa { flex: 1 1 520px; min-width: 0; }
+.tarefas__topo-projeto > .btn { align-self: stretch; }
+.caixa-modelo { font-size: 0.9rem; color: var(--texto); }
+.aplicar-modelo { display: grid; gap: 14px; }
+.aplicar-modelo__previa { margin: 0; padding: 0 0 0 22px; display: grid; gap: 6px; }
+.aplicar-modelo__item span { display: block; }
+.aplicar-modelo__item small { color: var(--texto-suave); font-size: 0.8rem; }
+.aplicar-modelo__item--existe { color: var(--texto-suave); }
+.aplicar-modelo__item--existe span { text-decoration: line-through; }
+.modelos-tarefas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 16px; max-width: 820px; }
+.modelo-tarefas { border: 1px solid var(--borda); border-radius: var(--raio-controle); padding: 12px; display: grid; gap: 10px; align-content: start; background: var(--superficie-2); }
+.modelo-tarefas__topo { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.modelo-tarefas__topo .select-compacto { flex: none; }
+.modelo-tarefas__tipo { display: inline-flex; color: var(--primaria); }
+.modelo-tarefas__nome { flex: 1; min-width: 0; font-weight: 600; background: transparent; border-color: transparent; padding: 6px 8px; }
+.modelo-tarefas__nome:hover { border-color: var(--borda); }
+.modelo-tarefas__itens { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.modelo-tarefas__item { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; align-items: center; gap: 6px; }
+.modelo-tarefas__item > input { padding: 6px 8px; font-size: 0.9rem; min-width: 0; background: var(--superficie); }
+.modelo-tarefas__numero { color: var(--texto-suave); font-size: 0.8rem; text-align: right; font-variant-numeric: tabular-nums; }
+.modelo-tarefas__dias { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--texto-suave); }
+.modelo-tarefas__dias input { width: 58px; padding: 6px; font-size: 0.85rem; background: var(--superficie); }
+.modelo-tarefas__acoes { display: inline-flex; }
+.modelo-tarefas__acoes .btn--icone { padding: 4px; }
+.modelo-tarefas__novo { display: grid; grid-template-columns: minmax(0, 1fr) 70px auto; gap: 6px; }
+.modelo-tarefas__novo input { padding: 6px 8px; font-size: 0.9rem; min-width: 0; background: var(--superficie); }
+.painel-tarefa__dica { margin: 4px 0 0; font-size: 0.8rem; color: var(--texto-suave); }
+
 /* Painel lateral da tarefa: abre por cima da página, encostado à direita */
 .painel-lateral__fundo { position: fixed; inset: 0; z-index: 45; background: rgb(0 0 0 / 0.45); }
 .painel-lateral { position: fixed; top: 0; right: 0; bottom: 0; width: min(540px, 100%); overflow-y: auto; background: var(--superficie); border-left: 1px solid var(--borda); box-shadow: -24px 0 64px rgb(0 0 0 / 0.5); padding: 18px 24px 28px; display: grid; align-content: start; gap: 18px; animation: painel-entra 0.18s ease-out; }

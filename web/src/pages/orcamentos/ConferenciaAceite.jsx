@@ -7,6 +7,7 @@ import { Campo } from '../../components/Campo.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, hojeISO } from '../../lib/datas.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { CaixaModeloTarefas, modeloPadrao, useModelosTarefas } from '../../components/tarefas/ModeloTarefas.jsx';
 import {
   destinosDoItem, destinoPadrao, valoresComDesconto, planejarParcelas, sugerirParcelas, SERVICO_DO_DESTINO, etapaAoVincular,
 } from '../../../../server/domain/orcamentos.js';
@@ -84,6 +85,10 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
   const vinculaveis = orcamento.projetos_vinculaveis ?? [];
   const mudar = (id, parcial) => setEscolhas((atual) => ({ ...atual, [id]: { ...atual[id], ...parcial } }));
   const destinoDe = (it) => (escolhas[it.id].marcado ? escolhas[it.id].destino : 'nenhum');
+  // Tarefas do modelo do serviço: marcado por padrão no projeto novo, desmarcado no vinculado (que já tem as dele).
+  const modelos = useModelosTarefas();
+  const modeloDo = (it) => modeloPadrao(modelos, SERVICO_DO_DESTINO[destinoDe(it)]);
+  const criaTarefas = (it) => escolhas[it.id].tarefas ?? !vinculadoDe(it);
   const sites = orcamento.itens.filter((it) => destinoDe(it) === 'site');
   const gmns = orcamento.itens.filter((it) => destinoDe(it) === 'gmn');
 
@@ -97,7 +102,7 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
   function escolherVinculo(it, valor) {
     const projeto = vinculaveis.find((p) => String(p.id) === valor);
     const { modo } = sugerirParcelas(orcamento.pagamento);
-    mudar(it.id, { vinculo: valor, parcelas: { ...escolhas[it.id].parcelas, modo: projeto?.parcelas.length ? 'nenhuma' : modo } });
+    mudar(it.id, { vinculo: valor, tarefas: null, parcelas: { ...escolhas[it.id].parcelas, modo: projeto?.parcelas.length ? 'nenhuma' : modo } });
   }
   // Projetos já escolhidos por outro item: não dá para usar o mesmo em dois.
   const ocupadosPorOutros = (it) => new Set(orcamento.itens.filter((o) => o.id !== it.id).map(vinculadoDe).filter(Boolean).map((p) => p.id));
@@ -147,6 +152,7 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
         saida.parcelas = { modo, ...(modo === 'mensais' ? { quantidade: n } : {}), ...(modo !== 'nenhuma' ? { primeira } : {}) };
         const vinculado = vinculadoDe(it);
         if (vinculado) saida.projeto_id = vinculado.id;
+        if (modeloDo(it) && criaTarefas(it)) saida.modelo_tarefas_id = modeloDo(it).id;
       }
       if (temMensalidade(it) && destino !== 'nenhum') {
         const dia = Number(escolha.dia);
@@ -218,12 +224,14 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
                         {!vinculado && <p className="conferencia__vira">Vira um projeto em Sites, na etapa <strong>Valor definido</strong>.</p>}
                         {parcelas}
                         {num(it.valor_mensal_centavos) > 0 && mensalidadeDo(it, 'Mensalidade neste projeto, começa a cobrar quando o site for entregue.')}
+                        <CaixaModeloTarefas modelo={modeloDo(it)} marcado={criaTarefas(it)} onMudar={(tarefas) => mudar(it.id, { tarefas })} />
                       </>
                     )}
                     {destino === 'gmn' && (
                       <>
                         {!vinculado && <p className="conferencia__vira">Vira o Google Meu Negócio do cliente, como <strong>pendente</strong>.</p>}
                         {parcelas}
+                        <CaixaModeloTarefas modelo={modeloDo(it)} marcado={criaTarefas(it)} onMudar={(tarefas) => mudar(it.id, { tarefas })} />
                       </>
                     )}
                     {destino === 'placa' && (

@@ -7,6 +7,7 @@ import { notificar } from '../../lib/notificacoes.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { FormPlacaVenda } from '../../components/FormPlacaVenda.jsx';
+import { BotaoLembreteCobranca } from '../../components/tarefas/ModeloTarefas.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, diasDesde } from '../../lib/datas.js';
 
@@ -123,6 +124,7 @@ export function AbaVendas({ visao = 'todas', seletor = null, resumo = null, nova
                     {!v.via_projeto && (v.recebido_em
                       ? <button type="button" className="btn btn--fantasma btn--pequeno" aria-label="Desfazer recebimento" onClick={() => mudarRecebimento(v)}>Desfazer</button>
                       : <button type="button" className={`btn btn--pequeno${aReceber ? ' btn--primario' : ''}`} aria-label={`Recebi de ${nome}`} onClick={() => mudarRecebimento(v)}>Recebi</button>)}{' '}
+                    {aReceber && <><BotaoLembreteCobranca placaVendaId={v.id} nome={nome} />{' '}</>}
                     <button type="button" className="btn btn--fantasma btn--pequeno" onClick={() => remover(v)}>Excluir</button>
                   </td>
                 </tr>

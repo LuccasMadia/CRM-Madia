@@ -7,6 +7,7 @@ import {
 import { repoClientes } from '../repos/clientes.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
 import { emTransacao } from '../repos/crud.js';
+import { concluirPorRecebimento, avisarRecebimentoDesfeito } from '../repos/tarefas.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import {
@@ -425,15 +426,28 @@ export function rotasPlacas({ db, hoje }) {
     res.json(montarVenda(vendas.atualizar(id, dados)));
   });
 
+  // Receber fecha as tarefas de cobrança ligadas à venda; desfazer só deixa um comentário nelas.
   r.post('/placas/vendas/:id/recebimento', (req, res) => {
-    const atualizada = vendas.atualizar(lerId(req.params.id), { recebido_em: hoje() });
-    if (!atualizada) throw naoEncontrado('Venda');
+    const id = lerId(req.params.id);
+    const antes = vendas.obter(id);
+    if (!antes) throw naoEncontrado('Venda');
+    const atualizada = emTransacao(db, () => {
+      const nova = vendas.atualizar(id, { recebido_em: hoje() });
+      if (!antes.recebido_em) concluirPorRecebimento(db, { placa_venda_id: id }, hoje());
+      return nova;
+    });
     res.json(montarVenda(atualizada));
   });
 
   r.delete('/placas/vendas/:id/recebimento', (req, res) => {
-    const atualizada = vendas.atualizar(lerId(req.params.id), { recebido_em: null });
-    if (!atualizada) throw naoEncontrado('Venda');
+    const id = lerId(req.params.id);
+    const antes = vendas.obter(id);
+    if (!antes) throw naoEncontrado('Venda');
+    const atualizada = emTransacao(db, () => {
+      const nova = vendas.atualizar(id, { recebido_em: null });
+      if (antes.recebido_em) avisarRecebimentoDesfeito(db, { placa_venda_id: id }, hoje());
+      return nova;
+    });
     res.json(montarVenda(atualizada));
   });
 

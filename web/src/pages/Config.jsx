@@ -9,6 +9,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { CadastroLista } from './config/CadastroLista.jsx';
 import { ConexaoInstagram } from './config/ConexaoInstagram.jsx';
 import { ConexaoVercel } from './config/ConexaoVercel.jsx';
+import { ModelosTarefas } from './config/ModelosTarefas.jsx';
 
 export function Config() {
   const { dados: config, erro } = useCarregar(() => api('/config'), []);
@@ -21,6 +22,7 @@ export function Config() {
       {config && <Repositorio inicial={config} />}
       <CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />
       <CadastroLista titulo="Nichos" caminho="/nichos" rotuloNovo="Novo nicho" />
+      <ModelosTarefas />
       <section className="cartao">
         <h2>Tabela de preços</h2>
         <p>A tabela de preços agora fica em <Link to="/orcamentos?aba=precos">Orçamentos › Tabela de preços</Link>.</p>

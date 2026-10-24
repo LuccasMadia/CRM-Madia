@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
+import { CaixaModeloTarefas, modeloPadrao, useModelosTarefas } from './tarefas/ModeloTarefas.jsx';
 
 // Com `clientes` (lista de Serviços), o formulário também pergunta de quem é; no perfil vem o clienteId.
 export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = null, onSalvar }) {
@@ -18,6 +20,9 @@ export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = 
   });
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const valorTravado = Boolean(parcela?.pago_em) && valores.cobranca === 'unica';
+  // Só ao criar: o GMN novo já nasce com as tarefas do modelo (dá para desmarcar).
+  const modeloGmn = modeloPadrao(useModelosTarefas(), 'google_meu_negocio');
+  const [criarTarefas, setCriarTarefas] = useState(true);
 
   function enviar(e) {
     e.preventDefault();
@@ -40,6 +45,7 @@ export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = 
       Object.assign(corpo, { valor_total_centavos: valor ?? 0, vencimento: valores.vencimento, mensalidade_ativa: false });
     }
     Object.assign(corpo, { link_perfil: valores.link_perfil, notas: valores.notas });
+    if (!projeto && modeloGmn && criarTarefas) corpo.modelo_tarefas_id = modeloGmn.id;
     executar(() => onSalvar(corpo));
   }
 
@@ -71,6 +77,7 @@ export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = 
       <Campo rotulo="Observações" nome="notas" erros={erros}>
         <textarea rows={3} {...campo('notas')} />
       </Campo>
+      {!projeto && <CaixaModeloTarefas modelo={modeloGmn} marcado={criarTarefas} onMudar={setCriarTarefas} />}
       <Aviso erro={erro} />
       <div><button className="btn btn--primario" disabled={enviando}>Salvar</button></div>
     </form>

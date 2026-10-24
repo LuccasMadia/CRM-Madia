@@ -15,6 +15,7 @@ import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { repoCategorias, repoNichos, repoProjetosCategorias } from '../repos/categorias.js';
 import { MODOS_INICIO_MENSALIDADE, planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { REGRAS_CLIENTE } from './clientes.js';
+import { repoModelosTarefas, aplicarModelo } from '../repos/tarefas.js';
 
 const REGRAS_PROJETO = {
   cliente_id: { tipo: 'inteiro', obrigatorio: true },
@@ -42,6 +43,7 @@ const REGRAS_PROJETO = {
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
+const REGRA_MODELO_TAREFAS = { modelo_tarefas_id: { tipo: 'inteiro', min: 1 } };
 
 function exigirDadosMensalidade(atual, dados) {
   const ativa = dados.mensalidade_ativa ?? atual?.mensalidade_ativa ?? 0;
@@ -269,6 +271,10 @@ export function rotasProjetos({ db, hoje }) {
       ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: clienteDaOportunidade })
       : null;
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
+    // "Criar tarefas do modelo X": o modelo é aplicado junto, na mesma transação.
+    const { modelo_tarefas_id: modeloId } = validar(corpo, REGRA_MODELO_TAREFAS, { parcial: true });
+    const modeloTarefas = modeloId ? repoModelosTarefas(db).obter(modeloId) : null;
+    if (modeloId && !modeloTarefas) throw new ErroValidacao([{ campo: 'modelo_tarefas_id', mensagem: 'Modelo de tarefas não encontrado' }]);
 
     let categoriasValidadas = null;
 
@@ -299,6 +305,7 @@ export function rotasProjetos({ db, hoje }) {
       if (categoriasValidadas) projetosCategorias.substituir(projeto.id, categoriasValidadas);
       if (temServicos) criarServicosDoProjeto(projeto.id, servicosValidados);
       sincronizarCobrancaUnica(projeto.id, vencimento);
+      if (modeloTarefas) aplicarModelo(db, modeloTarefas, projeto, hoje());
       return projeto;
     }
 

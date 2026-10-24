@@ -15,6 +15,7 @@ import {
 import { planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { aplicarRegrasProjeto } from '../domain/regras.js';
 import { registrarVendaPlaca } from './placas.js';
+import { repoModelosTarefas, aplicarModelo } from '../repos/tarefas.js';
 import { modeloDocumento, gerarPdf } from '../orcamentos/pdf.js';
 import { precoGmnCentavos } from './tabelaPrecos.js';
 import { validar, lerId } from '../http/validar.js';
@@ -63,6 +64,8 @@ const REGRAS_ESCOLHA = {
   projeto_id: { tipo: 'inteiro', min: 1 },
   // Item com mensalidade cujo projeto (vinculado) já cobra uma: troca pelo valor do orçamento.
   substituir_mensalidade: { tipo: 'bool' },
+  // site / gmn: cria no projeto as tarefas deste modelo (sem repetir as que já existem).
+  modelo_tarefas_id: { tipo: 'inteiro', min: 1 },
 };
 
 const REGRAS_PARCELAS = {
@@ -89,6 +92,7 @@ export function rotasOrcamentos({ db, hoje }) {
   const vendas = repoPlacasVendas(db);
   const categorias = repoCategorias(db);
   const projetosCategorias = repoProjetosCategorias(db);
+  const modelosTarefas = repoModelosTarefas(db);
 
   // O que o aceite gerou. Só dá para apagar o que ainda não andou: projeto criado sem parcela paga,
   // venda não recebida e sem placa montada separada para ela. Projeto vinculado (já existia) nunca é apagado:
@@ -306,6 +310,10 @@ export function rotasOrcamentos({ db, hoje }) {
       if (!item) throw new ErroHttp(400, 'Há um item que não é deste orçamento.');
       if (porItem.has(item.id)) throw new ErroHttp(400, `${item.nome}: escolhido duas vezes.`);
       if (!destinosDoItem(item).includes(e.destino)) throw new ErroHttp(400, `${item.nome}: este item não pode virar isso.`);
+      if (e.modelo_tarefas_id) {
+        e.modeloTarefas = ['site', 'gmn'].includes(e.destino) ? modelosTarefas.obter(e.modelo_tarefas_id) : null;
+        if (!e.modeloTarefas) throw new ErroHttp(400, `${item.nome}: o modelo de tarefas escolhido não existe.`);
+      }
       const parcelasEscolhidas = bruta.parcelas == null ? { modo: 'nenhuma' } : validar(bruta.parcelas, REGRAS_PARCELAS);
       parcelasEscolhidas.primeira ??= hoje();
       porItem.set(item.id, { ...e, item, parcelas: parcelasEscolhidas });
@@ -444,6 +452,11 @@ export function rotasOrcamentos({ db, hoje }) {
           throw new ErroHttp(400, `${e.item.nome}: ${erro.erros.map((x) => x.mensagem).join('; ')}`);
         }
       }
+    }
+
+    // Tarefas do modelo, no projeto criado ou vinculado; as que já existem com o mesmo título não se repetem.
+    for (const e of escolhas.filter((x) => x.modeloTarefas && criados.has(x.item.id))) {
+      aplicarModelo(db, e.modeloTarefas, projetos.obter(criados.get(e.item.id).id), dia);
     }
 
     for (const e of escolhas.filter((x) => x.destino === 'mensal_site' || x.destino === 'mensal_gmn')) {
