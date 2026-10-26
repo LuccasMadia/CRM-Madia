@@ -53,7 +53,7 @@ export function repoTabelaPacotes(db) {
 
 export function repoOrcamentos(db) {
   const base = criarRepo(db, 'orcamentos', [
-    'cliente_id', 'data', 'validade_dias', 'pagamento', 'prazo', 'observacao', 'situacao', 'desconto_pct', 'titulo_pacote',
+    'cliente_id', 'data', 'validade_dias', 'pagamento', 'prazo', 'observacao', 'situacao', 'desconto_pct', 'desconto_valor_centavos', 'titulo_pacote',
   ]);
   return {
     ...base,

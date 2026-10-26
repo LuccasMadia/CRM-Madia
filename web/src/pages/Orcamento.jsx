@@ -513,18 +513,35 @@ function ItemLinha({ item, ocupado, onSalvar, onRemover }) {
 
 function Totais({ orcamento, ocupado, descontoPadrao, onSalvar }) {
   const { totais, desconto_pct: pct } = orcamento;
+  const ocultos = useValoresOcultos();
+  const valorDesconto = orcamento.desconto_valor_centavos;
   return (
     <section className="cartao orcamento__totais" aria-label="Totais">
       <h2>Totais</h2>
       {totais.desconto_centavos > 0 && (
         <div className="orcamento__linha"><span>Subtotal</span><span>{formatarDinheiro(totais.subtotal_unico_centavos)}</span></div>
       )}
+      {totais.desconto_valor_centavos > 0 && (
+        <div className="orcamento__linha">
+          <span>Desconto</span>
+          <span>{`− ${formatarDinheiro(totais.desconto_valor_centavos)}`}</span>
+        </div>
+      )}
+      <div className="orcamento__desconto">
+        {ocultos ? <ValorOculto rotulo="Desconto (R$)" centavos={valorDesconto ?? 0} /> : (
+          <CampoAoSair
+            id="orcamento-desconto-valor" key={`desconto-valor-${valorDesconto}`} rotulo="Desconto (R$)" inputMode="decimal"
+            texto={centavosParaTexto(valorDesconto)} original={valorDesconto} converter={comoDinheiro}
+            onSalvar={(v) => onSalvar({ desconto_valor_centavos: v })}
+          />
+        )}
+      </div>
       {pct != null ? (
         <>
-          {totais.desconto_centavos > 0 && (
+          {totais.desconto_combo_centavos > 0 && (
             <div className="orcamento__linha">
               <span>{`Desconto combo (${pct}%)`}</span>
-              <span>{`− ${formatarDinheiro(totais.desconto_centavos)}`}</span>
+              <span>{`− ${formatarDinheiro(totais.desconto_combo_centavos)}`}</span>
             </div>
           )}
           <div className="orcamento__desconto">
@@ -534,15 +551,19 @@ function Totais({ orcamento, ocupado, descontoPadrao, onSalvar }) {
             />
             <button type="button" className="btn btn--pequeno" disabled={ocupado} onClick={() => onSalvar({ desconto_pct: null })}>Tirar desconto</button>
           </div>
-          {totais.desconto_centavos === 0 && <p className="vazio">O desconto entra com 2 ou mais serviços pagos uma vez.</p>}
+          {totais.desconto_combo_centavos === 0 && <p className="vazio">O desconto de combo entra com 2 ou mais serviços pagos uma vez.</p>}
         </>
       ) : (
         <div className="orcamento__desconto">
-          <button type="button" className="btn btn--pequeno" disabled={ocupado} onClick={() => onSalvar({ desconto_pct: descontoPadrao })}>Aplicar desconto</button>
+          <button type="button" className="btn btn--pequeno" disabled={ocupado} onClick={() => onSalvar({ desconto_pct: descontoPadrao })}>Aplicar desconto de combo</button>
         </div>
       )}
       <div className="orcamento__linha orcamento__linha--total">
-        <span>Total pago uma vez</span><strong>{formatarDinheiro(totais.total_unico_centavos)}</strong>
+        <span>Total pago uma vez</span>
+        <span className="orcamento__total-final">
+          {totais.desconto_centavos > 0 && <s aria-label={`Sem desconto: ${formatarDinheiro(totais.subtotal_unico_centavos)}`}>{formatarDinheiro(totais.subtotal_unico_centavos)}</s>}
+          <strong>{formatarDinheiro(totais.total_unico_centavos)}</strong>
+        </span>
       </div>
       {totais.mensalidades.map((m, i) => (
         <div key={`${m.nome}-${i}`} className="orcamento__linha"><span>{m.nome}</span><span>{`${formatarDinheiro(m.valor_centavos)}/mês`}</span></div>

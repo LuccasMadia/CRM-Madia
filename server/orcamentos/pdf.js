@@ -36,12 +36,15 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
       frase: i.frase ?? '',
       valor: valorDoItem(i),
     })),
-    desconto: totais.desconto_centavos > 0
-      ? { rotulo: `Desconto combo (${orcamento.desconto_pct}%)`, valor: `- ${dinheiro(totais.desconto_centavos)}` }
-      : null,
+    descontos: [
+      totais.desconto_combo_centavos > 0 && { rotulo: `Desconto combo (${orcamento.desconto_pct}%)`, valor: `- ${dinheiro(totais.desconto_combo_centavos)}` },
+      totais.desconto_valor_centavos > 0 && { rotulo: 'Desconto', valor: `- ${dinheiro(totais.desconto_valor_centavos)}` },
+    ].filter(Boolean),
     // Só mensalidades: sem a linha "R$ 0,00" pago uma vez. Orçamento vazio mantém o R$ 0,00.
     total_unico: totais.total_unico_centavos === 0 && totais.mensalidades.length > 0
       ? null : dinheiro(totais.total_unico_centavos),
+    // com desconto, o valor cheio aparece riscado acima do total
+    total_sem_desconto: totais.desconto_centavos > 0 ? dinheiro(totais.subtotal_unico_centavos) : null,
     mensalidades: totais.mensalidades.map((m) => ({ nome: m.nome, valor: `${dinheiro(m.valor_centavos)}/mês` })),
     rodape,
   };
@@ -106,23 +109,29 @@ export function gerarPdf(modelo) {
       doc.lineWidth(1).strokeColor(LINHA).moveTo(esq, y).lineTo(dir, y).stroke();
     };
     modelo.itens.forEach((i) => linhaItem(i));
-    if (modelo.desconto) linhaItem({ nome: modelo.desconto.rotulo, frase: '', valor: modelo.desconto.valor }, COMBO);
+    modelo.descontos.forEach((d) => linhaItem({ nome: d.rotulo, frase: '', valor: d.valor }, COMBO));
 
     // Caixa de total
     y += 14;
-    const alturaCaixa = (modelo.total_unico == null ? 16 : 42) + modelo.mensalidades.length * 18;
+    const riscado = modelo.total_unico != null && modelo.total_sem_desconto ? 18 : 0;
+    const topoMensal = (modelo.total_unico == null ? 12 : 40) + riscado;
+    const alturaCaixa = topoMensal + 4 + modelo.mensalidades.length * 18;
     garantirEspaco(alturaCaixa);
     doc.roundedRect(esq, y, largura, alturaCaixa, 6).fill(FUNDO_TOTAL);
     const xi = esq + 14;
     const li = largura - 28;
+    if (riscado) {
+      doc.font('Helvetica').fontSize(12).fillColor(CINZA)
+        .text(modelo.total_sem_desconto, xi, y + 12, { width: li, align: 'right', lineBreak: false, strike: true });
+    }
     doc.font('Helvetica-Bold').fontSize(15).fillColor(ESCURO);
     if (modelo.total_unico != null) {
-      doc.text('Total (pago uma vez)', xi, y + 13, { width: li, lineBreak: false });
-      doc.text(modelo.total_unico, xi, y + 13, { width: li, align: 'right', lineBreak: false });
+      doc.text('Total (pago uma vez)', xi, y + 13 + riscado, { width: li, lineBreak: false });
+      doc.text(modelo.total_unico, xi, y + 13 + riscado, { width: li, align: 'right', lineBreak: false });
     }
     doc.font('Helvetica').fontSize(12).fillColor(ESCURO);
     modelo.mensalidades.forEach((m, k) => {
-      const yy = y + (modelo.total_unico == null ? 12 : 40) + k * 18;
+      const yy = y + topoMensal + k * 18;
       doc.text(m.nome, xi, yy, { width: li - colValor, lineBreak: false });
       doc.text(m.valor, xi, yy, { width: li, align: 'right', lineBreak: false });
     });

@@ -12,7 +12,7 @@ const filinto = {
     { nome: 'Cardápio digital B2B', frase: 'Catálogo para revendedores, com pedido pelo WhatsApp', quantidade: 1, valor_unico_centavos: 150000, valor_mensal_centavos: 0 },
   ],
   totais: {
-    subtotal_unico_centavos: 183000 + 0, desconto_centavos: 18300, total_unico_centavos: 164700,
+    subtotal_unico_centavos: 183000 + 0, desconto_combo_centavos: 18300, desconto_valor_centavos: 0, desconto_centavos: 18300, total_unico_centavos: 164700,
     mensalidades: [{ nome: 'Hospedagem e suporte do cardápio', valor_centavos: 15000 }], total_mensal_centavos: 15000,
   },
 };
@@ -31,8 +31,9 @@ describe('modeloDocumento', () => {
         { nome: 'Configuração do Google Meu Negócio', frase: 'Perfil completo no Google Maps, com fotos, horários e categorias', valor: 'R$ 250,00' },
         { nome: 'Cardápio digital B2B', frase: 'Catálogo para revendedores, com pedido pelo WhatsApp', valor: 'R$ 1.500,00' },
       ],
-      desconto: { rotulo: 'Desconto combo (10%)', valor: '- R$ 183,00' },
+      descontos: [{ rotulo: 'Desconto combo (10%)', valor: '- R$ 183,00' }],
       total_unico: 'R$ 1.647,00',
+      total_sem_desconto: 'R$ 1.830,00',
       mensalidades: [{ nome: 'Hospedagem e suporte do cardápio', valor: 'R$ 150,00/mês' }],
       rodape: ['Forma de pagamento: a combinar · Prazo: a combinar', '@madia.consultoria'],
     });
@@ -44,10 +45,22 @@ describe('modeloDocumento', () => {
       itens: [{ nome: 'Hospedagem', frase: '', quantidade: 1, valor_unico_centavos: 0, valor_mensal_centavos: 15000 }],
       totais: { subtotal_unico_centavos: 0, desconto_centavos: 0, total_unico_centavos: 0, mensalidades: [{ nome: 'Hospedagem', valor_centavos: 15000 }], total_mensal_centavos: 15000 },
     }, { whatsapp: '(11) 99999-0000' }));
-    expect(m.desconto).toBeNull();
+    expect(m.descontos).toEqual([]);
+    expect(m.total_sem_desconto).toBeNull();
     expect(m.total_unico).toBeNull();
     expect(m.itens[0].valor).toBe('R$ 150,00/mês');
     expect(m.rodape[1]).toBe('WhatsApp (11) 99999-0000 · @madia.consultoria');
+  });
+
+  it('desconto em reais: 1200 riscado e 1000 no total', () => {
+    const m = norm(modeloDocumento({
+      ...filinto, desconto_pct: null,
+      itens: [{ nome: 'Site', frase: '', quantidade: 1, valor_unico_centavos: 120000, valor_mensal_centavos: 0 }],
+      totais: { subtotal_unico_centavos: 120000, desconto_combo_centavos: 0, desconto_valor_centavos: 20000, desconto_centavos: 20000, total_unico_centavos: 100000, mensalidades: [], total_mensal_centavos: 0 },
+    }, { whatsapp: null }));
+    expect(m.descontos).toEqual([{ rotulo: 'Desconto', valor: '- R$ 200,00' }]);
+    expect(m.total_sem_desconto).toBe('R$ 1.200,00');
+    expect(m.total_unico).toBe('R$ 1.000,00');
   });
 
   it('placa × 3, observação e rodapé sem WhatsApp', () => {

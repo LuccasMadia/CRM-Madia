@@ -11,15 +11,18 @@ function chaveServico(it) {
   return 'i' + it.id;
 }
 
-export function calcularTotais(itens, descontoPct) {
+// desconto_centavos é a soma do combo (%) com o desconto em reais; o em reais nunca passa do que sobra.
+export function calcularTotais(itens, descontoPct, descontoValorCentavos) {
   const lista = itens || [];
   const comUnico = lista.filter((it) => num(it.valor_unico_centavos) > 0);
   const servicos_combo = new Set(comUnico.map(chaveServico)).size;
   const subtotal_unico_centavos = comUnico.reduce((s, it) => s + num(it.valor_unico_centavos), 0);
 
-  const desconto_centavos = servicos_combo >= 2 && descontoPct != null
+  const desconto_combo_centavos = servicos_combo >= 2 && descontoPct != null
     ? Math.round((subtotal_unico_centavos * num(descontoPct)) / 100)
     : 0;
+  const desconto_valor_centavos = Math.min(num(descontoValorCentavos), subtotal_unico_centavos - desconto_combo_centavos);
+  const desconto_centavos = desconto_combo_centavos + desconto_valor_centavos;
 
   const mensalidades = lista
     .filter((it) => num(it.valor_mensal_centavos) > 0)
@@ -28,6 +31,8 @@ export function calcularTotais(itens, descontoPct) {
   return {
     servicos_combo,
     subtotal_unico_centavos,
+    desconto_combo_centavos,
+    desconto_valor_centavos,
     desconto_centavos,
     total_unico_centavos: subtotal_unico_centavos - desconto_centavos,
     mensalidades,

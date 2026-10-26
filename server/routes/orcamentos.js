@@ -29,6 +29,7 @@ const REGRAS_ORCAMENTO = {
   observacao: { tipo: 'texto' },
   situacao: { tipo: 'enum', valores: ['rascunho', 'enviado', 'aceito', 'recusado'], obrigatorio: true },
   desconto_pct: { tipo: 'inteiro', min: 0, max: 100 },
+  desconto_valor_centavos: { tipo: 'inteiro', min: 0 },
   titulo_pacote: { tipo: 'texto' },
 };
 
@@ -164,7 +165,7 @@ export function rotasOrcamentos({ db, hoje }) {
       numero: orcamento.id,
       cliente_nome: clientes.obter(orcamento.cliente_id)?.nome ?? null,
       itens: lista,
-      totais: calcularTotais(lista, orcamento.desconto_pct),
+      totais: calcularTotais(lista, orcamento.desconto_pct, orcamento.desconto_valor_centavos),
       sugerir_hospedagem: sugerirHospedagem(orcamento.id),
       gerados: gerados(orcamento.id),
       projetos_vinculaveis: projetosVinculaveis(orcamento.cliente_id),
@@ -283,7 +284,7 @@ export function rotasOrcamentos({ db, hoje }) {
       data: o.data,
       validade_dias: o.validade_dias,
       situacao: o.situacao,
-      totais: calcularTotais(itensDoOrcamento(o.id), o.desconto_pct),
+      totais: calcularTotais(itensDoOrcamento(o.id), o.desconto_pct, o.desconto_valor_centavos),
       gerou: temGerados(o.id),
       ...alertasOrcamento({ ...o, mexido_em: o.mexido.slice(0, 10) }, dia),
     })));
@@ -352,7 +353,7 @@ export function rotasOrcamentos({ db, hoje }) {
       if (ocupados.has(chave)) throw new ErroHttp(400, `${e.item.nome}: esse projeto já recebe outra mensalidade.`);
       ocupados.add(chave);
     }
-    const { desconto_centavos } = calcularTotais(lista, orcamento.desconto_pct);
+    const { desconto_centavos } = calcularTotais(lista, orcamento.desconto_pct, orcamento.desconto_valor_centavos);
     return { escolhas, valores: valoresComDesconto(lista, desconto_centavos) };
   }
 

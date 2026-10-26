@@ -22,11 +22,21 @@ describe('calcularTotais', () => {
     expect(calcularTotais(itens, 10)).toEqual({
       servicos_combo: 3,
       subtotal_unico_centavos: 183000,
+      desconto_combo_centavos: 18300,
+      desconto_valor_centavos: 0,
       desconto_centavos: 18300,
       total_unico_centavos: 164700,
       mensalidades: [{ nome: 'Hospedagem e suporte', valor_centavos: 15000 }],
       total_mensal_centavos: 15000,
     });
+  });
+
+  it('desconto em reais vale com um item só, soma com o combo e nunca deixa o total negativo', () => {
+    const site = item({ servico_id: 3, nome: 'Site', valor_unico_centavos: 120000 });
+    expect(calcularTotais([site], null, 20000)).toMatchObject({ desconto_combo_centavos: 0, desconto_valor_centavos: 20000, total_unico_centavos: 100000 });
+    const gmn = item({ servico_id: 2, nome: 'GMN', valor_unico_centavos: 80000 });
+    expect(calcularTotais([site, gmn], 10, 20000)).toMatchObject({ desconto_combo_centavos: 20000, desconto_valor_centavos: 20000, desconto_centavos: 40000, total_unico_centavos: 160000 });
+    expect(calcularTotais([site], null, 999999)).toMatchObject({ desconto_valor_centavos: 120000, total_unico_centavos: 0 });
   });
 
   it('landing page + hospedagem não tem desconto (mensalidade não conta)', () => {
@@ -70,6 +80,8 @@ describe('calcularTotais', () => {
     expect(calcularTotais([], 10)).toEqual({
       servicos_combo: 0,
       subtotal_unico_centavos: 0,
+      desconto_combo_centavos: 0,
+      desconto_valor_centavos: 0,
       desconto_centavos: 0,
       total_unico_centavos: 0,
       mensalidades: [],

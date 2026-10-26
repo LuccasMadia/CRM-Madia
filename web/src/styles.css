@@ -689,6 +689,8 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .orcamento__linha > :last-child { text-align: right; white-space: nowrap; }
 .orcamento__linha--total { border-top: 1px solid var(--borda); margin-top: 6px; padding-top: 10px; }
 .orcamento__linha--total strong { font-size: 1.25rem; }
+.orcamento__total-final { display: flex; flex-direction: column; align-items: flex-end; }
+.orcamento__total-final s { color: var(--texto-suave); font-size: 0.9rem; }
 .orcamento__desconto { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 6px; }
 .orcamento__desconto .campo { width: 110px; }
 .orcamento__campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 720px; }

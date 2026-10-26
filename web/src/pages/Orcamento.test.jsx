@@ -44,7 +44,7 @@ const filinto = {
     item({ id: 34, servico_id: 4, nome: 'Hospedagem e suporte', valor_mensal_centavos: 15000, ordem: 3, tipo_servico: 'hospedagem' }),
   ],
   totais: {
-    servicos_combo: 3, subtotal_unico_centavos: 183000, desconto_centavos: 18300, total_unico_centavos: 164700,
+    servicos_combo: 3, subtotal_unico_centavos: 183000, desconto_combo_centavos: 18300, desconto_valor_centavos: 0, desconto_centavos: 18300, total_unico_centavos: 164700,
     mensalidades: [{ nome: 'Hospedagem e suporte', valor_centavos: 15000 }], total_mensal_centavos: 15000,
   },
   sugerir_hospedagem: false,
@@ -52,7 +52,7 @@ const filinto = {
 
 const vazio = {
   ...filinto, itens: [],
-  totais: { servicos_combo: 0, subtotal_unico_centavos: 0, desconto_centavos: 0, total_unico_centavos: 0, mensalidades: [], total_mensal_centavos: 0 },
+  totais: { servicos_combo: 0, subtotal_unico_centavos: 0, desconto_combo_centavos: 0, desconto_valor_centavos: 0, desconto_centavos: 0, total_unico_centavos: 0, mensalidades: [], total_mensal_centavos: 0 },
 };
 
 const rotas = (extra = {}) => ({ 'GET /orcamentos/7': filinto, 'GET /tabela-precos': tabela, 'GET /placas/modelos': modelos, ...extra });
@@ -158,13 +158,30 @@ describe('Orcamento', () => {
     expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(false);
   });
 
+  it('desconto em reais: salva o valor e mostra o total cheio riscado acima do final', async () => {
+    const site = { ...vazio, itens: [item({ id: 40, servico_id: 3, nome: 'Site', valor_unico_centavos: 120000 })],
+      totais: { ...vazio.totais, servicos_combo: 1, subtotal_unico_centavos: 120000, total_unico_centavos: 120000 } };
+    const comDesconto = { ...site, desconto_valor_centavos: 20000,
+      totais: { ...site.totais, desconto_valor_centavos: 20000, desconto_centavos: 20000, total_unico_centavos: 100000 } };
+    const { chamadas } = mockApi(rotas({ 'GET /orcamentos/7': site, 'PUT /orcamentos/7': comDesconto }));
+    abrir();
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Desconto (R$)'), '200');
+    await user.tab();
+    await vi.waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ desconto_valor_centavos: 20000 }));
+    const total = within(totais()).getByText('Total pago uma vez').closest('div');
+    await vi.waitFor(() => expect(within(total).getByLabelText(/Sem desconto: R\$\s1\.200,00/).tagName).toBe('S'));
+    expect(within(total).getByText(/R\$\s1\.000,00/).tagName).toBe('STRONG');
+    expect(totais()).toHaveTextContent(/Desconto\s*− R\$\s200,00/);
+  });
+
   it('tira o desconto', async () => {
-    const semDesconto = { ...filinto, desconto_pct: null, totais: { ...filinto.totais, desconto_centavos: 0, total_unico_centavos: 183000 } };
+    const semDesconto = { ...filinto, desconto_pct: null, totais: { ...filinto.totais, desconto_combo_centavos: 0, desconto_centavos: 0, total_unico_centavos: 183000 } };
     const { chamadas } = mockApi(rotas({ 'PUT /orcamentos/7': semDesconto }));
     abrir();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Tirar desconto' }));
-    expect(await screen.findByRole('button', { name: 'Aplicar desconto' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Aplicar desconto de combo' })).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ desconto_pct: null });
     expect(within(totais()).getByText('Total pago uma vez').closest('div')).toHaveTextContent(/R\$\s1\.830,00/);
   });
@@ -181,7 +198,7 @@ describe('Orcamento', () => {
     expect(totais()).not.toHaveTextContent('Desconto combo');
     expect(totais()).not.toHaveTextContent('Subtotal');
     expect(screen.getByRole('button', { name: 'Tirar desconto' })).toBeInTheDocument();
-    expect(screen.getByText('O desconto entra com 2 ou mais serviços pagos uma vez.')).toBeInTheDocument();
+    expect(screen.getByText('O desconto de combo entra com 2 ou mais serviços pagos uma vez.')).toBeInTheDocument();
   });
 
   it('respostas fora de ordem: vale a do último pedido', async () => {
