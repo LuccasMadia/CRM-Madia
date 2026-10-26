@@ -7,6 +7,9 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { Campo } from '../../components/Campo.jsx';
 import { Modal } from '../../components/Modal.jsx';
 import { PedeAtencao } from '../../components/PedeAtencao.jsx';
+import { Icone } from '../../components/Icone.jsx';
+import { useConfirmacao } from '../../hooks/useConfirmacao.jsx';
+import { notificar } from '../../lib/notificacoes.js';
 import { formatarData } from '../../lib/datas.js';
 import { ROTULO_SITUACAO, numeroOrcamento, resumoValor } from '../cliente/AbaOrcamentos.jsx';
 
@@ -63,9 +66,22 @@ function itensAtencao(lista) {
 }
 
 export function ListaOrcamentos() {
-  const { dados: lista, erro } = useCarregar(() => api('/orcamentos'), []);
+  const { dados: lista, erro, recarregar } = useCarregar(() => api('/orcamentos'), []);
   const [params, setParams] = useSearchParams();
   const [criando, setCriando] = useState(false);
+  const [confirmar, dialogo] = useConfirmacao();
+
+  function excluir(o) {
+    confirmar({
+      titulo: `Excluir o orçamento nº ${numeroOrcamento(o.numero)}?`,
+      mensagem: o.gerou ? 'O que ele gerou (projetos e vendas) continua existindo.' : 'Os itens dele também serão excluídos.',
+      onConfirmar: async () => {
+        await api(`/orcamentos/${o.id}`, { method: 'DELETE' });
+        notificar('Orçamento excluído');
+        recarregar();
+      },
+    });
+  }
   const situacao = ROTULO_SITUACAO[params.get('situacao')] ? params.get('situacao') : '';
   const atencao = ATENCAO[params.get('atencao')] ? params.get('atencao') : '';
 
@@ -101,7 +117,7 @@ export function ListaOrcamentos() {
         {lista && (visiveis.length ? (
           <table className="tabela tabela--orcamentos">
             <thead>
-              <tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Situação</th><th className="num">Valor</th><th>Validade</th></tr>
+              <tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Situação</th><th className="num">Valor</th><th>Validade</th><th aria-label="Ações" /></tr>
             </thead>
             <tbody>
               {visiveis.map((o) => {
@@ -117,6 +133,11 @@ export function ListaOrcamentos() {
                       <span className="tabela__titulo">{formatarData(o.vence_em)}</span>
                       {v && <span className={`tabela__sub${v.perigo ? ' texto-perigo' : ''}`}>{v.texto}</span>}
                     </td>
+                    <td className="num">
+                      <button type="button" className="btn btn--icone btn--icone-perigo" aria-label={`Excluir orçamento nº ${numeroOrcamento(o.numero)}`} title="Excluir" onClick={() => excluir(o)}>
+                        <Icone nome="fechar" tamanho={18} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -125,6 +146,7 @@ export function ListaOrcamentos() {
         ) : <p className="vazio">{lista.length ? 'Nenhum orçamento com esse filtro.' : 'Nenhum orçamento ainda.'}</p>)}
       </section>
       {criando && <NovoOrcamento onFechar={() => setCriando(false)} />}
+      {dialogo}
     </>
   );
 }

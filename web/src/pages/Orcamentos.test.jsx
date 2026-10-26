@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Orcamentos } from './Orcamentos.jsx';
-import { mockApi } from '../test/mockApi.js';
+import { mockApi, resposta } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 
 const totais = (unico, mensal = 0) => ({
@@ -43,6 +43,22 @@ describe('Orcamentos', () => {
     expect(linhas()[3]).toHaveTextContent('vencido há 3 dias');
     // aceito não mostra prazo
     expect(linhas()[4]).not.toHaveTextContent(/vence/);
+  });
+
+  it('exclui um orçamento direto da lista, depois de confirmar', async () => {
+    let atual = lista;
+    const api = mockApi({ 'GET /orcamentos': () => atual, 'DELETE /orcamentos/1': resposta(204) });
+    const usuario = userEvent.setup();
+    abrir();
+    await screen.findByRole('table');
+    await usuario.click(screen.getByRole('button', { name: 'Excluir orçamento nº 001' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Excluir o orçamento nº 001?' });
+    // o nº 001 gerou projetos: avisa que eles continuam
+    expect(dialogo).toHaveTextContent('continua existindo');
+    atual = lista.filter((o) => o.id !== 1);
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Excluir' }));
+    expect(api.chamadas).toContainEqual(expect.objectContaining({ metodo: 'DELETE', caminho: '/orcamentos/1' }));
+    await vi.waitFor(() => expect(linhas()).toHaveLength(4));
   });
 
   it('a faixa Pede atenção leva ao orçamento (um só) ou filtra a lista (vários)', async () => {
