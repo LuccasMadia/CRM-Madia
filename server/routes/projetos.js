@@ -16,6 +16,7 @@ import { repoCategorias, repoNichos, repoProjetosCategorias } from '../repos/cat
 import { MODOS_INICIO_MENSALIDADE, planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { REGRAS_CLIENTE } from './clientes.js';
 import { repoModelosTarefas, aplicarModelo } from '../repos/tarefas.js';
+import { exigirLojaDoCliente } from '../repos/lojas.js';
 
 const REGRAS_PROJETO = {
   cliente_id: { tipo: 'inteiro', obrigatorio: true },
@@ -40,6 +41,7 @@ const REGRAS_PROJETO = {
   mensalidade_inicio_data: { tipo: 'data' },
   prototipo_pronto: { tipo: 'bool', padrao: 0 },
   teste_inicio: { tipo: 'data' },
+  loja_id: { tipo: 'inteiro', min: 1 },
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
@@ -241,6 +243,7 @@ export function rotasProjetos({ db, hoje }) {
         preco_vendido_centavos: Math.round(valorLinhaServico(linhaServico) / linhaServico.quantidade),
         custo_unitario_centavos: resultado.custoUnitarioCentavos,
         cliente_id: atual.cliente_id,
+        loja_id: dados.loja_id !== undefined ? dados.loja_id : atual.loja_id,
         comprador_nome: null,
         data_venda: hoje(),
         // O dinheiro desta venda entra pelas parcelas do projeto.
@@ -317,7 +320,8 @@ export function rotasProjetos({ db, hoje }) {
         if (!(erro instanceof ErroValidacao)) throw erro;
         throw new ErroValidacao(erro.erros.map((e) => ({ ...e, campo: `novo_cliente.${e.campo}` })));
       }
-      const { cliente_id: _ignorado, ...regrasSemCliente } = REGRAS_PROJETO;
+      // Cliente novo ainda não tem lojas.
+      const { cliente_id: _ignorado, loja_id: _semLoja, ...regrasSemCliente } = REGRAS_PROJETO;
       const dados = prepararDados(aplicarRegrasProjeto(null, validar(corpo, regrasSemCliente), hoje()));
       const criado = emTransacao(db, () => {
         const cliente = clientes.criar(dadosCliente);
@@ -327,6 +331,7 @@ export function rotasProjetos({ db, hoje }) {
     }
     const dados = prepararDados(aplicarRegrasProjeto(null, validar(corpo, REGRAS_PROJETO), hoje()));
     exigirCliente(dados.cliente_id);
+    exigirLojaDoCliente(db, dados.loja_id, dados.cliente_id);
     const criado = emTransacao(db, () => criarProjetoCompleto(dados));
     res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
   });
@@ -362,9 +367,13 @@ export function rotasProjetos({ db, hoje }) {
     const dadosMensalidade = inicioAoLigar(atual.servico, atual, dadosBase);
     exigirDadosMensalidade(atual, dadosMensalidade);
     if (dadosBase.cliente_id !== undefined) exigirCliente(dadosBase.cliente_id);
+    const clienteFinal = dadosBase.cliente_id ?? atual.cliente_id;
+    // Trocar de cliente sem escolher loja solta a loja antiga, que é do outro cliente.
+    const lojaFinal = 'loja_id' in dadosBase ? dadosBase.loja_id : (clienteFinal === atual.cliente_id ? atual.loja_id : null);
+    exigirLojaDoCliente(db, lojaFinal, clienteFinal);
 
     emTransacao(db, () => {
-      let dados = dadosMensalidade;
+      let dados = { ...dadosMensalidade, loja_id: lojaFinal };
       if (linhasNovas) {
         projetosServicos.removerPorProjetoSemVenda(id);
         criarServicosDoProjeto(id, linhasNovas);

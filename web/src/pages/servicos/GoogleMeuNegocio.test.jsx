@@ -101,7 +101,7 @@ describe('Serviços › Google Meu Negócio', () => {
     await user.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(chamadas.find((c) => c.metodo === 'POST')?.corpo).toEqual({
       servico: 'google_meu_negocio', titulo: 'Google Meu Negócio', cliente_id: 20,
-      valor_total_centavos: 15000, vencimento: '2026-11-05', mensalidade_ativa: false, link_perfil: '', notas: '',
+      valor_total_centavos: 15000, vencimento: '2026-11-05', mensalidade_ativa: false, link_perfil: '', notas: '', loja_id: null,
     }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });

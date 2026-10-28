@@ -14,6 +14,7 @@ function CartaoGmn({ clienteId, projeto, onMudou }) {
 
   return (
     <li className="cartao" style={{ display: 'block' }}>
+      {projeto.loja_nome && <p><strong>{projeto.loja_nome}</strong></p>}
       <p>
         {projeto.etapa === 'entregue'
           ? <span className="etiqueta etiqueta--entregue">{`Configurado em ${formatarData(projeto.data_entrega)}`}</span>

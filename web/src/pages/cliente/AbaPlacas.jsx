@@ -49,7 +49,7 @@ function CartaoVenda({ cliente, projeto, onMudou }) {
 
   return (
     <li className="cartao" style={{ display: 'block' }}>
-      <p><strong>{`${linha?.modelo_nome ?? '—'} × ${linha?.quantidade ?? 0}`}</strong></p>
+      <p><strong>{`${linha?.modelo_nome ?? '—'} × ${linha?.quantidade ?? 0}`}</strong>{projeto.loja_nome && ` · ${projeto.loja_nome}`}</p>
       <p><CobrancaServico projeto={projeto} parcelas={parcelas} onPago={() => { recarregar(); onMudou(); }} /></p>
       <p>
         {projeto.etapa === 'entregue'
@@ -96,7 +96,7 @@ export function AbaPlacas({ cliente, projetos, onMudou }) {
               {resumo.vendas.map((v) => (
                 <tr key={v.id}>
                   <td>{formatarData(v.data_venda)}</td>
-                  <td>{`${v.modelo_nome} × ${v.quantidade}`}</td>
+                  <td>{`${v.modelo_nome} × ${v.quantidade}${v.loja_nome ? ` · ${v.loja_nome}` : ''}`}</td>
                   <td className="num">{formatarDinheiro(v.valor_total_centavos)}</td>
                   <td><SituacaoVenda venda={v} /></td>
                 </tr>

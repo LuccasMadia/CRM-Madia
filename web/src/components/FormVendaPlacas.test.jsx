@@ -32,7 +32,7 @@ describe('FormVendaPlacas', () => {
     expect(enviados.at(-1)).toEqual({
       servico: 'placas_nfc', titulo: 'Placas NFC', cliente_id: 1,
       servicos: [{ tipo: 'placas_nfc', modelo_id: 2, quantidade: 3, valor_total_centavos: 25000 }],
-      vencimento: '2026-10-05', notas: '',
+      vencimento: '2026-10-05', notas: '', loja_id: null,
     });
   });
 
@@ -81,6 +81,6 @@ describe('FormVendaPlacas', () => {
     expect(screen.getByLabelText('Quantidade')).toBeDisabled();
     expect(screen.getByLabelText('Valor total')).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(enviados.at(-1)).toEqual({ vencimento: '', notas: '' });
+    expect(enviados.at(-1)).toEqual({ vencimento: '', notas: '', loja_id: null });
   });
 });

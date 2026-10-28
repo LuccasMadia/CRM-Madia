@@ -16,6 +16,7 @@ import { AbaSites } from './cliente/AbaSites.jsx';
 import { AbaGmn } from './cliente/AbaGmn.jsx';
 import { AbaPlacas } from './cliente/AbaPlacas.jsx';
 import { AbaOrcamentos } from './cliente/AbaOrcamentos.jsx';
+import { LojasCliente } from './cliente/LojasCliente.jsx';
 
 // O terceiro item é o serviço contado no rótulo; Orçamentos não tem serviço, então fica sem contagem.
 const ABAS = [
@@ -35,6 +36,7 @@ export function ClienteDetalhe() {
     () => api(`/projetos?cliente_id=${id}`), [id],
   );
   const [editando, setEditando] = useState(false);
+  const [editandoLoja, setEditandoLoja] = useState(null);
   const [confirmar, dialogo] = useConfirmacao();
 
   if (erro || erroProjetos) return <Aviso erro={erro ?? erroProjetos} />;
@@ -91,9 +93,11 @@ export function ClienteDetalhe() {
         </div>
         <div>
           <button type="button" className="btn" onClick={() => setEditando(true)}>Editar dados</button>{' '}
+          <button type="button" className="btn" onClick={() => setEditandoLoja('nova')}>Adicionar loja</button>{' '}
           <button type="button" className="btn btn--perigo" onClick={excluir}>Excluir</button>
         </div>
       </header>
+      <LojasCliente cliente={cliente} editando={editandoLoja} setEditando={setEditandoLoja} onMudou={mudou} />
       <div role="tablist" className="abas">
         {ABAS.map(([chave, rotulo, servico]) => (
           <button

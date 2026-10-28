@@ -3,6 +3,7 @@ import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
+import { CampoLoja } from './CampoLoja.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
 import { CaixaModeloTarefas, modeloPadrao, useModelosTarefas } from './tarefas/ModeloTarefas.jsx';
 
@@ -11,6 +12,7 @@ export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = 
   const mensal = Boolean(projeto?.mensalidade_ativa);
   const { valores, campo, setValores } = useFormulario({
     cliente_id: clienteId ? String(clienteId) : '',
+    loja_id: projeto?.loja_id ? String(projeto.loja_id) : '',
     cobranca: mensal ? 'mensal' : 'unica',
     valor: projeto ? centavosParaTexto(mensal ? projeto.mensalidade_valor_centavos : projeto.valor_total_centavos) : '',
     vencimento: parcela?.vencimento ?? '',
@@ -44,7 +46,7 @@ export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = 
     } else {
       Object.assign(corpo, { valor_total_centavos: valor ?? 0, vencimento: valores.vencimento, mensalidade_ativa: false });
     }
-    Object.assign(corpo, { link_perfil: valores.link_perfil, notas: valores.notas });
+    Object.assign(corpo, { link_perfil: valores.link_perfil, notas: valores.notas, loja_id: Number(valores.loja_id) || null });
     if (!projeto && modeloGmn && criarTarefas) corpo.modelo_tarefas_id = modeloGmn.id;
     executar(() => onSalvar(corpo));
   }
@@ -53,12 +55,13 @@ export function FormGmn({ clienteId, clientes = null, projeto = null, parcela = 
     <form onSubmit={enviar} className="form" noValidate>
       {clientes && (
         <Campo rotulo="Cliente" nome="cliente_id" erros={erros}>
-          <select {...campo('cliente_id')}>
+          <select {...campo('cliente_id')} onChange={(e) => setValores((v) => ({ ...v, cliente_id: e.target.value, loja_id: '' }))}>
             <option value="">Escolha…</option>
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome || c.responsavel}</option>)}
           </select>
         </Campo>
       )}
+      <CampoLoja clienteId={valores.cliente_id} erros={erros} {...campo('loja_id')} />
       <fieldset className="campo">
         <legend>Cobrança</legend>
         <label>

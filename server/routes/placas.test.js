@@ -230,6 +230,20 @@ describe('/api/placas/vendas', () => {
     expect(res.body.venda.cliente_id).toBeNull();
   });
 
+  it('venda vai para uma loja do cliente; loja sem cliente ou de outro cliente é recusada', async () => {
+    const modelo = await montarModeloCompleto();
+    const cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Fotcell' })).body;
+    const [loja] = (await ctx.http.post(`/api/clientes/${cliente.id}/lojas`).send({ nome: 'Vila Alegre' }).expect(201)).body;
+    const venda = { modelo_id: modelo.id, preco_vendido_centavos: 8000, data_venda: '2026-09-23' };
+
+    await ctx.http.post('/api/placas/vendas').send({ ...venda, comprador_nome: 'Fulano', loja_id: loja.id }).expect(400);
+    const res = await ctx.http.post('/api/placas/vendas').send({ ...venda, cliente_id: cliente.id, loja_id: loja.id }).expect(201);
+    expect(res.body.venda).toMatchObject({ loja_id: loja.id, loja_nome: 'Vila Alegre' });
+    const outro = (await ctx.http.post('/api/clientes').send({ nome: 'Outro' })).body;
+    const movida = (await ctx.http.put(`/api/placas/vendas/${res.body.venda.id}`).send({ cliente_id: outro.id }).expect(200)).body;
+    expect(movida.loja_id).toBeNull();
+  });
+
   it('recusa quando não informa cliente nem nome avulso', async () => {
     const modelo = await montarModeloCompleto();
     const res = await ctx.http.post('/api/placas/vendas').send({

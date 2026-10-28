@@ -60,7 +60,7 @@ export function repoPlacasModelosPacks(db) {
 
 export const CAMPOS_VENDA = [
   'modelo_id', 'quantidade', 'preco_vendido_centavos', 'custo_unitario_centavos',
-  'cliente_id', 'comprador_nome', 'data_venda', 'recebido_em', 'quantidade_montada', 'orcamento_id',
+  'cliente_id', 'comprador_nome', 'data_venda', 'recebido_em', 'quantidade_montada', 'orcamento_id', 'loja_id',
 ];
 export function repoPlacasVendas(db) {
   const base = criarRepo(db, 'placas_vendas', CAMPOS_VENDA);
@@ -76,13 +76,15 @@ export function repoPlacasVendas(db) {
     },
     listarDoCliente(clienteId) {
       return db.prepare(`
-        SELECT v.*, m.nome AS modelo_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
+        SELECT v.*, m.nome AS modelo_nome, l.nome AS loja_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
+        LEFT JOIN lojas l ON l.id = v.loja_id
         WHERE v.cliente_id = ? ORDER BY v.data_venda DESC, v.id DESC
       `).all(clienteId).map(linha);
     },
     listarAvulsasDoCliente(clienteId) {
       return db.prepare(`
-        SELECT v.*, m.nome AS modelo_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
+        SELECT v.*, m.nome AS modelo_nome, l.nome AS loja_nome FROM placas_vendas v JOIN placas_modelos m ON m.id = v.modelo_id
+        LEFT JOIN lojas l ON l.id = v.loja_id
         WHERE v.cliente_id = ?
           AND v.id NOT IN (SELECT venda_id FROM projetos_servicos WHERE venda_id IS NOT NULL)
         ORDER BY v.data_venda DESC, v.id DESC

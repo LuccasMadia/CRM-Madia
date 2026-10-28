@@ -4,6 +4,7 @@ import path from 'node:path';
 import { repoClientes } from '../repos/clientes.js';
 import { criarUpload, removerArquivos } from '../http/upload.js';
 import { repoProjetos } from '../repos/projetos.js';
+import { repoLojas } from '../repos/lojas.js';
 import { repoPlacasVendas, idsVendasDeProjeto } from '../repos/placas.js';
 import { estadoVendaPlaca, valorVendaPlaca } from '../domain/placas.js';
 import { validar, lerId } from '../http/validar.js';
@@ -19,10 +20,16 @@ export const REGRAS_CLIENTE = {
   notas: { tipo: 'texto' },
 };
 
+const REGRAS_LOJA = {
+  nome: { tipo: 'texto', obrigatorio: true },
+  responsavel: { tipo: 'texto' },
+};
+
 export function rotasClientes({ db, hoje, dataDir }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
   const vendasPlacas = repoPlacasVendas(db);
+  const lojas = repoLojas(db);
   const upload = criarUpload(dataDir);
   const apagarFoto = (foto) => foto && rmSync(path.join(dataDir, 'uploads', foto), { force: true });
   const r = Router();
@@ -40,6 +47,7 @@ export function rotasClientes({ db, hoje, dataDir }) {
     res.json({
       ...cliente,
       projetos: projetos.listarComCliente({ cliente_id: cliente.id }),
+      lojas: lojas.listarDoCliente(cliente.id),
       total_faturado_centavos: clientes.totalFaturado(cliente.id),
     });
   });
@@ -54,6 +62,37 @@ export function rotasClientes({ db, hoje, dataDir }) {
         .map((v) => ({ ...v, estado: estadoVendaPlaca(v, hoje()), valor_total_centavos: valorVendaPlaca(v), via_projeto: deProjeto.has(v.id) })),
       ja_comprou: vendasPlacas.quantidadeDoCliente(cliente.id),
     });
+  });
+
+  const carregarCliente = (param) => {
+    const cliente = clientes.obter(lerId(param));
+    if (!cliente) throw naoEncontrado('Cliente');
+    return cliente;
+  };
+  const carregarLoja = (cliente, param) => {
+    const loja = lojas.obter(lerId(param));
+    if (!loja || loja.cliente_id !== cliente.id) throw naoEncontrado('Loja');
+    return loja;
+  };
+
+  // As rotas de loja devolvem a lista atualizada das lojas do cliente.
+  r.post('/:id/lojas', (req, res) => {
+    const cliente = carregarCliente(req.params.id);
+    lojas.criar({ ...validar(req.body, REGRAS_LOJA), cliente_id: cliente.id });
+    res.status(201).json(lojas.listarDoCliente(cliente.id));
+  });
+
+  r.put('/:id/lojas/:lojaId', (req, res) => {
+    const cliente = carregarCliente(req.params.id);
+    const loja = carregarLoja(cliente, req.params.lojaId);
+    lojas.atualizar(loja.id, validar(req.body, REGRAS_LOJA, { parcial: true }));
+    res.json(lojas.listarDoCliente(cliente.id));
+  });
+
+  r.delete('/:id/lojas/:lojaId', (req, res) => {
+    const cliente = carregarCliente(req.params.id);
+    lojas.remover(carregarLoja(cliente, req.params.lojaId).id);
+    res.json(lojas.listarDoCliente(cliente.id));
   });
 
   r.put('/:id', (req, res) => {

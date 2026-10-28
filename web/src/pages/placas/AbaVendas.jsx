@@ -106,7 +106,7 @@ export function AbaVendas({ visao = 'todas', seletor = null, resumo = null, nova
           </thead>
           <tbody>
             {lista.map((v) => {
-              const nome = v.cliente_nome ?? v.comprador_nome;
+              const nome = v.loja_nome ? `${v.cliente_nome} · ${v.loja_nome}` : (v.cliente_nome ?? v.comprador_nome);
               const dias = diasDesde(v.data_venda);
               return (
                 <tr key={v.id}>

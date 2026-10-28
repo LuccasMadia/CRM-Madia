@@ -5,6 +5,7 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { usePrecoSugeridoPlacas } from '../hooks/usePrecoSugeridoPlacas.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
+import { CampoLoja } from './CampoLoja.jsx';
 import { apenasAtivos } from '../lib/ativos.js';
 import { paraCentavos, centavosParaTexto, formatarDinheiro } from '../lib/dinheiro.js';
 
@@ -27,6 +28,7 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
   const [manual, setManual] = useState(Boolean(linha));
   const [vencimento, setVencimento] = useState(parcela?.vencimento ?? '');
   const [notas, setNotas] = useState(projeto?.notas ?? '');
+  const [lojaId, setLojaId] = useState(projeto?.loja_id ? String(projeto.loja_id) : '');
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const quantidade = Number(quantidadeTexto);
 
@@ -56,7 +58,7 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
       }
       corpo.servicos = [{ tipo: 'placas_nfc', modelo_id: Number(modeloId) || null, quantidade: quantidade || 1, valor_total_centavos: valorCentavos ?? 0 }];
     }
-    Object.assign(corpo, { vencimento, notas });
+    Object.assign(corpo, { vencimento, notas, loja_id: Number(lojaId) || null });
     executar(() => onSalvar(corpo));
   }
 
@@ -66,6 +68,7 @@ export function FormVendaPlacas({ cliente, projeto = null, parcela = null, onSal
 
   return (
     <form onSubmit={enviar} className="form" noValidate>
+      <CampoLoja clienteId={cliente.id} erros={erros} value={lojaId} onChange={(e) => setLojaId(e.target.value)} />
       <Campo rotulo="Modelo da placa" nome="servicos" erros={erros}>
         <select value={modeloId} disabled={entregue} onChange={(e) => setModeloId(e.target.value)}>
           <option value="">Selecione…</option>

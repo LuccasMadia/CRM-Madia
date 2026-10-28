@@ -6,17 +6,18 @@ export const CAMPOS_PROJETO = [
   'mensalidade_ativa', 'mensalidade_valor_centavos', 'mensalidade_dia_vencimento',
   'mensalidade_inicio_modo', 'mensalidade_inicio_data',
   'postou_instagram', 'ficticio', 'servico', 'link_perfil', 'nicho_id',
-  'prototipo_pronto', 'teste_inicio', 'orcamento_id', 'orcamento_vinculado',
+  'prototipo_pronto', 'teste_inicio', 'orcamento_id', 'orcamento_vinculado', 'loja_id',
 ];
 
 // Parcelas avulsas (sem mensalidades) dizem se o projeto já foi pago.
-const SELECT_COM_CLIENTE = `SELECT p.*, c.nome AS cliente_nome, COALESCE(pf.publicar, 0) AS no_portfolio, n.nome AS nicho_nome,
+const SELECT_COM_CLIENTE = `SELECT p.*, c.nome AS cliente_nome, COALESCE(pf.publicar, 0) AS no_portfolio, n.nome AS nicho_nome, l.nome AS loja_nome,
   (SELECT COUNT(*) FROM parcelas pa WHERE pa.projeto_id = p.id AND pa.mensalidade = 0) AS parcelas_total,
   (SELECT COUNT(*) FROM parcelas pa WHERE pa.projeto_id = p.id AND pa.mensalidade = 0 AND pa.pago_em IS NOT NULL) AS parcelas_pagas
   FROM projetos p
   JOIN clientes c ON c.id = p.cliente_id
   LEFT JOIN portfolio pf ON pf.projeto_id = p.id
-  LEFT JOIN nichos n ON n.id = p.nicho_id`;
+  LEFT JOIN nichos n ON n.id = p.nicho_id
+  LEFT JOIN lojas l ON l.id = p.loja_id`;
 
 export function repoProjetos(db) {
   const base = criarRepo(db, 'projetos', CAMPOS_PROJETO);

@@ -52,7 +52,7 @@ describe('Aba Google Meu Negócio', () => {
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
       servico: 'google_meu_negocio', titulo: 'Google Meu Negócio', cliente_id: 1,
       valor_total_centavos: 20000, vencimento: '2026-10-05', mensalidade_ativa: false,
-      link_perfil: 'https://g.page/ana', notas: '',
+      link_perfil: 'https://g.page/ana', notas: '', loja_id: null,
     });
   });
 

@@ -43,7 +43,7 @@ function itensAtencao(projetos, parcelas) {
 }
 
 function LinhaGmn({ projeto, parcelas, acoes, onEditar, onPago }) {
-  const nome = projeto.cliente_nome;
+  const nome = projeto.loja_nome ? `${projeto.cliente_nome} · ${projeto.loja_nome}` : projeto.cliente_nome;
   const espera = diasEsperando(projeto);
   return (
     <tr className={projeto.etapa === 'perdido' ? 'tabela__linha--inativa' : undefined}>

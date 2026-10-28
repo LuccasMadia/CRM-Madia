@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useCarregar } from '../hooks/useCarregar.js';
 import { useFormulario } from '../hooks/useFormulario.js';
 import { useEnvio } from '../hooks/useEnvio.js';
+import { CampoLoja } from './CampoLoja.jsx';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { paraCentavos, centavosParaTexto } from '../lib/dinheiro.js';
@@ -18,6 +19,7 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
     preco_vendido: centavosParaTexto(inicial.preco_vendido_centavos),
     comprador: inicial.cliente_id ? String(inicial.cliente_id) : (inicial.comprador_nome ? 'avulso' : ''),
     comprador_nome: inicial.comprador_nome ?? '',
+    loja_id: inicial.loja_id ? String(inicial.loja_id) : '',
     data_venda: inicial.data_venda ?? hojeISO(),
   });
   const [recebido, setRecebido] = useState(false);
@@ -47,6 +49,7 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
       preco_vendido_centavos: precoVendido,
       cliente_id: compradorAvulso || !valores.comprador ? null : Number(valores.comprador),
       comprador_nome: compradorAvulso ? valores.comprador_nome : null,
+      loja_id: compradorAvulso ? null : Number(valores.loja_id) || null,
       data_venda: valores.data_venda,
       recebido,
     }));
@@ -63,12 +66,13 @@ export function FormPlacaVenda({ inicial = {}, rotuloBotao = 'Salvar', onSalvar 
       <Campo rotulo="Quantidade" nome="quantidade" erros={erros} type="number" min="1" {...campo('quantidade')} />
       <Campo rotulo="Preço vendido (R$)" nome="preco_vendido_centavos" erros={erros} inputMode="decimal" {...campo('preco_vendido')} />
       <Campo rotulo="Comprador" nome="comprador" erros={erros}>
-        <select {...campo('comprador')}>
+        <select {...campo('comprador')} onChange={(e) => setValores((v) => ({ ...v, comprador: e.target.value, loja_id: '' }))}>
           <option value="">Selecione…</option>
           {(clientes ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           <option value="avulso">Comprador avulso (sem cadastro)</option>
         </select>
       </Campo>
+      {!compradorAvulso && <CampoLoja clienteId={valores.comprador} erros={erros} {...campo('loja_id')} />}
       {compradorAvulso && (
         <Campo rotulo="Nome do comprador avulso" nome="comprador_nome" erros={erros} {...campo('comprador_nome')} />
       )}

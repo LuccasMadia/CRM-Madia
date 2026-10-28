@@ -5,6 +5,7 @@ import {
   repoPlacasMontagens, repoPlacasMontagensItens, idsVendasDeProjeto, montadasDisponiveis,
 } from '../repos/placas.js';
 import { repoClientes } from '../repos/clientes.js';
+import { repoLojas, exigirLojaDoCliente } from '../repos/lojas.js';
 import { repoProjetosServicos } from '../repos/servicos.js';
 import { emTransacao } from '../repos/crud.js';
 import { concluirPorRecebimento, avisarRecebimentoDesfeito } from '../repos/tarefas.js';
@@ -41,6 +42,7 @@ const REGRAS_VENDA = {
   quantidade: { tipo: 'inteiro', min: 1 },
   preco_vendido_centavos: { tipo: 'inteiro', obrigatorio: true, min: 0 },
   cliente_id: { tipo: 'inteiro' },
+  loja_id: { tipo: 'inteiro', min: 1 },
   comprador_nome: { tipo: 'texto' },
   data_venda: { tipo: 'data', obrigatorio: true },
 };
@@ -125,7 +127,7 @@ export function rotasPlacas({ db, hoje }) {
     };
   }
 
-  function montarVenda(venda, { modelosTodos = modelos.listar(), clientesTodos = clientes.listar(), deProjeto = idsVendasDeProjeto(db) } = {}) {
+  function montarVenda(venda, { modelosTodos = modelos.listar(), clientesTodos = clientes.listar(), deProjeto = idsVendasDeProjeto(db), lojasTodas = repoLojas(db).listar() } = {}) {
     return {
       ...venda,
       lucro_real_centavos: lucroRealVenda(venda),
@@ -134,6 +136,7 @@ export function rotasPlacas({ db, hoje }) {
       via_projeto: deProjeto.has(venda.id),
       modelo_nome: modelosTodos.find((m) => m.id === venda.modelo_id)?.nome ?? '—',
       cliente_nome: venda.cliente_id ? (clientesTodos.find((c) => c.id === venda.cliente_id)?.nome ?? '—') : null,
+      loja_nome: lojasTodas.find((l) => l.id === venda.loja_id)?.nome ?? null,
     };
   }
 
@@ -379,7 +382,7 @@ export function rotasPlacas({ db, hoje }) {
   });
 
   r.get('/placas/vendas', (req, res) => {
-    const contexto = { modelosTodos: modelos.listar(), clientesTodos: clientes.listar(), deProjeto: idsVendasDeProjeto(db) };
+    const contexto = { modelosTodos: modelos.listar(), clientesTodos: clientes.listar(), deProjeto: idsVendasDeProjeto(db), lojasTodas: repoLojas(db).listar() };
     res.json(vendas.listar().map((v) => montarVenda(v, contexto)));
   });
 
@@ -393,6 +396,7 @@ export function rotasPlacas({ db, hoje }) {
     if (temCliente && !clientes.obter(dados.cliente_id)) {
       throw new ErroValidacao([{ campo: 'cliente_id', mensagem: 'Cliente não encontrado' }]);
     }
+    exigirLojaDoCliente(db, dados.loja_id, dados.cliente_id);
     const modelo = modelos.obter(dados.modelo_id);
     if (!modelo) throw new ErroValidacao([{ campo: 'modelo_id', mensagem: 'Modelo não encontrado' }]);
 
@@ -402,6 +406,7 @@ export function rotasPlacas({ db, hoje }) {
       quantidade: dados.quantidade ?? 1,
       preco_vendido_centavos: dados.preco_vendido_centavos,
       cliente_id: temCliente ? dados.cliente_id : null,
+      loja_id: dados.loja_id ?? null,
       comprador_nome: temNome ? dados.comprador_nome.trim() : null,
       data_venda: dados.data_venda,
       recebido_em: req.body.recebido === true ? dados.data_venda : null,
@@ -418,6 +423,10 @@ export function rotasPlacas({ db, hoje }) {
     const atual = vendas.obter(id);
     if (!atual) throw naoEncontrado('Venda');
     const dados = validar(req.body, REGRAS_VENDA, { parcial: true });
+    const clienteFinal = 'cliente_id' in dados ? dados.cliente_id : atual.cliente_id;
+    // Trocar de cliente sem escolher loja solta a loja antiga, que é do outro cliente.
+    dados.loja_id = 'loja_id' in dados ? dados.loja_id : (clienteFinal === atual.cliente_id ? atual.loja_id : null);
+    exigirLojaDoCliente(db, dados.loja_id, clienteFinal);
     if (dados.quantidade !== undefined || dados.modelo_id !== undefined) {
       const modeloId = dados.modelo_id ?? atual.modelo_id;
       const livres = Math.max(0, montadasDisponiveis(db, modeloId, { ignorarVendaId: id }));
@@ -574,7 +583,7 @@ export function rotasPlacas({ db, hoje }) {
     const e = lerEstoque();
     const { lotes: lotesTodos, vendas: vendasTodas, itensModelo: todosItens, avarias: avariasTodas } = e;
     const estoquePorMaterial = new Map(materiaisTodos.map((m) => [m.id, estoqueDe(m.id, e)]));
-    const contextoVenda = { modelosTodos, clientesTodos: clientes.listar(), deProjeto: idsVendasDeProjeto(db) };
+    const contextoVenda = { modelosTodos, clientesTodos: clientes.listar(), deProjeto: idsVendasDeProjeto(db), lojasTodas: repoLojas(db).listar() };
     const aReceber = vendasTodas
       .filter((v) => !v.recebido_em && !contextoVenda.deProjeto.has(v.id))
       .map((v) => montarVenda(v, contextoVenda))
