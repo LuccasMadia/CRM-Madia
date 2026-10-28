@@ -1,4 +1,8 @@
 import PDFDocument from 'pdfkit';
+import { fileURLToPath } from 'node:url';
+
+const LOGO = fileURLToPath(new URL('./marca/logo-mark.png', import.meta.url));
+const ALICE = fileURLToPath(new URL('./marca/Alice-Regular.ttf', import.meta.url));
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const dinheiro = (centavos) => moeda.format((centavos ?? 0) / 100);
@@ -51,12 +55,12 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
 }
 
 const TURQUESA = '#2dd4bf';
-const ESCURO = '#1a1a1a';
-const CINZA = '#666666';
-const CINZA_CLARO = '#777777';
-const LINHA = '#eeeeee';
-const COMBO = '#0f9e8c';
-const FUNDO_TOTAL = '#f3fbfa';
+const ESCURO = '#1e2f45';
+const CINZA = '#5f6b7a';
+const CINZA_CLARO = '#7a8594';
+const LINHA = '#e6ecef';
+const COMBO = '#1fb5a3';
+const FUNDO_TOTAL = '#eff9f8';
 
 export function gerarPdf(modelo) {
   return new Promise((resolve, reject) => {
@@ -75,13 +79,14 @@ export function gerarPdf(modelo) {
 
     // Cabeçalho
     const topo = margem;
-    doc.font('Helvetica-Bold').fontSize(18).fillColor(ESCURO).text(modelo.cabecalho.marca, esq, topo, { lineBreak: false });
-    doc.font('Helvetica').fontSize(10.5).fillColor(CINZA).text(modelo.cabecalho.sub, esq, topo + 24, { lineBreak: false });
-    doc.font('Helvetica').fontSize(10.5).fillColor(CINZA);
+    doc.image(LOGO, esq, topo, { width: 150 });
+    const yMarca = topo + 50;
+    doc.font(ALICE).fontSize(20).fillColor(ESCURO).text(modelo.cabecalho.marca, esq, yMarca, { lineBreak: false });
+    doc.font('Helvetica').fontSize(10.5).fillColor(CINZA).text(modelo.cabecalho.sub, esq, yMarca + 24, { lineBreak: false });
     [modelo.cabecalho.numero, modelo.cabecalho.data, modelo.cabecalho.validade].forEach((t, k) => {
-      doc.text(t, esq, topo + k * 14, { width: largura, align: 'right', lineBreak: false });
+      doc.text(t, esq, yMarca - 4 + k * 14, { width: largura, align: 'right', lineBreak: false });
     });
-    const yLinha = topo + 50;
+    const yLinha = yMarca + 44;
     doc.lineWidth(3).strokeColor(TURQUESA).moveTo(esq, yLinha).lineTo(dir, yLinha).stroke();
 
     // Para
