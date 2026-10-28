@@ -72,6 +72,11 @@ describe('/api/orcamentos', () => {
     expect(res.totais.desconto_centavos).toBe(18300);
     expect(res.totais.total_mensal_centavos).toBe(15000);
 
+    // 1º mês grátis só marca o item; o total mensal continua
+    res = (await ctx.http.put(`/api/orcamentos/${orc.id}/itens/${res.itens[3].id}`).send({ primeiro_mes_gratis: true }).expect(200)).body;
+    expect(res.itens[3].primeiro_mes_gratis).toBe(1);
+    expect(res.totais.total_mensal_centavos).toBe(15000);
+
     // outro serviço obrigatório não duplica a hospedagem
     const agenda = await porNome('Sistema de agendamento');
     res = (await addItem(orc, { servico_id: agenda.id }).expect(201)).body;

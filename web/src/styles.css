@@ -695,7 +695,8 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .orcamento__desconto .campo { width: 110px; }
 .orcamento__campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 720px; }
 .orcamento__campos .campo:last-child { grid-column: 1 / -1; }
-.orcamento__campos input, .orcamento__campos textarea { width: 100%; min-width: 0; }
+.orcamento__campos input, .orcamento__campos textarea, .orcamento__campos select { width: 100%; min-width: 0; }
+.orcamento__aviso-parcelado { grid-column: 1 / -1; margin: 0; font-size: 0.9rem; }
 .orcamento__gerou { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 20px; color: var(--texto-suave); }
 .orcamento__gerou a.etiqueta:hover { text-decoration: none; filter: brightness(1.15); }
 .orcamento__vinculo { margin: 0 0 16px; font-size: 0.9rem; }

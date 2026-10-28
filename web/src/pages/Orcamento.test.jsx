@@ -5,6 +5,7 @@ import { Orcamento } from './Orcamento.jsx';
 import { mockApi } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
 import { definirValoresOcultos } from '../lib/privacidade.js';
+import { Notificacoes } from '../components/Notificacoes.jsx';
 
 const tabela = {
   servicos: [
@@ -88,6 +89,42 @@ describe('Orcamento', () => {
     expect(within(t).getByText('Total por mês').closest('div')).toHaveTextContent(/R\$\s150,00\/mês/);
   });
 
+  it('pagamento por lista: parcelado avisa da taxa e "Outro" pede descrição', async () => {
+    const parcelado = { ...filinto, pagamento: 'Parcelado no cartão' };
+    const { chamadas } = mockApi(rotas({ 'PUT /orcamentos/7': parcelado }));
+    abrir();
+    const user = userEvent.setup();
+    const pagamento = await screen.findByRole('combobox', { name: 'Forma de pagamento' });
+    await user.selectOptions(pagamento, 'Parcelado no cartão');
+    expect(await screen.findByText(/será cobrada a taxa da maquininha/)).toBeInTheDocument();
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ pagamento: 'Parcelado no cartão' });
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Prazo' }), 'Outro');
+    const descricao = screen.getByLabelText('Prazo: descreva');
+    await user.type(descricao, '20 dias úteis');
+    await user.tab();
+    expect(chamadas.filter((c) => c.metodo === 'PUT').at(-1).corpo).toEqual({ prazo: '20 dias úteis' });
+  });
+
+  it('valor fora da lista abre em "Outro" com o texto', async () => {
+    mockApi(rotas({ 'GET /orcamentos/7': { ...filinto, pagamento: 'Permuta' } }));
+    abrir();
+    expect(await screen.findByRole('combobox', { name: 'Forma de pagamento' })).toHaveValue('__outro');
+    expect(screen.getByLabelText('Forma de pagamento: descreva')).toHaveValue('Permuta');
+  });
+
+  it('Salvar espera o campo em edição gravar e avisa', async () => {
+    mockApi(rotas({ 'PUT /orcamentos/7': { ...filinto, observacao: 'oi' } }));
+    const pendentes = segurarEscritas();
+    renderizar(<><Orcamento /><Notificacoes /></>, { rota: '/orcamentos/7', padrao: '/orcamentos/:id' });
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Observação'), 'oi');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(screen.queryByText('Orçamento salvo')).toBeNull();
+    await act(async () => pendentes[0].soltar());
+    expect(await screen.findByText('Orçamento salvo')).toBeInTheDocument();
+  });
+
   it('adiciona serviço da tabela e re-renderiza com a resposta', async () => {
     const depois = { ...vazio, itens: [item({ id: 40, servico_id: 3, nome: 'Cardápio digital B2B', valor_unico_centavos: 150000 })],
       totais: { ...vazio.totais, subtotal_unico_centavos: 150000, total_unico_centavos: 150000 } };
@@ -144,6 +181,18 @@ describe('Orcamento', () => {
     await user.tab();
     await vi.waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')).toBeTruthy());
     expect(chamadas.find((c) => c.metodo === 'PUT')).toMatchObject({ caminho: '/orcamentos/7/itens/33', corpo: { valor_unico_centavos: 160000 } });
+  });
+
+  it('marca o 1º mês grátis só em item mensal', async () => {
+    const { chamadas } = mockApi(rotas({ 'PUT /orcamentos/7/itens/34': filinto }));
+    abrir();
+    const user = userEvent.setup();
+    const marcar = await screen.findAllByRole('checkbox', { name: /1º mês grátis/ });
+    expect(marcar).toHaveLength(1);
+    await user.click(marcar[0]);
+    await vi.waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')).toMatchObject({
+      caminho: '/orcamentos/7/itens/34', corpo: { primeiro_mes_gratis: true },
+    }));
   });
 
   it('valor inválido no item não envia e mostra o erro', async () => {

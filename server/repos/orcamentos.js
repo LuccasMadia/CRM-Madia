@@ -66,7 +66,7 @@ export function repoOrcamentos(db) {
 export function repoOrcamentoItens(db) {
   const base = criarRepo(db, 'orcamento_itens', [
     'orcamento_id', 'servico_id', 'placa_modelo_id', 'nome', 'frase', 'quantidade',
-    'valor_unico_centavos', 'valor_mensal_centavos', 'ordem',
+    'valor_unico_centavos', 'valor_mensal_centavos', 'primeiro_mes_gratis', 'ordem',
   ]);
   return {
     ...base,

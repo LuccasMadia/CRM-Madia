@@ -39,6 +39,7 @@ const REGRAS_ITEM = {
   quantidade: { tipo: 'inteiro', min: 1, padrao: 1 },
   valor_unico_centavos: { tipo: 'inteiro', min: 0 },
   valor_mensal_centavos: { tipo: 'inteiro', min: 0 },
+  primeiro_mes_gratis: { tipo: 'bool' },
 };
 
 const REGRAS_ENTRADA = {

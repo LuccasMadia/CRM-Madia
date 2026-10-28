@@ -32,6 +32,7 @@ describe('modeloDocumento', () => {
         { nome: 'Cardápio digital B2B', frase: 'Catálogo para revendedores, com pedido pelo WhatsApp', valor: 'R$ 1.500,00' },
       ],
       descontos: [{ rotulo: 'Desconto combo (10%)', valor: '- R$ 183,00' }],
+      brindes: [],
       total_unico: 'R$ 1.647,00',
       total_sem_desconto: 'R$ 1.830,00',
       mensalidades: [{ nome: 'Hospedagem e suporte do cardápio', valor: 'R$ 150,00/mês' }],
@@ -72,6 +73,19 @@ describe('modeloDocumento', () => {
     expect(m.rodape).toEqual([
       'Forma de pagamento: a combinar · Prazo: a combinar', '@madia.consultoria', 'Entrega em 5 dias',
     ]);
+  });
+
+  it('parcelado avisa da taxa da maquininha no rodapé', () => {
+    const m = norm(modeloDocumento({ ...filinto, pagamento: 'Parcelado no cartão' }, { whatsapp: null }));
+    expect(m.rodape).toContain('Pagamento parcelado: será cobrada a taxa da maquininha.');
+    expect(norm(modeloDocumento(filinto, { whatsapp: null })).rodape.join()).not.toMatch(/maquininha/);
+  });
+
+  it('item mensal com 1º mês grátis vira linha com o valor riscado; os totais não mudam', () => {
+    const gestao = { nome: 'Gestão do Google Meu Negócio', frase: '', quantidade: 1, valor_unico_centavos: 0, valor_mensal_centavos: 15000, primeiro_mes_gratis: 1 };
+    const m = norm(modeloDocumento({ ...filinto, itens: [...filinto.itens, gestao] }, { whatsapp: null }));
+    expect(m.brindes).toEqual([{ rotulo: 'Gestão do Google Meu Negócio — 1º mês incluso', riscado: 'R$ 150,00', valor: 'grátis' }]);
+    expect(m.total_unico).toBe('R$ 1.647,00');
   });
 });
 

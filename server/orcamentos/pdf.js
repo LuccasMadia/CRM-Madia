@@ -25,6 +25,8 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
     `Forma de pagamento: ${orcamento.pagamento} · Prazo: ${orcamento.prazo}`,
     whatsapp ? `WhatsApp ${whatsapp} · @madia.consultoria` : '@madia.consultoria',
   ];
+  // O mesmo teste está em web/src/pages/Orcamento.jsx, que mostra o aviso na tela.
+  if (/parcel/i.test(orcamento.pagamento)) rodape.push('Pagamento parcelado: será cobrada a taxa da maquininha.');
   if (orcamento.observacao) rodape.push(orcamento.observacao);
   return {
     cabecalho: {
@@ -44,6 +46,10 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
       totais.desconto_combo_centavos > 0 && { rotulo: `Desconto combo (${orcamento.desconto_pct}%)`, valor: `- ${dinheiro(totais.desconto_combo_centavos)}` },
       totais.desconto_valor_centavos > 0 && { rotulo: 'Desconto', valor: `- ${dinheiro(totais.desconto_valor_centavos)}` },
     ].filter(Boolean),
+    // 1º mês grátis: valor do mês riscado, sem mexer nos totais.
+    brindes: orcamento.itens
+      .filter((i) => i.primeiro_mes_gratis && i.valor_mensal_centavos > 0)
+      .map((i) => ({ rotulo: `${i.nome} — 1º mês incluso`, riscado: dinheiro(i.valor_mensal_centavos), valor: 'grátis' })),
     // Só mensalidades: sem a linha "R$ 0,00" pago uma vez. Orçamento vazio mantém o R$ 0,00.
     total_unico: totais.total_unico_centavos === 0 && totais.mensalidades.length > 0
       ? null : dinheiro(totais.total_unico_centavos),
@@ -100,7 +106,7 @@ export function gerarPdf(modelo) {
     };
 
     // Itens
-    const linhaItem = ({ nome, frase, valor }, cor = ESCURO) => {
+    const linhaItem = ({ nome, frase, valor, riscado }, cor = ESCURO) => {
       doc.font('Helvetica').fontSize(12);
       const hNome = doc.heightOfString(nome, { width: larguraNome });
       doc.fontSize(10.5);
@@ -110,11 +116,17 @@ export function gerarPdf(modelo) {
       doc.font('Helvetica').fontSize(12).fillColor(cor).text(nome, esq, y + 7, { width: larguraNome });
       if (frase) doc.fontSize(10.5).fillColor(CINZA_CLARO).text(frase, esq, y + 7 + hNome, { width: larguraNome });
       doc.fontSize(12).fillColor(cor).text(valor, dir - colValor, y + 7, { width: colValor, align: 'right', lineBreak: false });
+      if (riscado) {
+        // termina 8pt antes do "grátis", alinhado à direita
+        const fimRiscado = dir - doc.widthOfString(valor) - 8;
+        doc.fillColor(CINZA).text(riscado, fimRiscado - colValor, y + 7, { width: colValor, align: 'right', lineBreak: false, strike: true });
+      }
       y += altura;
       doc.lineWidth(1).strokeColor(LINHA).moveTo(esq, y).lineTo(dir, y).stroke();
     };
     modelo.itens.forEach((i) => linhaItem(i));
     modelo.descontos.forEach((d) => linhaItem({ nome: d.rotulo, frase: '', valor: d.valor }, COMBO));
+    modelo.brindes.forEach((b) => linhaItem({ nome: b.rotulo, frase: '', valor: b.valor, riscado: b.riscado }, COMBO));
 
     // Caixa de total
     y += 14;

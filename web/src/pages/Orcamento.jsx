@@ -50,6 +50,40 @@ function CampoAoSair({ id, rotulo, rotuloAcessivel, texto, original, converter =
   );
 }
 
+const OPCOES_PAGAMENTO = ['a combinar', 'À vista no Pix', '50% de entrada + 50% na entrega', 'Parcelado no cartão'];
+const OPCOES_PRAZO = ['a combinar', '7 dias', '15 dias', '30 dias', '45 dias', '60 dias'];
+const OUTRO = '__outro';
+// O mesmo teste está em server/orcamentos/pdf.js, que põe o aviso no PDF.
+const AVISO_PARCELADO = 'Pagamento parcelado: será cobrada a taxa da maquininha.';
+const ehParcelado = (t) => /parcel/i.test(t ?? '');
+
+// Lista de opções prontas; "Outro" abre um campo para descrever o que não se encaixa.
+function CampoOpcoes({ nome, rotulo, opcoes, valor, onSalvar }) {
+  const [outro, setOutro] = useState(!opcoes.includes(valor));
+  function escolher(v) {
+    if (v === OUTRO) return setOutro(true);
+    setOutro(false);
+    return v !== valor && onSalvar(v);
+  }
+  return (
+    <>
+      <Campo rotulo={rotulo} nome={nome}>
+        <select value={outro ? OUTRO : valor} onChange={(e) => escolher(e.target.value)}>
+          {opcoes.map((o) => <option key={o} value={o}>{o}</option>)}
+          <option value={OUTRO}>Outro</option>
+        </select>
+      </Campo>
+      {outro && (
+        <CampoAoSair
+          key={`${nome}-${valor}`} id={`orcamento-${nome}-outro`} rotulo={`${rotulo}: descreva`} autoFocus
+          texto={opcoes.includes(valor) ? '' : valor} original={valor}
+          converter={comoObrigatorio('Descreva ou escolha uma opção da lista')} onSalvar={onSalvar}
+        />
+      )}
+    </>
+  );
+}
+
 function ValorOculto({ rotulo, centavos }) {
   return (
     <div className="campo">
@@ -70,6 +104,7 @@ export function Orcamento() {
   // e os botões ficam travados enquanto houver qualquer pedido em andamento.
   const ultimoPedido = useRef(0);
   const [emAndamento, setEmAndamento] = useState(0);
+  const pendentes = useRef(new Set());
   const [falha, setFalha] = useState(null);
   const ocupado = emAndamento > 0;
   const [conferindo, setConferindo] = useState(false);
@@ -87,7 +122,14 @@ export function Orcamento() {
   const hospedagem = tabela?.servicos.find((s) => s.tipo === 'hospedagem' && s.ativo);
   const erroEnvio = falha && (falha.erros?.length ? { message: falha.erros.map((e) => e.mensagem).join('\n') } : falha);
 
-  async function rodar(fn) {
+  function rodar(fn) {
+    const p = executar(fn);
+    pendentes.current.add(p);
+    p.finally(() => pendentes.current.delete(p));
+    return p;
+  }
+
+  async function executar(fn) {
     setFalha(null);
     setEmAndamento((n) => n + 1);
     try {
@@ -117,6 +159,12 @@ export function Orcamento() {
   };
   const salvar = (campos) => aplicar(`/orcamentos/${id}`, { method: 'PUT', body: campos });
   const adicionarItem = (corpo) => aplicar(`/orcamentos/${id}/itens`, { method: 'POST', body: corpo });
+
+  // Os campos já salvam ao sair (o clique no botão tira o foco do campo): aqui só espera os envios terminarem.
+  async function salvarTudo() {
+    const respostas = await Promise.all([...pendentes.current]);
+    if (!respostas.includes(undefined)) notificar('Orçamento salvo');
+  }
 
   function duplicar() {
     rodar(async () => {
@@ -209,8 +257,10 @@ export function Orcamento() {
               {Object.entries(ROTULO_SITUACAO).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
             </select>
           </Campo>
+          {/* Não trava com ocupado: o clique que tira o foco de um campo dispara o envio antes do onClick. */}
+          <button type="button" className="btn btn--primario" onClick={salvarTudo}>Salvar</button>
           <a
-            className={`btn btn--primario${ocupado ? ' btn--desabilitado' : ''}`} href={`/api/orcamentos/${id}/pdf`} download
+            className={`btn${ocupado ? ' btn--desabilitado' : ''}`} href={`/api/orcamentos/${id}/pdf`} download
             aria-disabled={ocupado || undefined} onClick={(e) => { if (ocupado) e.preventDefault(); }}
           >Baixar PDF</a>
           <button type="button" className="btn" onClick={duplicar} disabled={ocupado}>Duplicar</button>
@@ -250,8 +300,9 @@ export function Orcamento() {
         <div className="orcamento__campos">
           <CampoAoSair key={`data-${orcamento.data}`} {...campo('data')} rotulo="Data" type="date" texto={orcamento.data} converter={comoObrigatorio('Informe a data')} />
           <CampoAoSair key={`validade_dias-${orcamento.validade_dias}`} {...campo('validade_dias')} rotulo="Validade (dias)" inputMode="numeric" texto={String(orcamento.validade_dias)} converter={comoInteiro(1)} />
-          <CampoAoSair key={`pagamento-${orcamento.pagamento}`} {...campo('pagamento')} rotulo="Forma de pagamento" texto={orcamento.pagamento} />
-          <CampoAoSair key={`prazo-${orcamento.prazo}`} {...campo('prazo')} rotulo="Prazo" texto={orcamento.prazo} />
+          <CampoOpcoes key={`pagamento-${id}`} nome="pagamento" rotulo="Forma de pagamento" opcoes={OPCOES_PAGAMENTO} valor={orcamento.pagamento} onSalvar={campo('pagamento').onSalvar} />
+          <CampoOpcoes key={`prazo-${id}`} nome="prazo" rotulo="Prazo" opcoes={OPCOES_PRAZO} valor={orcamento.prazo} onSalvar={campo('prazo').onSalvar} />
+          {ehParcelado(orcamento.pagamento) && <p className="vazio orcamento__aviso-parcelado">{`${AVISO_PARCELADO} Esse aviso sai no PDF.`}</p>}
           <CampoAoSair key={`observacao-${orcamento.observacao}`} {...campo('observacao')} rotulo="Observação" texto={orcamento.observacao} multilinha rows={3} />
         </div>
       </div>
@@ -506,6 +557,12 @@ function ItemLinha({ item, ocupado, onSalvar, onRemover }) {
       <button type="button" className="btn btn--pequeno btn--perigo orcamento__remover" aria-label={`Remover ${item.nome}`} disabled={ocupado} onClick={onRemover}>Remover</button>
       <div className="orcamento__frase">
         <CampoAoSair key={`frase-${item.frase}`} {...campo('frase')} rotulo="Frase" rotuloAcessivel={`Frase de ${item.nome}`} texto={item.frase} />
+        {item.valor_mensal_centavos > 0 && (
+          <label className="campo--check">
+            <input type="checkbox" checked={!!item.primeiro_mes_gratis} disabled={ocupado} onChange={(e) => onSalvar({ primeiro_mes_gratis: e.target.checked })} />
+            1º mês grátis (sai riscado no PDF)
+          </label>
+        )}
       </div>
     </li>
   );
