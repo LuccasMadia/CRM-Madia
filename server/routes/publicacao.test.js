@@ -22,7 +22,7 @@ describe('configuração', () => {
     await ctx.http.put('/api/config').send({ portfolio_repo_path: repo }).expect(200);
     expect((await ctx.http.get('/api/config')).body).toEqual({
       portfolio_repo_path: repo,
-      preco_servico_google_meu_negocio_centavos: 0,
+      preco_servico_google_meu_negocio_centavos: 25000,
     });
   });
 
@@ -36,10 +36,10 @@ describe('configuração', () => {
     });
   });
 
-  it('sem configurar ainda, os preços padrão de serviço vêm como 0', async () => {
+  it('sem configurar ainda, o preço padrão da configuração do GMN vem como 25000', async () => {
     const res = await ctx.http.get('/api/config').expect(200);
     expect(res.body).toMatchObject({
-      preco_servico_google_meu_negocio_centavos: 0,
+      preco_servico_google_meu_negocio_centavos: 25000,
     });
   });
 

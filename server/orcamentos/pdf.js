@@ -37,7 +37,7 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
       validade: `Válido por ${orcamento.validade_dias} dias`,
     },
     para: orcamento.cliente_nome ?? '',
-    itens: orcamento.itens.map((i) => ({
+    itens: orcamento.itens.filter((i) => !i.config_inclusa).map((i) => ({
       nome: i.quantidade > 1 ? `${i.nome} × ${i.quantidade}` : i.nome,
       frase: i.frase ?? '',
       valor: valorDoItem(i),
@@ -46,10 +46,15 @@ export function modeloDocumento(orcamento, { whatsapp } = {}) {
       totais.desconto_combo_centavos > 0 && { rotulo: `Desconto combo (${orcamento.desconto_pct}%)`, valor: `- ${dinheiro(totais.desconto_combo_centavos)}` },
       totais.desconto_valor_centavos > 0 && { rotulo: 'Desconto', valor: `- ${dinheiro(totais.desconto_valor_centavos)}` },
     ].filter(Boolean),
-    // 1º mês grátis: valor do mês riscado, sem mexer nos totais.
-    brindes: orcamento.itens
-      .filter((i) => i.primeiro_mes_gratis && i.valor_mensal_centavos > 0)
-      .map((i) => ({ rotulo: `${i.nome} — 1º mês incluso`, riscado: dinheiro(i.valor_mensal_centavos), valor: 'grátis' })),
+    // Brindes: valor cheio riscado e "grátis", sem mexer nos totais.
+    brindes: [
+      ...orcamento.itens
+        .filter((i) => i.config_inclusa)
+        .map((i) => ({ rotulo: `${i.nome} — inclusa na gestão (mínimo de 3 meses)`, riscado: dinheiro(i.valor_cheio_centavos), valor: 'grátis' })),
+      ...orcamento.itens
+        .filter((i) => i.primeiro_mes_gratis && i.valor_mensal_centavos > 0)
+        .map((i) => ({ rotulo: `${i.nome} — 1º mês incluso`, riscado: dinheiro(i.valor_mensal_centavos), valor: 'grátis' })),
+    ],
     // Só mensalidades: sem a linha "R$ 0,00" pago uma vez. Orçamento vazio mantém o R$ 0,00.
     total_unico: totais.total_unico_centavos === 0 && totais.mensalidades.length > 0
       ? null : dinheiro(totais.total_unico_centavos),

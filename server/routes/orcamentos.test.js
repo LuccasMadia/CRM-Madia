@@ -84,6 +84,17 @@ describe('/api/orcamentos', () => {
     expect(res.itens).toHaveLength(5);
   });
 
+  it('configuração do GMN sai inclusa (valor 0, cheio guardado) quando o orçamento tem a gestão', async () => {
+    definirConfig(ctx.db, 'preco_servico_google_meu_negocio_centavos', '25000');
+    const orc = await novoOrcamento();
+    let res = (await addItem(orc, { servico_id: (await porTipo('gmn_config')).id }).expect(201)).body;
+    expect(res.totais.total_unico_centavos).toBe(25000);
+    res = (await addItem(orc, { servico_id: (await porNome('Gestão do Google Meu Negócio')).id }).expect(201)).body;
+    expect(res.itens[0]).toMatchObject({ valor_unico_centavos: 0, valor_cheio_centavos: 25000, config_inclusa: true });
+    expect(res.totais.total_unico_centavos).toBe(0);
+    expect(res.totais.total_mensal_centavos).toBe(15000);
+  });
+
   it('mudar a quantidade da placa recalcula o preço; valor explícito vence', async () => {
     const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Redonda', preco_venda_centavos: 8000, itens: [] }).expect(201)).body;
     const orc = await novoOrcamento();

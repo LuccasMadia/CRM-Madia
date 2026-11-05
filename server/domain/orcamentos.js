@@ -58,7 +58,7 @@ export function destinosDoItem(it) {
 export function destinoPadrao(it) {
   const unico = num(it.valor_unico_centavos) > 0;
   const mensal = num(it.valor_mensal_centavos) > 0;
-  if (!unico && !mensal) return 'nenhum';
+  if (!unico && !mensal) return it.config_inclusa ? 'gmn' : 'nenhum'; // config inclusa na gestão ainda cria o projeto
   // Item livre só mensal costuma ser manutenção do site; o da tabela é a gestão do GMN.
   if (!unico && it.tipo_servico === 'comum') return 'mensal_gmn';
   if (!unico && it.tipo_servico == null) return 'mensal_site';

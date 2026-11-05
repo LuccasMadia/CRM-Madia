@@ -42,7 +42,7 @@ async function orcamentoCompleto() {
 describe('POST /orcamentos/:id/aceitar', () => {
   it('cria site, mensalidades, GMN e venda de placa com o desconto dividido e marca aceito', async () => {
     const orc = await orcamentoCompleto();
-    expect(orc.totais).toMatchObject({ subtotal_unico_centavos: 139000, desconto_centavos: 13900, total_unico_centavos: 125100 });
+    expect(orc.totais).toMatchObject({ subtotal_unico_centavos: 114000, desconto_centavos: 11400, total_unico_centavos: 102600 });
     const cardapio = itemDe(orc, 'Cardápio / catálogo digital');
     const gmn = itemDe(orc, 'Configuração do Google Meu Negócio');
     const res = (await aceitar(orc, [
@@ -68,15 +68,11 @@ describe('POST /orcamentos/:id/aceitar', () => {
     expect(categorias.map((c) => c.nome)).toEqual(['Site']);
 
     expect(google).toMatchObject({
-      servico: 'google_meu_negocio', etapa: 'andamento', valor_total_centavos: 22500, orcamento_id: orc.id,
+      servico: 'google_meu_negocio', etapa: 'andamento', valor_total_centavos: 0, orcamento_id: orc.id,
       mensalidade_ativa: 1, mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 21,
       mensalidade_inicio_modo: 'data', mensalidade_inicio_data: '2026-10-21', data_inicio: '2026-10-21',
     });
-    expect(parcelasDe(google.id)).toEqual([
-      { descricao: 'Parcela 1/3', valor_centavos: 7500, vencimento: '2026-11-01' },
-      { descricao: 'Parcela 2/3', valor_centavos: 7500, vencimento: '2026-12-01' },
-      { descricao: 'Parcela 3/3', valor_centavos: 7500, vencimento: '2027-01-01' },
-    ]);
+    expect(parcelasDe(google.id)).toEqual([]); // configuração inclusa na gestão: nada a parcelar
 
     const [venda] = vendasDo();
     expect(venda).toMatchObject({
@@ -84,7 +80,7 @@ describe('POST /orcamentos/:id/aceitar', () => {
       cliente_id: cliente.id, data_venda: '2026-10-21', recebido_em: null, quantidade_montada: 0, orcamento_id: orc.id,
     });
     // a soma do que foi criado bate com o total do orçamento
-    expect(site.valor_total_centavos + google.valor_total_centavos + venda.preco_vendido_centavos * venda.quantidade).toBe(125100);
+    expect(site.valor_total_centavos + google.valor_total_centavos + venda.preco_vendido_centavos * venda.quantidade).toBe(102600);
 
     expect(res.gerados).toEqual({
       projetos: [
@@ -390,7 +386,7 @@ describe('aceite vinculando a um projeto que já existe', () => {
       { item_id: itemDe(orc, 'Configuração do Google Meu Negócio').id, destino: 'gmn', projeto_id: gmn.id },
     ]).expect(200);
     expect(projeto(existente.id)).toMatchObject({ etapa: 'andamento', valor_total_centavos: 81000, orcamento_vinculado: 1 });
-    expect(projeto(gmn.id)).toMatchObject({ etapa: 'entregue', valor_total_centavos: 22500, orcamento_id: orc.id });
+    expect(projeto(gmn.id)).toMatchObject({ etapa: 'entregue', valor_total_centavos: 0, orcamento_id: orc.id });
     expect(parcelasDe(existente.id)).toEqual([]);
     expect(projetosDo()).toHaveLength(2);
   });

@@ -552,7 +552,9 @@ function ItemLinha({ item, ocupado, onSalvar, onRemover }) {
       {item.tipo_servico === 'placa' && (
         <CampoAoSair key={`quantidade-${item.quantidade}`} {...campo('quantidade')} rotulo="Qtd." rotuloAcessivel={`Quantidade de ${item.nome}`} inputMode="numeric" texto={String(item.quantidade)} converter={comoInteiro(1)} />
       )}
-      {dinheiro('valor_unico_centavos', 'Valor único (R$)', 'Valor único')}
+      {item.config_inclusa
+        ? <p className="vazio orcamento__inclusa">{`Inclusa na gestão (mínimo de 3 meses): ${ocultos ? 'R$ •••' : formatarDinheiro(item.valor_cheio_centavos)} riscado no PDF`}</p>
+        : dinheiro('valor_unico_centavos', 'Valor único (R$)', 'Valor único')}
       {dinheiro('valor_mensal_centavos', 'Por mês (R$)', 'Valor mensal')}
       <button type="button" className="btn btn--pequeno btn--perigo orcamento__remover" aria-label={`Remover ${item.nome}`} disabled={ocupado} onClick={onRemover}>Remover</button>
       <div className="orcamento__frase">

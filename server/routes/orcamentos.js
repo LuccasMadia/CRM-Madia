@@ -126,12 +126,19 @@ export function rotasOrcamentos({ db, hoje }) {
     'SELECT 1 FROM projetos WHERE orcamento_id = ?1 UNION ALL SELECT 1 FROM placas_vendas WHERE orcamento_id = ?1 LIMIT 1',
   ).get(id);
 
-  const itensDoOrcamento = (id) =>
-    db.prepare(
+  // Quem contrata a gestão do GMN (item da tabela só mensal; mínimo 3 meses) não paga a configuração: ela sai com
+  // valor 0 e config_inclusa, e o preço cheio fica em valor_cheio_centavos para o PDF riscar.
+  const itensDoOrcamento = (id) => {
+    const lista = db.prepare(
       `SELECT oi.*, ts.tipo AS tipo_servico
          FROM orcamento_itens oi LEFT JOIN tabela_servicos ts ON ts.id = oi.servico_id
         WHERE oi.orcamento_id = ? ORDER BY oi.ordem, oi.id`,
     ).all(id).map((i) => ({ ...i }));
+    const temGestao = lista.some((i) => i.tipo_servico === 'comum' && !(i.valor_unico_centavos > 0) && i.valor_mensal_centavos > 0);
+    if (!temGestao) return lista;
+    return lista.map((i) => (i.tipo_servico === 'gmn_config' && i.valor_unico_centavos > 0
+      ? { ...i, valor_cheio_centavos: i.valor_unico_centavos, valor_unico_centavos: 0, config_inclusa: true } : i));
+  };
 
   // Há item de serviço com hospedagem opcional e nenhum item de hospedagem.
   function sugerirHospedagem(id) {
