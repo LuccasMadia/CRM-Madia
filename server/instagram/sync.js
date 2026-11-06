@@ -104,6 +104,22 @@ async function executar({ db, dataDir, fetch, agora, sessao, vigente }) {
     desvincular(db, id);
   }
 
+  // Posts mais antigos que a janela nunca voltam na listagem; para saber se o
+  // Lucca os apagou no Instagram, pergunta por id. Só "objeto não existe" remove.
+  if (desde && !respostaSuspeita) {
+    const antigas = db.prepare('SELECT id FROM instagram_midias WHERE removido = 0 AND publicado_em < ?').all(desde);
+    for (const { id } of antigas) {
+      try {
+        await ig.midia(id);
+      } catch (erro) {
+        if (erro.code === 100 && (erro.subcode === 33 || /does not exist/i.test(erro.message))) {
+          db.prepare('UPDATE instagram_midias SET removido = 1 WHERE id = ?').run(id);
+          desvincular(db, id);
+        }
+      }
+    }
+  }
+
   await baixarCapasPendentes(db, dataDir, fetch, ig, vistas);
   ligarPublicados(db);
   for (const midia of novas) vincularAutomatico(db, midia);
