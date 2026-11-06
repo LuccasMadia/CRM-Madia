@@ -95,6 +95,15 @@ describe('/api/orcamentos', () => {
     expect(res.totais.total_mensal_centavos).toBe(15000);
   });
 
+  it('configuração do GMN é cobrança única: valor mensal enviado é ignorado', async () => {
+    definirConfig(ctx.db, 'preco_servico_google_meu_negocio_centavos', '25000');
+    const orc = await novoOrcamento();
+    let res = (await addItem(orc, { servico_id: (await porTipo('gmn_config')).id }).expect(201)).body;
+    res = (await ctx.http.put(`/api/orcamentos/${orc.id}/itens/${res.itens[0].id}`).send({ valor_mensal_centavos: 10000 }).expect(200)).body;
+    expect(res.itens[0].valor_mensal_centavos).toBeNull();
+    expect(res.totais.total_mensal_centavos).toBe(0);
+  });
+
   it('mudar a quantidade da placa recalcula o preço; valor explícito vence', async () => {
     const modelo = (await ctx.http.post('/api/placas/modelos').send({ nome: 'Redonda', preco_venda_centavos: 8000, itens: [] }).expect(201)).body;
     const orc = await novoOrcamento();

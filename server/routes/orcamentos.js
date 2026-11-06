@@ -544,6 +544,8 @@ export function rotasOrcamentos({ db, hoje }) {
         }).total_centavos;
       }
     }
+    // A configuração do GMN é cobrança única: nunca recebe valor mensal.
+    if (item.servico_id && servicos.obter(item.servico_id)?.tipo === 'gmn_config') delete dados.valor_mensal_centavos;
     itens.atualizar(item.id, dados);
     res.json(montar(orcamento));
   });
