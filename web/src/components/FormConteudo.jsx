@@ -9,6 +9,7 @@ import { MidiasConteudo } from './MidiasConteudo.jsx';
 import { PublicarConteudo } from './PublicarConteudo.jsx';
 import { ROTULO_ESTADO_CONTEUDO, ROTULO_TIPO } from '../lib/rotulos.js';
 import { CLASSE_ESTADO_CONTEUDO as CLASSE_ESTADO } from '../lib/conteudos.js';
+import { isoParaLocal, localParaIso } from '../lib/datas.js';
 
 const ESTADOS_EDITAVEIS = { rascunho: ROTULO_ESTADO_CONTEUDO.rascunho, pronto: ROTULO_ESTADO_CONTEUDO.pronto };
 
@@ -23,6 +24,7 @@ export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir, o
   );
   const { erros, erro, enviando, executar } = useEnvio();
   const [atual, setAtual] = useState(inicial);
+  const [horario, setHorario] = useState(inicial.agendado_para ? isoParaLocal(inicial.agendado_para) : '');
 
   const emPublicacao = Boolean(atual.id) && !ESTADOS_EDITAVEIS[atual.estado];
   const conteudoMudou = (c) => { setAtual(c); onMidiasMudaram?.(c); };
@@ -34,7 +36,13 @@ export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir, o
     if (emPublicacao) delete resto.estado;
     else if (!ESTADOS_EDITAVEIS[resto.estado]) resto.estado = atual.estado;
     const projeto_id = projetoFixo ?? (projetoEscolhido ? Number(projetoEscolhido) : null);
-    executar(() => onSalvar({ ...resto, projeto_id }));
+    executar(async () => {
+      // Horário digitado e ainda não confirmado: agenda junto com o Salvar (antes, ele se perdia em silêncio).
+      if (horario && ['rascunho', 'pronto', 'falhou', 'atrasado'].includes(atual.estado)) {
+        await api(`/conteudos/${atual.id}/agendar`, { method: 'POST', body: { agendado_para: localParaIso(horario) } });
+      }
+      await onSalvar({ ...resto, projeto_id });
+    });
   }
 
   return (
@@ -58,7 +66,7 @@ export function FormConteudo({ inicial = {}, projetoFixo, onSalvar, onExcluir, o
         ? (
           <>
             <MidiasConteudo conteudo={atual} onMudou={conteudoMudou} />
-            <PublicarConteudo conteudo={atual} onMudou={conteudoMudou} />
+            <PublicarConteudo conteudo={atual} onMudou={conteudoMudou} horario={horario} onHorario={setHorario} />
           </>
         )
         : <p className="kanban__meta">Salve o rascunho para adicionar mídias.</p>}

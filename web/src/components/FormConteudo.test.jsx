@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormConteudo } from './FormConteudo.jsx';
 import { mockApi } from '../test/mockApi.js';
@@ -48,6 +48,16 @@ describe('FormConteudo', () => {
     render(<FormConteudo projetoFixo={5} inicial={{ id: 2, titulo: 'B', tipo: 'post', estado: 'falhou', midias: [] }} onSalvar={onSalvar} />);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar' }));
     expect(onSalvar.mock.calls[0][0]).not.toHaveProperty('estado');
+  });
+
+  it('Salvar com horário digitado agenda antes de salvar', async () => {
+    const { chamadas } = mockApi({ 'POST /conteudos/1/agendar': { id: 1, estado: 'agendado' } });
+    const onSalvar = vi.fn();
+    render(<FormConteudo projetoFixo={5} inicial={{ id: 1, titulo: 'A', tipo: 'post', estado: 'pronto', midias: [] }} onSalvar={onSalvar} />);
+    fireEvent.change(screen.getByLabelText('Agendar para'), { target: { value: '2999-01-01T10:00' } });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(chamadas[0]).toMatchObject({ metodo: 'POST', caminho: '/conteudos/1/agendar' });
+    expect(onSalvar).toHaveBeenCalled();
   });
 
   it('mudança de publicação atualiza o formulário e avisa o pai', async () => {

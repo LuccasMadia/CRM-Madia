@@ -11,9 +11,12 @@ const INTERVALO_CONSULTA_MS = 5000;
 const dataHora = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
 // Prévia + ações de publicação de um conteúdo já salvo; cada mudança devolve o conteúdo atualizado em `onMudou`.
-export function PublicarConteudo({ conteudo, onMudou }) {
+export function PublicarConteudo({ conteudo, onMudou, horario: horarioPai, onHorario }) {
   const { erros, erro, enviando, executar, setErros } = useEnvio();
-  const [horario, setHorario] = useState(conteudo.agendado_para ? isoParaLocal(conteudo.agendado_para) : '');
+  const [horarioLocal, setHorarioLocal] = useState(conteudo.agendado_para ? isoParaLocal(conteudo.agendado_para) : '');
+  // Controlado pelo formulário, que agenda o horário pendente ao salvar; sozinho, usa estado próprio.
+  const horario = onHorario ? horarioPai : horarioLocal;
+  const setHorario = onHorario ?? setHorarioLocal;
   const [reagendando, setReagendando] = useState(false);
   const { id, estado } = conteudo;
   const base = `/conteudos/${id}`;
