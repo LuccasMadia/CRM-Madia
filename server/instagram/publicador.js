@@ -122,7 +122,10 @@ export function criarPublicador({
     const caption = conteudo.legenda ?? '';
     let containerId;
     if (conteudo.tipo === 'reels') {
-      containerId = await ig.criarContainer(usuarioId, { media_type: 'REELS', video_url: url(lista[0].arquivo), caption });
+      containerId = await ig.criarContainer(usuarioId, {
+        media_type: 'REELS', video_url: url(lista[0].arquivo), caption,
+        ...(conteudo.capa_ms != null && { thumb_offset: conteudo.capa_ms }), // quadro escolhido como capa
+      });
     } else if (conteudo.tipo === 'carrossel') {
       const filhos = [];
       for (const midia of lista) {

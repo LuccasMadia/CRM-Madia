@@ -19,6 +19,7 @@ const REGRAS_CONTEUDO = {
   legenda: { tipo: 'texto' },
   estado: { tipo: 'enum', valores: ESTADOS_CONTEUDO, padrao: 'rascunho' },
   data_planejada: { tipo: 'data' },
+  capa_ms: { tipo: 'inteiro', min: 0 },
 };
 const CAMPOS = [...Object.keys(REGRAS_CONTEUDO), 'ordem'];
 const SELECT = 'SELECT c.*, p.titulo AS projeto_titulo FROM conteudos c LEFT JOIN projetos p ON p.id = c.projeto_id';

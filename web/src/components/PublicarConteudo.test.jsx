@@ -21,6 +21,21 @@ describe('PublicarConteudo', () => {
     expect(onMudou).toHaveBeenCalledWith(publicando);
   });
 
+  it('Reels com vídeo deixa escolher o quadro da capa e salva em milissegundos', async () => {
+    const reels = { ...base, tipo: 'reels', capa_url: '/uploads/a.mp4', midias: [{ id: 1, tipo: 'video', url: '/uploads/a.mp4' }] };
+    const salvo = { ...reels, capa_ms: 4200 };
+    const { chamadas } = mockApi({ 'PUT /conteudos/7': salvo });
+    const onMudou = vi.fn();
+    render(<PublicarConteudo conteudo={reels} onMudou={onMudou} />);
+    const video = screen.getByLabelText('Quadro da capa');
+    Object.defineProperty(video, 'duration', { value: 30 });
+    fireEvent.loadedMetadata(video);
+    fireEvent.change(screen.getByRole('slider'), { target: { value: '4.2' } });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Usar este quadro como capa' }));
+    expect(chamadas[0]).toMatchObject({ metodo: 'PUT', caminho: '/conteudos/7', corpo: { capa_ms: 4200 } });
+    expect(onMudou).toHaveBeenCalledWith(salvo);
+  });
+
   it('agenda enviando o horário digitado em ISO', async () => {
     const agendado = { ...base, estado: 'agendado', agendado_para: localParaIso('2026-10-20T18:00') };
     const { chamadas } = mockApi({ 'POST /conteudos/7/agendar': agendado });

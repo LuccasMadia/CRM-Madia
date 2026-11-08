@@ -4,6 +4,7 @@ import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
 import { CapaConteudo } from './CapaConteudo.jsx';
+import { SeletorCapa } from './SeletorCapa.jsx';
 import { isoParaLocal, localParaIso } from '../lib/datas.js';
 
 const INTERVALO_CONSULTA_MS = 5000;
@@ -53,12 +54,16 @@ export function PublicarConteudo({ conteudo, onMudou }) {
     : null;
   const podePublicar = ['rascunho', 'pronto', 'falhou', 'atrasado'].includes(estado);
   const mostraAgendar = podePublicar || (estado === 'agendado' && reagendando);
+  const editaCapa = conteudo.midias?.[0]?.tipo === 'video' && (podePublicar || estado === 'agendado');
+  const salvarCapa = (capa_ms) => mudar(() => api(base, { method: 'PUT', body: { capa_ms } }));
 
   return (
     <section className="publicar" aria-label="Publicação">
       <h3>Publicação</h3>
       <div className="publicar__previa">
-        {conteudo.capa_url && <CapaConteudo item={conteudo} alt="Capa" />}
+        {conteudo.capa_url && (editaCapa
+          ? <SeletorCapa key={conteudo.capa_ms} conteudo={conteudo} desabilitado={enviando} onSalvar={salvarCapa} />
+          : <CapaConteudo item={conteudo} alt="Capa" />)}
         {conteudo.legenda && <p>{conteudo.legenda}</p>}
       </div>
 

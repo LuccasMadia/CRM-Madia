@@ -37,6 +37,17 @@ describe('publicar', () => {
   });
 });
 
+describe('capa do reels', () => {
+  it('guarda o momento do vídeo escolhido como capa e rejeita valor negativo', async () => {
+    const c = await criarPost();
+    const ok = await ctx.http.put(`/api/conteudos/${c.id}`).send({ capa_ms: 4200 }).expect(200);
+    expect(ok.body.capa_ms).toBe(4200);
+    await ctx.http.put(`/api/conteudos/${c.id}`).send({ capa_ms: -1 }).expect(400);
+    const limpo = await ctx.http.put(`/api/conteudos/${c.id}`).send({ capa_ms: null }).expect(200);
+    expect(limpo.body.capa_ms).toBeNull();
+  });
+});
+
 describe('agendar', () => {
   it('recusa horário no passado', async () => {
     const c = await criarPost();

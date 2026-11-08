@@ -63,6 +63,18 @@ function publicador(rotasFalsas = rotas(), opcoes = {}) {
 const finalizado = (id = 'C1') => ({ [`/${id}`]: { status_code: 'FINISHED' } });
 
 describe('publicador — reels e post', () => {
+  it('reels: manda o quadro escolhido como capa (thumb_offset) só quando existe', async () => {
+    const comCapa = criarConteudo({ extra: { capa_ms: 4200 } });
+    const a = publicador(rotas(finalizado()));
+    await a.pub.iniciar(comCapa);
+    expect(a.posts()[0].corpo.thumb_offset).toBe('4200');
+
+    const semCapa = criarConteudo();
+    const b = publicador(rotas(finalizado()));
+    await b.pub.iniciar(semCapa);
+    expect(b.posts()[0].corpo).not.toHaveProperty('thumb_offset');
+  });
+
   it('reels: cria o contêiner, espera FINISHED e publica', async () => {
     const id = criarConteudo();
     const { pub, posts, sincronizar } = publicador(rotas(finalizado()));
