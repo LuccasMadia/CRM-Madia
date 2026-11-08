@@ -1,6 +1,7 @@
 import { diaLocal, formatarData } from '../../lib/datas.js';
 import { ROTULO_TIPO } from '../../lib/rotulos.js';
 import { Icone } from '../../components/Icone.jsx';
+import { CapaConteudo } from '../../components/CapaConteudo.jsx';
 
 const ICONE_TIPO = { reels: 'reels', carrossel: 'carrossel' };
 
@@ -17,7 +18,7 @@ function Pronto({ item, indice, total, onEditar, onMover }) {
     <li className="grid-ig__item grid-ig__item--pronto">
       <button type="button" className="grid-ig__abrir" aria-label={`Editar ${item.titulo}`} onClick={() => onEditar(item)}>
         {item.capa_url
-          ? <img src={item.capa_url} alt={item.titulo} />
+          ? <CapaConteudo item={item} alt={item.titulo} />
           : <span className="grid-ig__titulo">{item.titulo}</span>}
         <span className="grid-ig__rotulo">{rotulo(item)}</span>
       </button>

@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useEnvio } from '../hooks/useEnvio.js';
 import { Campo } from './Campo.jsx';
 import { Aviso } from './Aviso.jsx';
+import { CapaConteudo } from './CapaConteudo.jsx';
 import { isoParaLocal, localParaIso } from '../lib/datas.js';
 
 const INTERVALO_CONSULTA_MS = 5000;
@@ -57,7 +58,7 @@ export function PublicarConteudo({ conteudo, onMudou }) {
     <section className="publicar" aria-label="Publicação">
       <h3>Publicação</h3>
       <div className="publicar__previa">
-        {conteudo.capa_url && <img src={conteudo.capa_url} alt="Capa" />}
+        {conteudo.capa_url && <CapaConteudo item={conteudo} alt="Capa" />}
         {conteudo.legenda && <p>{conteudo.legenda}</p>}
       </div>
 

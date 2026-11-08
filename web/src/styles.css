@@ -572,7 +572,7 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .grid-ig__item--selecionado { outline: 3px solid var(--atencao); outline-offset: -3px; }
 .grid-ig__abrir { all: unset; cursor: pointer; display: block; width: 100%; height: 100%; position: relative; }
 .grid-ig__abrir:focus-visible { outline: 2px solid var(--primaria); outline-offset: -2px; }
-.grid-ig__abrir img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.grid-ig__abrir img, .grid-ig__abrir video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .grid-ig__titulo { display: flex; align-items: center; justify-content: center; height: 100%; padding: 8px; text-align: center; font-size: 0.85rem; color: var(--primaria); }
 .grid-ig__rotulo { position: absolute; left: 4px; bottom: 4px; font-size: 0.75rem; background: rgb(0 0 0 / 0.6); color: var(--texto); padding: 2px 6px; border-radius: 6px; }
 .grid-ig__icone { position: absolute; top: 6px; right: 8px; font-size: 0.8rem; color: #fff; text-shadow: 0 1px 3px rgb(0 0 0 / 0.8); }
@@ -584,6 +584,7 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .painel-midia__legenda summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .painel-midia__legenda p { white-space: pre-wrap; font-size: 0.85rem; color: var(--texto-suave); }
 .publicar__previa p { white-space: pre-wrap; }
+.publicar__previa video { max-width: 100%; max-height: 320px; border-radius: 6px; }
 .painel-midia__numeros { margin: 0; display: grid; gap: 4px; }
 .painel-midia__numeros div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--borda); padding: 4px 0; }
 .painel-midia__numeros dt { color: var(--texto-suave); }

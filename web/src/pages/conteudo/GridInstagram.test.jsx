@@ -11,6 +11,14 @@ describe('GridInstagram', () => {
     expect(screen.getByText(/Agendado · 20\/10\/2026.*18:30/)).toBeInTheDocument();
   });
 
+  it('Reels com vídeo mostra o vídeo como capa, não uma imagem quebrada', () => {
+    const { container } = grid([item({
+      estado: 'pronto', titulo: 'Reels', tipo: 'reels', capa_url: '/uploads/a.mp4', midias: [{ id: 1, tipo: 'video', url: '/uploads/a.mp4' }],
+    })]);
+    expect(container.querySelector('video')).toHaveAttribute('src', '/uploads/a.mp4#t=0.1');
+    expect(container.querySelector('img')).toBeNull();
+  });
+
   it('publicando mostra Publicando…', () => {
     grid([item({ estado: 'publicando' })]);
     expect(screen.getByText('Publicando…')).toBeInTheDocument();
