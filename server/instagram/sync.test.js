@@ -215,6 +215,24 @@ describe('sincronizar — robustez', () => {
     expect(db.prepare("SELECT midia_id FROM conteudos WHERE titulo = 'P'").get().midia_id).toBe('m1');
   });
 
+  const naoExiste = { status: 400, corpo: { error: { code: 100, error_subcode: 33, message: "Unsupported get request. Object with ID 'm2' does not exist" } } };
+
+  it('post antigo (fora da janela de 60 dias) apagado no Instagram sai do grid', async () => {
+    await rodar(rotasPadrao()).promessa;
+    const depois = new Date('2027-03-01T15:00:00.000Z');
+    await rodar(rotasPadrao({ '/me/media': { data: [] }, '/me': { user_id: '178', username: 'x', followers_count: 1, media_count: 0 }, '/m1': { id: 'm1' }, '/m2': naoExiste }), depois).promessa;
+    expect(midia('m2').removido).toBe(1);
+    expect(midia('m1').removido).toBe(0);
+  });
+
+  it('post antigo: erro que não é "não existe" (ex.: limite de requisições) não remove', async () => {
+    await rodar(rotasPadrao()).promessa;
+    const depois = new Date('2027-03-01T15:00:00.000Z');
+    await rodar(rotasPadrao({ '/me/media': { data: [] }, '/me': { user_id: '178', username: 'x', followers_count: 1, media_count: 0 }, '/m1': { status: 400, corpo: { error: { code: 4, message: 'rate limit' } } }, '/m2': { status: 500, corpo: {} } }), depois).promessa;
+    expect(midia('m1').removido).toBe(0);
+    expect(midia('m2').removido).toBe(0);
+  });
+
   it('falha ao renovar o token não impede a sync com o token atual', async () => {
     definirConfig(db, 'instagram_token_expira_em', '2026-10-26T00:00:00.000Z');
     const { promessa } = rodar(rotasPadrao({ '/refresh_access_token': { status: 500, corpo: { error: { code: 2, message: 'fora' } } } }));
