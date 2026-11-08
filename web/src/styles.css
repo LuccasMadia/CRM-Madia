@@ -583,6 +583,7 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .painel-midia__capa { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--raio-controle); }
 .painel-midia__legenda summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .painel-midia__legenda p { white-space: pre-wrap; font-size: 0.85rem; color: var(--texto-suave); }
+.publicar__previa p { white-space: pre-wrap; }
 .painel-midia__numeros { margin: 0; display: grid; gap: 4px; }
 .painel-midia__numeros div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--borda); padding: 4px 0; }
 .painel-midia__numeros dt { color: var(--texto-suave); }
