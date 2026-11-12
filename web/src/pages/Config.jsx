@@ -20,6 +20,7 @@ export function Config() {
       <ConexaoInstagram />
       <ConexaoVercel />
       {config && <Repositorio inicial={config} />}
+      {config && <PastaCerebro inicial={config} />}
       <CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />
       <CadastroLista titulo="Nichos" caminho="/nichos" rotuloNovo="Novo nicho" />
       <ModelosTarefas />
@@ -84,6 +85,39 @@ function Repositorio({ inicial }) {
       {importados && (
         <p role="status">Importados: {lista(importados.importados)}. Ignorados: {lista(importados.ignorados)}.</p>
       )}
+    </section>
+  );
+}
+
+function PastaCerebro({ inicial }) {
+  const { valores, campo } = useFormulario({ cerebro_path: inicial.cerebro_path ?? '' });
+  const { erros, erro, enviando, executar } = useEnvio();
+  const [salvo, setSalvo] = useState(false);
+
+  function salvar(e) {
+    e.preventDefault();
+    setSalvo(false);
+    executar(async () => {
+      await api('/config', { method: 'PUT', body: valores });
+      setSalvo(true);
+    });
+  }
+
+  return (
+    <section className="cartao">
+      <h2>Pasta do cérebro</h2>
+      <form onSubmit={salvar} className="form" noValidate>
+        <Campo
+          rotulo="Caminho da pasta do cérebro"
+          nome="cerebro_path"
+          erros={erros}
+          placeholder="C:\Users\lucca\Documents\Projetos\0. Luccas Madia (eu)\Cerebro-Madia"
+          {...campo('cerebro_path')}
+        />
+        <Aviso erro={erro} />
+        {salvo && <p className="aviso aviso--ok" role="status">Pasta salva.</p>}
+        <div><button className="btn btn--primario" disabled={enviando}>Salvar pasta do cérebro</button></div>
+      </form>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import path from 'node:path';
+import { statSync } from 'node:fs';
 import { obterConfig, definirConfig } from '../repos/config.js';
 import { repoPortfolio } from '../repos/portfolio.js';
 import { ErroHttp, ErroValidacao } from '../http/erros.js';
@@ -11,6 +12,7 @@ import { commitarPortfolio } from '../portfolio/git.js';
 import { importarPortfolio } from '../portfolio/import.js';
 
 const CHAVE_REPO = 'portfolio_repo_path';
+const CHAVE_CEREBRO = 'cerebro_path';
 const CHAVES_PRECO_SERVICO = ['preco_servico_google_meu_negocio_centavos'];
 
 export function rotasPublicacao({ db, dataDir, hoje }) {
@@ -44,8 +46,12 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
     return { repo, erros: [], resultado, atual, diff };
   }
 
+  // '' = pasta do cérebro limpa; devolve null
+  const cerebroPath = () => obterConfig(db, CHAVE_CEREBRO) || null;
+
   r.get('/config', (req, res) => res.json({
     portfolio_repo_path: obterConfig(db, CHAVE_REPO),
+    cerebro_path: cerebroPath(),
     ...Object.fromEntries(CHAVES_PRECO_SERVICO.map((chave) => [chave, Number(obterConfig(db, chave) ?? 0)])),
   }));
 
@@ -57,6 +63,12 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
       const errosRepo = validarRepo(caminho);
       if (errosRepo.length) erros.push(...errosRepo.map((mensagem) => ({ campo: CHAVE_REPO, mensagem })));
       else definirConfig(db, CHAVE_REPO, caminho);
+    }
+    if (CHAVE_CEREBRO in corpo) {
+      const caminho = typeof corpo[CHAVE_CEREBRO] === 'string' ? corpo[CHAVE_CEREBRO].trim() : '';
+      const ehPasta = (() => { try { return statSync(caminho).isDirectory(); } catch { return false; } })();
+      if (caminho && !ehPasta) erros.push({ campo: CHAVE_CEREBRO, mensagem: `Pasta não encontrada: ${caminho}` });
+      else definirConfig(db, CHAVE_CEREBRO, caminho);
     }
     for (const chave of CHAVES_PRECO_SERVICO) {
       if (!(chave in corpo)) continue;
@@ -70,6 +82,7 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
     if (erros.length) throw new ErroValidacao(erros);
     res.json({
       portfolio_repo_path: obterConfig(db, CHAVE_REPO),
+      cerebro_path: cerebroPath(),
       ...Object.fromEntries(CHAVES_PRECO_SERVICO.map((chave) => [chave, Number(obterConfig(db, chave) ?? 0)])),
     });
   });

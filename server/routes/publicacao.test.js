@@ -22,8 +22,22 @@ describe('configuração', () => {
     await ctx.http.put('/api/config').send({ portfolio_repo_path: repo }).expect(200);
     expect((await ctx.http.get('/api/config')).body).toEqual({
       portfolio_repo_path: repo,
+      cerebro_path: null,
       preco_servico_google_meu_negocio_centavos: 25000,
     });
+  });
+
+  it('salva, recusa e limpa a pasta do cérebro', async () => {
+    const pasta = path.dirname(repo);
+    await ctx.http.put('/api/config').send({ cerebro_path: pasta }).expect(200);
+    expect((await ctx.http.get('/api/config')).body.cerebro_path).toBe(pasta);
+
+    const inexistente = path.join(pasta, 'nada-aqui');
+    const res = await ctx.http.put('/api/config').send({ cerebro_path: inexistente }).expect(400);
+    expect(res.body.erros[0]).toEqual({ campo: 'cerebro_path', mensagem: `Pasta não encontrada: ${inexistente}` });
+
+    await ctx.http.put('/api/config').send({ cerebro_path: '' }).expect(200);
+    expect((await ctx.http.get('/api/config')).body.cerebro_path).toBeNull();
   });
 
   it('salva e devolve os preços padrão de serviço', async () => {

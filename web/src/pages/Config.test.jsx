@@ -18,6 +18,18 @@ describe('Config', () => {
     expect(await screen.findByText('Pasta não encontrada: X')).toBeInTheDocument();
   });
 
+  it('mostra o erro da pasta do cérebro ao lado do campo', async () => {
+    mockApi({
+      'GET /config': { portfolio_repo_path: null, cerebro_path: null },
+      'PUT /config': resposta(400, { erros: [{ campo: 'cerebro_path', mensagem: 'Pasta não encontrada: Y' }] }),
+    });
+    renderizar(<Config />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Caminho da pasta do cérebro'), 'Y');
+    await user.click(screen.getByRole('button', { name: 'Salvar pasta do cérebro' }));
+    expect(await screen.findByText('Pasta não encontrada: Y')).toBeInTheDocument();
+  });
+
   it('prévia com erros lista o que corrigir e não oferece publicar', async () => {
     mockApi({
       'GET /config': { portfolio_repo_path: 'C:/pf' },
