@@ -28,8 +28,8 @@ export function montarRelatorioProjetos(db, hoje) {
   );
   const tarefasLista = todas(
     `SELECT t.id, t.texto, t.prazo, t.concluida, t.projeto_id, p.titulo AS projeto_titulo
-     FROM tarefas t JOIN projetos p ON p.id = t.projeto_id
-     WHERE p.ficticio = 0 AND p.etapa <> 'perdido' ORDER BY t.ordem, t.id`,
+     FROM tarefas t LEFT JOIN projetos p ON p.id = t.projeto_id
+     WHERE t.projeto_id IS NULL OR (p.ficticio = 0 AND p.etapa <> 'perdido') ORDER BY t.ordem, t.id`,
   );
   const tarefas = porProjeto(tarefasLista);
   // Mesma base do painel: parcelas de projeto não fictício + vendas de placa avulsas.

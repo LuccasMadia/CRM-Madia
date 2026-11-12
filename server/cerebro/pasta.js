@@ -15,17 +15,36 @@ function frontmatter(texto) {
   return dados;
 }
 
+// Lê um arquivo de texto; qualquer falha vira aviso e null.
+function lerTexto(caminho, nome, avisos) {
+  try {
+    return readFileSync(caminho, 'utf8');
+  } catch {
+    avisos.push(`${nome} não pôde ser lido`);
+    return null;
+  }
+}
+
+const objeto = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+
 function lerLista(pasta, arquivo, avisos) {
   const caminho = path.join(pasta, arquivo);
   if (!existsSync(caminho)) return [];
+  const texto = lerTexto(caminho, arquivo, avisos);
+  if (texto === null) return [];
+  let dados;
   try {
-    const dados = JSON.parse(readFileSync(caminho, 'utf8'));
-    if (!Array.isArray(dados)) throw new Error('não é lista');
-    return dados;
+    dados = JSON.parse(texto);
   } catch {
+    dados = null;
+  }
+  if (!Array.isArray(dados)) {
     avisos.push(`${arquivo} não é um JSON válido`);
     return [];
   }
+  const validos = dados.filter(objeto);
+  if (validos.length < dados.length) avisos.push(`${arquivo} tem itens que não são objetos e foram ignorados`);
+  return validos;
 }
 
 export function lerPasta(caminho) {
@@ -36,8 +55,9 @@ export function lerPasta(caminho) {
   }
   const avisos = [];
   const arquivoCentro = path.join(caminho, 'CLAUDE.md');
-  const centro = existsSync(arquivoCentro) ? { texto: readFileSync(arquivoCentro, 'utf8') } : null;
-  if (!centro) avisos.push('CLAUDE.md não encontrado na pasta do cérebro');
+  const textoCentro = existsSync(arquivoCentro) ? lerTexto(arquivoCentro, 'CLAUDE.md', avisos) : null;
+  if (!existsSync(arquivoCentro)) avisos.push('CLAUDE.md não encontrado na pasta do cérebro');
+  const centro = textoCentro === null ? null : { texto: textoCentro };
 
   const dirSkills = path.join(caminho, '.claude', 'skills');
   const skills = [];
@@ -45,7 +65,9 @@ export function lerPasta(caminho) {
     for (const d of readdirSync(dirSkills, { withFileTypes: true })) {
       const arq = path.join(dirSkills, d.name, 'SKILL.md');
       if (!d.isDirectory() || !existsSync(arq)) continue;
-      const fm = frontmatter(readFileSync(arq, 'utf8'));
+      const textoSkill = lerTexto(arq, `${d.name}/SKILL.md`, avisos);
+      if (textoSkill === null) continue;
+      const fm = frontmatter(textoSkill);
       skills.push({ id: d.name, nome: fm.name || d.name, descricao: fm.description || '' });
     }
   }

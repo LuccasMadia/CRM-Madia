@@ -25,7 +25,7 @@ export function montarMemoria(db, hoje) {
   );
   const parcelas = todas(
     `SELECT pa.*, p.titulo AS projeto_titulo FROM parcelas pa JOIN projetos p ON p.id = pa.projeto_id
-     WHERE pa.pago_em IS NULL AND ${vivo} ORDER BY pa.vencimento, pa.id`,
+     WHERE pa.pago_em IS NULL AND p.ficticio = 0 ORDER BY pa.vencimento, pa.id`,
   );
   const contarPorProjeto = (lista) => lista.reduce((m, x) => m.set(x.projeto_id, (m.get(x.projeto_id) ?? 0) + 1), new Map());
   const tarefasAbertas = contarPorProjeto(tarefas);
@@ -75,7 +75,7 @@ export function montarMemoria(db, hoje) {
     ...dePlacas,
     ...todas(
       `SELECT h.projeto_id, h.url, h.status, p.titulo FROM hospedagens h JOIN projetos p ON p.id = h.projeto_id
-       WHERE h.tipo = 'vercel' AND ${vivo} ORDER BY h.projeto_id`,
+       WHERE ${vivo} ORDER BY h.projeto_id`,
     ).map((h) => ({
       id: `hospedagem:${h.projeto_id}`, rotulo: `Site ${h.titulo}`, destaque: h.status === 'fora_do_ar',
       link: `/projetos/${h.projeto_id}`, resumo: `Hospedagem ${h.status.replace(/_/g, ' ')}${h.url ? ` · ${h.url}` : ''}`,

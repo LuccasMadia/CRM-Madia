@@ -167,3 +167,31 @@ describe('GET /api/cerebro', () => {
     ]);
   });
 });
+
+describe('GET /api/cerebro: destaques batem com pede_atencao', () => {
+  it('parcela de perdido, site fora do ar e tarefas (solta e de projeto) contam igual', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = await cliente(ctx);
+    const perdido = await projeto(ctx, { cliente_id: ana.id, titulo: 'Perdido', etapa: 'perdido' });
+    await ctx.http.post(`/api/projetos/${perdido.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-09-10' });
+    const site = await projeto(ctx, { cliente_id: ana.id, titulo: 'Site', etapa: 'entregue', data_entrega: '2026-09-01' });
+    ctx.db.prepare(
+      `INSERT INTO hospedagens (projeto_id, tipo, url, status, status_desde, atualizado_em)
+       VALUES (?, 'sem_hospedagem', 'https://ana.example', 'fora_do_ar', '2026-09-22', '2026-09-22')`,
+    ).run(site.id);
+    await ctx.http.post(`/api/projetos/${site.id}/tarefas`).send({ texto: 'Com projeto', prazo: '2026-09-01' });
+    await ctx.http.post('/api/tarefas').send({ texto: 'Solta', prazo: '2026-09-02' }).expect(201);
+
+    const res = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    const destaques = (prefixo) => res.memoria.areas.flatMap((a) => a.pontos).filter((p) => p.destaque && p.id.startsWith(prefixo)).length;
+    const n = (texto) => Number(res.pede_atencao.find((x) => x.texto.includes(texto))?.texto.split(' ')[0] ?? 0);
+    expect(n('parcela')).toBe(1);
+    expect(destaques('parcela:') + destaques('venda:')).toBe(1);
+    expect(n('fora do ar')).toBe(1);
+    expect(destaques('hospedagem:')).toBe(1);
+    expect(n('tarefa')).toBe(2);
+    expect(destaques('tarefa:')).toBe(2);
+    expect(n('projeto')).toBe(0);
+    expect(destaques('projeto:')).toBe(0);
+  });
+});

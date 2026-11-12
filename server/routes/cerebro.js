@@ -39,7 +39,7 @@ export function rotasCerebro({ db, hoje }) {
       skills: pasta.skills,
       rotinas: pasta.rotinas,
       apps: pasta.apps_base.map((a) => ({
-        ...a, conectado: Boolean(a.conexao?.startsWith('crm:') && obterConfig(db, a.conexao.slice(4))),
+        ...a, conectado: Boolean(typeof a.conexao === 'string' && a.conexao.startsWith('crm:') && obterConfig(db, a.conexao.slice(4))),
       })),
       memoria: montarMemoria(db, hoje()),
       pede_atencao: pedeAtencao(montarRelatorioProjetos(db, hoje()).pede_acao),

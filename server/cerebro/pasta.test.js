@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { lerPasta } from './pasta.js';
@@ -51,5 +51,37 @@ describe('lerPasta', () => {
   it('SKILL.md sem frontmatter usa o nome da pasta', () => {
     const r = lerPasta(pastaTemp({ skill: '# só texto' }));
     expect(r.skills).toEqual([{ id: 'relatorio-projetos', nome: 'relatorio-projetos', descricao: '' }]);
+  });
+});
+
+describe('lerPasta: nunca lança', () => {
+  it('[null] em rotinas.json ignora o item e avisa', () => {
+    const r = lerPasta(pastaTemp({ rotinas: '[null]' }));
+    expect(r.rotinas).toEqual([]);
+    expect(r.avisos).toEqual(['rotinas.json tem itens que não são objetos e foram ignorados']);
+  });
+
+  it('apps.json que não é lista avisa', () => {
+    const r = lerPasta(pastaTemp({ apps: '{"a":1}' }));
+    expect(r.apps_base).toEqual([]);
+    expect(r.avisos).toEqual(['apps.json não é um JSON válido']);
+  });
+
+  it('sem CLAUDE.md avisa e centro é null', () => {
+    const dir = pastaTemp();
+    rmSync(path.join(dir, 'CLAUDE.md'));
+    const r = lerPasta(dir);
+    expect(r.centro).toBeNull();
+    expect(r.avisos).toContain('CLAUDE.md não encontrado na pasta do cérebro');
+  });
+
+  it('CLAUDE.md que é pasta avisa sem lançar', () => {
+    const dir = pastaTemp();
+    rmSync(path.join(dir, 'CLAUDE.md'));
+    mkdirSync(path.join(dir, 'CLAUDE.md'));
+    const r = lerPasta(dir);
+    expect(r.centro).toBeNull();
+    expect(r.avisos).toEqual(['CLAUDE.md não pôde ser lido']);
+    expect(r.skills).toHaveLength(1);
   });
 });
