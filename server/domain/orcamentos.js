@@ -71,7 +71,7 @@ export function destinoPadrao(it) {
 export const SERVICO_DO_DESTINO = { site: 'site_sistema', gmn: 'google_meu_negocio' };
 // Etapa de um projeto criado pelo aceite: site em Valor definido, GMN pendente.
 export const ETAPA_DO_DESTINO = { site: 'valor_definido', gmn: 'andamento' };
-const ORDEM_ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
+export const ORDEM_ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
 
 // O projeto vinculado só avança até a etapa do aceite: o que já passou dela fica onde está.
 export function etapaAoVincular(etapaAtual, destino) {

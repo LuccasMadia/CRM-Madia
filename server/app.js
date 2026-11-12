@@ -11,6 +11,7 @@ import { rotasParcelas } from './routes/parcelas.js';
 import { rotasTarefas } from './routes/tarefas.js';
 import { rotasConteudos } from './routes/conteudos.js';
 import { rotasPainel } from './routes/painel.js';
+import { rotasCerebro } from './routes/cerebro.js';
 import { rotasPortfolio } from './routes/portfolio.js';
 import { rotasPublicacao } from './routes/publicacao.js';
 import { rotasBackup } from './routes/backup.js';
@@ -51,6 +52,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasTarefas(ctx));
   app.use('/api', rotasConteudos(ctx));
   app.use('/api', rotasPainel(ctx));
+  app.use('/api', rotasCerebro(ctx));
   app.use('/api', rotasPortfolio(ctx));
   app.use('/api', rotasPublicacao(ctx));
   app.use('/api', rotasBackup(ctx));
