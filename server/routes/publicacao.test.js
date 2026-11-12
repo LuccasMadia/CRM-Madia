@@ -36,6 +36,9 @@ describe('configuração', () => {
     const res = await ctx.http.put('/api/config').send({ cerebro_path: inexistente }).expect(400);
     expect(res.body.erros[0]).toEqual({ campo: 'cerebro_path', mensagem: `Pasta não encontrada: ${inexistente}` });
 
+    const relativo = await ctx.http.put('/api/config').send({ cerebro_path: '.' }).expect(400);
+    expect(relativo.body.erros[0]).toEqual({ campo: 'cerebro_path', mensagem: 'Use o caminho completo da pasta (ex.: C:\\...)' });
+
     await ctx.http.put('/api/config').send({ cerebro_path: '' }).expect(200);
     expect((await ctx.http.get('/api/config')).body.cerebro_path).toBeNull();
   });

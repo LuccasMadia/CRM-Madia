@@ -114,6 +114,7 @@ function PastaCerebro({ inicial }) {
           placeholder="C:\Users\lucca\Documents\Projetos\0. Luccas Madia (eu)\Cerebro-Madia"
           {...campo('cerebro_path')}
         />
+        <p className="form__ajuda">O conteúdo desta pasta aparece na tela Cérebro, inclusive em crm.luccasmadia.com.br. Não guarde senhas nela.</p>
         <Aviso erro={erro} />
         {salvo && <p className="aviso aviso--ok" role="status">Pasta salva.</p>}
         <div><button className="btn btn--primario" disabled={enviando}>Salvar pasta do cérebro</button></div>

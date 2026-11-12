@@ -42,8 +42,8 @@ function lerLista(pasta, arquivo, avisos) {
     avisos.push(`${arquivo} não é um JSON válido`);
     return [];
   }
-  const validos = dados.filter(objeto);
-  if (validos.length < dados.length) avisos.push(`${arquivo} tem itens que não são objetos e foram ignorados`);
+  const validos = dados.filter((x) => objeto(x) && typeof x.id === 'string' && typeof x.nome === 'string');
+  if (validos.length < dados.length) avisos.push(`${arquivo} tem itens sem id ou nome que foram ignorados`);
   return validos;
 }
 
@@ -62,7 +62,13 @@ export function lerPasta(caminho) {
   const dirSkills = path.join(caminho, '.claude', 'skills');
   const skills = [];
   if (existsSync(dirSkills)) {
-    for (const d of readdirSync(dirSkills, { withFileTypes: true })) {
+    let entradas = [];
+    try {
+      entradas = readdirSync(dirSkills, { withFileTypes: true });
+    } catch {
+      avisos.push('Não foi possível ler as skills da pasta do cérebro');
+    }
+    for (const d of entradas) {
       const arq = path.join(dirSkills, d.name, 'SKILL.md');
       if (!d.isDirectory() || !existsSync(arq)) continue;
       const textoSkill = lerTexto(arq, `${d.name}/SKILL.md`, avisos);

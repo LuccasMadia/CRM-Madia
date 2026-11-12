@@ -58,7 +58,25 @@ describe('lerPasta: nunca lança', () => {
   it('[null] em rotinas.json ignora o item e avisa', () => {
     const r = lerPasta(pastaTemp({ rotinas: '[null]' }));
     expect(r.rotinas).toEqual([]);
-    expect(r.avisos).toEqual(['rotinas.json tem itens que não são objetos e foram ignorados']);
+    expect(r.avisos).toEqual(['rotinas.json tem itens sem id ou nome que foram ignorados']);
+  });
+
+  it('app sem nome é ignorado e avisa', () => {
+    const r = lerPasta(pastaTemp({ apps: JSON.stringify([
+      { id: 'vercel', nome: 'Vercel', para_que: 'Hospedagem', conexao: 'x' },
+      { id: 'sem-nome', para_que: 'y', conexao: 'z' },
+    ]) }));
+    expect(r.apps_base).toHaveLength(1);
+    expect(r.avisos).toEqual(['apps.json tem itens sem id ou nome que foram ignorados']);
+  });
+
+  it('.claude/skills que é arquivo avisa sem lançar', () => {
+    const dir = pastaTemp();
+    rmSync(path.join(dir, '.claude', 'skills'), { recursive: true });
+    writeFileSync(path.join(dir, '.claude', 'skills'), 'x');
+    const r = lerPasta(dir);
+    expect(r.skills).toEqual([]);
+    expect(r.avisos).toEqual(['Não foi possível ler as skills da pasta do cérebro']);
   });
 
   it('apps.json que não é lista avisa', () => {

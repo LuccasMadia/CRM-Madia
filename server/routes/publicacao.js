@@ -67,7 +67,8 @@ export function rotasPublicacao({ db, dataDir, hoje }) {
     if (CHAVE_CEREBRO in corpo) {
       const caminho = typeof corpo[CHAVE_CEREBRO] === 'string' ? corpo[CHAVE_CEREBRO].trim() : '';
       const ehPasta = (() => { try { return statSync(caminho).isDirectory(); } catch { return false; } })();
-      if (caminho && !ehPasta) erros.push({ campo: CHAVE_CEREBRO, mensagem: `Pasta não encontrada: ${caminho}` });
+      if (caminho && !path.isAbsolute(caminho)) erros.push({ campo: CHAVE_CEREBRO, mensagem: 'Use o caminho completo da pasta (ex.: C:\\...)' });
+      else if (caminho && !ehPasta) erros.push({ campo: CHAVE_CEREBRO, mensagem: `Pasta não encontrada: ${caminho}` });
       else definirConfig(db, CHAVE_CEREBRO, caminho);
     }
     for (const chave of CHAVES_PRECO_SERVICO) {
