@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Cerebro } from './Cerebro.jsx';
 import { mockApi } from '../test/mockApi.js';
 import { renderizar } from '../test/renderizar.jsx';
+import { ALVO_TOQUE } from './cerebro/AneisCerebro.jsx';
 
 const area = (id, rotulo, pontos = []) => ({ id, rotulo, pontos });
 const DADOS = {
@@ -67,6 +68,34 @@ describe('Cerebro', () => {
     renderizar(<Cerebro />);
     expect(await screen.findByRole('alert')).toHaveTextContent('rotinas.json inválido');
     expect(screen.getByRole('alert')).toHaveTextContent('apps.json não encontrado');
+  });
+
+  it('ponto que pede ação vem depois dos outros da área (fica por cima) e todo ponto tem alvo de toque grande', async () => {
+    const projetos = area('projetos', 'Projetos', [
+      { id: 'projeto:12', rotulo: 'Site da Ana', destaque: true, link: '/projetos/12', resumo: 'atrasado' },
+      { id: 'projeto:13', rotulo: 'Site do Bruno', destaque: false, link: '/projetos/13', resumo: 'em dia' },
+      { id: 'projeto:14', rotulo: 'Site da Carla', destaque: false, link: '/projetos/14', resumo: 'em dia' },
+    ]);
+    mockApi({ 'GET /cerebro': { ...DADOS, memoria: { areas: DADOS.memoria.areas.map((a) => (a.id === 'projetos' ? projetos : a)) } } });
+    renderizar(<Cerebro />);
+    const destaque = await screen.findByRole('button', { name: 'Site da Ana' });
+    for (const nome of ['Site do Bruno', 'Site da Carla']) {
+      const outro = screen.getByRole('button', { name: nome });
+      expect(outro.compareDocumentPosition(destaque) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    for (const nome of ['Ana', 'Site da Ana', 'Site do Bruno', 'Site da Carla']) {
+      expect(Number(screen.getByRole('button', { name: nome }).getAttribute('r'))).toBeGreaterThanOrEqual(ALVO_TOQUE);
+    }
+    expect(ALVO_TOQUE).toBeGreaterThanOrEqual(9);
+  });
+
+  it('skills, rotinas, apps e o centro vêm antes dos pontos da memória na ordem do Tab', async () => {
+    mockApi({ 'GET /cerebro': DADOS });
+    renderizar(<Cerebro />);
+    const ponto = await screen.findByRole('button', { name: 'Ana' });
+    for (const nome of ['CLAUDE.md', 'Relatório', 'Checar sites', 'Instagram']) {
+      expect(screen.getByRole('button', { name: nome }).compareDocumentPosition(ponto) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
   it('clicar numa área aproxima a fatia e "Ver tudo" volta ao anel inteiro', async () => {

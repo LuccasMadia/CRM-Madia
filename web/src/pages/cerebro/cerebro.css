@@ -20,7 +20,9 @@
 
 .aneis { display: block; width: 100%; height: auto; font-family: inherit; }
 .aneis [role='button'] { cursor: pointer; outline: none; }
-.aneis [role='button']:focus-visible { stroke: var(--texto); stroke-width: 2; }
+.aneis [role='button']:focus-visible,
+.aneis__app:focus-visible polygon,
+.aneis__centro:focus-visible circle { stroke: var(--texto); stroke-width: 2.5; }
 .aneis__fundo { fill: color-mix(in srgb, var(--primaria) 4%, transparent); stroke: none; }
 .aneis__linha { fill: none; stroke-width: 1; }
 .aneis__linha--apps { stroke: color-mix(in srgb, var(--anel-apps) 45%, transparent); }
@@ -39,9 +41,11 @@
 .aneis__area--administrativo, .aneis__ponto--administrativo { --cor: var(--area-administrativo); }
 .aneis__area--conteudo, .aneis__ponto--conteudo { --cor: var(--area-conteudo); }
 .aneis__area { fill: var(--cor); }
-.aneis__ponto circle { fill: color-mix(in srgb, var(--cor) 75%, transparent); }
-.aneis__ponto circle:hover { fill: var(--cor); }
-.aneis__ponto--destaque circle[role='button'] { fill: var(--perigo); }
+.aneis__marca { fill: color-mix(in srgb, var(--cor) 75%, transparent); pointer-events: none; }
+.aneis__alvo { fill: transparent; }
+.aneis g[role='button'] text { stroke: none; }
+.aneis__ponto:hover .aneis__marca { fill: var(--cor); }
+.aneis__ponto--destaque .aneis__marca { fill: var(--perigo); }
 .aneis__ponto--destaque .aneis__brilho { fill: none; stroke: var(--perigo); stroke-width: 1.5; opacity: 0.5; transform-box: fill-box; transform-origin: center; animation: aneis-pulsar 2.4s ease-in-out infinite; pointer-events: none; }
 
 .aneis__skill { fill: var(--anel-skills); stroke: var(--fundo); stroke-width: 1.5; }

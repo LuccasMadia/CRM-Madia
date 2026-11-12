@@ -3,6 +3,8 @@ import { CENTRO, fatiaDaArea, noAnel, posicionarPontos } from './posicoes.js';
 
 const R = { centro: 22, skills: 70, memoriaDe: 95, memoriaAte: 200, rotulos: 216, rotinas: 235, apps: 275 };
 const TUDO = '0 0 600 600';
+// raio do alvo de toque de cada ponto da memória, em unidades do viewBox (~5px de raio a 375px de largura, ~11px a 720px)
+export const ALVO_TOQUE = 9;
 
 // Itens distribuídos por igual num anel, deslocados meio passo para deixar o topo livre para o nome do anel.
 const emVolta = (lista, raio) => lista.map((item, i) => ({ item, ...noAnel(-Math.PI / 2 + ((i + 0.5) * 2 * Math.PI) / lista.length, raio) }));
@@ -51,7 +53,10 @@ export function AneisCerebro({ dados, aproximada, aoAbrir, aoAproximar }) {
   const { areas } = dados.memoria;
   const pontos = useMemo(() => {
     const porId = new Map(areas.flatMap((a) => a.pontos.map((p) => [p.id, p])));
-    return posicionarPontos(areas, R.memoriaDe, R.memoriaAte).map((pos) => ({ ...pos, ponto: porId.get(pos.id) }));
+    // destaques por último: no SVG quem vem depois fica por cima, então um vizinho nunca cobre um ponto que pede ação
+    return posicionarPontos(areas, R.memoriaDe, R.memoriaAte)
+      .map((pos) => ({ ...pos, ponto: porId.get(pos.id) }))
+      .sort((a, b) => a.ponto.destaque - b.ponto.destaque);
   }, [areas]);
   const rotuloArea = Object.fromEntries(areas.map((a) => [a.id, a.rotulo]));
   const indice = areas.findIndex((a) => a.id === aproximada);
@@ -65,24 +70,6 @@ export function AneisCerebro({ dados, aproximada, aoAbrir, aoAproximar }) {
       <circle className="aneis__linha aneis__linha--skills" cx={CENTRO} cy={CENTRO} r={R.skills} />
       <text className="aneis__nome aneis__nome--apps" x={CENTRO} y={CENTRO - R.apps + 4}>APPS</text>
       <text className="aneis__nome aneis__nome--rotinas" x={CENTRO} y={CENTRO - R.rotinas + 4}>ROTINAS</text>
-
-      {areas.map((a, i) => {
-        const { x, y } = noAnel(fatiaDaArea(i, areas.length).meio, R.rotulos);
-        return (
-          <text key={a.id} className={`aneis__area aneis__area--${a.id}`} x={x} y={y} {...botao(`Aproximar ${a.rotulo}`, () => aoAproximar(a.id))}>
-            {a.rotulo}
-          </text>
-        );
-      })}
-
-      {pontos.map(({ id, area, x, y, ponto }) => (
-        <g key={id} className={`aneis__ponto aneis__ponto--${area}${ponto.destaque ? ' aneis__ponto--destaque' : ''}`}>
-          {ponto.destaque && <circle className="aneis__brilho" cx={x} cy={y} r={7} aria-hidden="true" />}
-          <circle cx={x} cy={y} r={ponto.destaque ? 3.5 : 2.5} {...botao(ponto.rotulo, () => aoAbrir({ tipo: 'ponto', dados: { ...ponto, area: rotuloArea[area] } }))}>
-            <title>{ponto.rotulo}</title>
-          </circle>
-        </g>
-      ))}
 
       {emVolta(dados.skills, R.skills).map(({ item, x, y }) => (
         <circle key={item.id} className="aneis__skill" cx={x} cy={y} r={5} {...botao(item.nome, () => aoAbrir({ tipo: 'skill', dados: item }))}>
@@ -110,6 +97,26 @@ export function AneisCerebro({ dados, aproximada, aoAbrir, aoAproximar }) {
           <text x={CENTRO} y={CENTRO} aria-hidden="true">CLAUDE.md</text>
         </g>
       )}
+      {areas.map((a, i) => {
+        const { x, y } = noAnel(fatiaDaArea(i, areas.length).meio, R.rotulos);
+        return (
+          <text key={a.id} className={`aneis__area aneis__area--${a.id}`} x={x} y={y} {...botao(`Aproximar ${a.rotulo}`, () => aoAproximar(a.id))}>
+            {a.rotulo}
+          </text>
+        );
+      })}
+
+      {pontos.map(({ id, area, x, y, ponto }) => (
+        <g key={id} className={`aneis__ponto aneis__ponto--${area}${ponto.destaque ? ' aneis__ponto--destaque' : ''}`}>
+          {ponto.destaque && <circle className="aneis__brilho" cx={x} cy={y} r={10} aria-hidden="true" />}
+          <circle className="aneis__marca" cx={x} cy={y} r={ponto.destaque ? 5 : 2.5} aria-hidden="true" />
+          {/* alvo invisível maior que o ponto: dá para tocar no celular */}
+          <circle className="aneis__alvo" cx={x} cy={y} r={ALVO_TOQUE} {...botao(ponto.rotulo, () => aoAbrir({ tipo: 'ponto', dados: { ...ponto, area: rotuloArea[area] } }))}>
+            <title>{ponto.rotulo}</title>
+          </circle>
+        </g>
+      ))}
+
     </svg>
   );
 }
