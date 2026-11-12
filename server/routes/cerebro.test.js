@@ -1,4 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { definirConfig } from '../repos/config.js';
 import { criarContexto } from '../test/contexto.js';
 import { SERVICOS_ORDEM } from '../domain/cerebro.js';
 
@@ -107,6 +111,59 @@ describe('GET /api/cerebro/projetos', () => {
     const rel = await relatorio(ctx);
     expect(rel.pede_acao.sites_fora_do_ar).toEqual([
       { projeto_id: p.id, titulo: 'Site', url: 'https://ana.example', status_desde: '2026-09-22' },
+    ]);
+  });
+});
+
+describe('GET /api/cerebro', () => {
+  const pastaCerebro = () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'cerebro-rota-'));
+    writeFileSync(path.join(dir, 'CLAUDE.md'), '# Madia');
+    writeFileSync(path.join(dir, 'apps.json'), JSON.stringify([
+      { id: 'vercel', nome: 'Vercel', para_que: 'Hospedagem', conexao: 'crm:vercel_token' },
+      { id: 'figma', nome: 'Figma', para_que: 'Telas', conexao: 'manual' },
+    ]));
+    return dir;
+  };
+
+  it('sem cerebro_path devolve centro nulo, 6 áreas e nenhum app', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const res = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(res.centro).toBeNull();
+    expect(res.memoria.areas).toHaveLength(6);
+    expect(res.apps).toEqual([]);
+    expect(res.pede_atencao).toEqual([]);
+  });
+
+  it('cerebro_path vazio conta como não configurado', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    definirConfig(ctx.db, 'cerebro_path', '');
+    expect((await ctx.http.get('/api/cerebro').expect(200)).body.centro).toBeNull();
+  });
+
+  it('marca como conectado só o app com chave no CRM', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    definirConfig(ctx.db, 'cerebro_path', pastaCerebro());
+    definirConfig(ctx.db, 'vercel_token', 'tok');
+    const res = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(res.centro).toEqual({ texto: '# Madia' });
+    expect(res.apps.find((a) => a.id === 'vercel').conectado).toBe(true);
+    expect(res.apps.find((a) => a.id === 'figma').conectado).toBe(false);
+  });
+
+  it('pede_atencao usa singular/plural e o link certo', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = await cliente(ctx);
+    const a = await projeto(ctx, { cliente_id: ana.id, titulo: 'A', etapa: 'andamento', prazo_entrega: '2026-09-10' });
+    let res = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(res.pede_atencao).toEqual([{ texto: '1 projeto atrasado', tom: 'perigo', para: `/projetos/${a.id}` }]);
+    await projeto(ctx, { cliente_id: ana.id, titulo: 'B', etapa: 'andamento', prazo_entrega: '2026-09-11' });
+    await ctx.http.post(`/api/projetos/${a.id}/tarefas`).send({ texto: 'x', prazo: '2026-09-01' });
+    await ctx.http.post(`/api/projetos/${a.id}/tarefas`).send({ texto: 'y', prazo: '2026-09-02' });
+    res = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(res.pede_atencao).toEqual([
+      { texto: '2 projetos atrasados', tom: 'perigo', para: '/servicos?aba=sites' },
+      { texto: '2 tarefas vencidas', tom: 'atencao', para: '/tarefas' },
     ]);
   });
 });
