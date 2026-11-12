@@ -1,0 +1,90 @@
+/* Tela do Cérebro: anéis sobre o fundo escuro do tema. Cores das áreas derivadas das etiquetas do tema. */
+.cerebro {
+  --area-clientes: var(--tag-lima);
+  --area-comercial: var(--tag-ceu);
+  --area-projetos: var(--primaria);
+  --area-processos: var(--tag-violeta);
+  --area-administrativo: var(--tag-azul);
+  --area-conteudo: var(--tag-fucsia);
+  --anel-skills: var(--tag-verde);
+  --anel-rotinas: var(--tag-laranja);
+  --anel-apps: var(--texto-suave);
+}
+
+.cerebro__corpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.cerebro__corpo--com-painel { grid-template-columns: minmax(0, 1fr) 340px; }
+.cerebro__palco { position: relative; display: grid; justify-items: center; gap: 12px; }
+.cerebro__anel { position: relative; width: 100%; max-width: 720px; }
+.cerebro__ver-tudo { position: absolute; top: 0; left: 0; z-index: 1; }
+.cerebro__configurar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 8px 12px; border-radius: var(--raio-controle); background: var(--superficie); border: 1px solid var(--borda); font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+
+.aneis { display: block; width: 100%; height: auto; font-family: inherit; }
+.aneis [role='button'] { cursor: pointer; outline: none; }
+.aneis [role='button']:focus-visible { stroke: var(--texto); stroke-width: 2; }
+.aneis__fundo { fill: color-mix(in srgb, var(--primaria) 4%, transparent); stroke: none; }
+.aneis__linha { fill: none; stroke-width: 1; }
+.aneis__linha--apps { stroke: color-mix(in srgb, var(--anel-apps) 45%, transparent); }
+.aneis__linha--rotinas { stroke: color-mix(in srgb, var(--anel-rotinas) 60%, transparent); }
+.aneis__linha--skills { stroke: var(--anel-skills); stroke-width: 2; stroke-dasharray: 2 4; animation: aneis-girar 40s linear infinite; }
+.aneis__nome { font-size: 9px; font-weight: 600; letter-spacing: 0.18em; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: var(--fundo); stroke-width: 6px; }
+.aneis__nome--apps { fill: var(--anel-apps); }
+.aneis__nome--rotinas { fill: var(--anel-rotinas); }
+
+.aneis__area { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: var(--fundo); stroke-width: 4px; }
+.aneis__area:hover, .aneis__area:focus-visible { text-decoration: underline; }
+.aneis__area--clientes, .aneis__ponto--clientes { --cor: var(--area-clientes); }
+.aneis__area--comercial, .aneis__ponto--comercial { --cor: var(--area-comercial); }
+.aneis__area--projetos, .aneis__ponto--projetos { --cor: var(--area-projetos); }
+.aneis__area--processos, .aneis__ponto--processos { --cor: var(--area-processos); }
+.aneis__area--administrativo, .aneis__ponto--administrativo { --cor: var(--area-administrativo); }
+.aneis__area--conteudo, .aneis__ponto--conteudo { --cor: var(--area-conteudo); }
+.aneis__area { fill: var(--cor); }
+.aneis__ponto circle { fill: color-mix(in srgb, var(--cor) 75%, transparent); }
+.aneis__ponto circle:hover { fill: var(--cor); }
+.aneis__ponto--destaque circle[role='button'] { fill: var(--perigo); }
+.aneis__ponto--destaque .aneis__brilho { fill: none; stroke: var(--perigo); stroke-width: 1.5; opacity: 0.5; transform-box: fill-box; transform-origin: center; animation: aneis-pulsar 2.4s ease-in-out infinite; pointer-events: none; }
+
+.aneis__skill { fill: var(--anel-skills); stroke: var(--fundo); stroke-width: 1.5; }
+.aneis__rotina { stroke: var(--anel-rotinas); stroke-width: 1.5; }
+.aneis__rotina--ativa { fill: var(--anel-rotinas); }
+.aneis__rotina--planejada { fill: var(--fundo); }
+.aneis__app polygon { fill: var(--superficie); stroke: color-mix(in srgb, var(--anel-apps) 50%, transparent); stroke-width: 1.25; }
+.aneis__app text { fill: var(--texto-suave); font-size: 9px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.aneis__app--conectado polygon { fill: var(--primaria-suave); stroke: var(--primaria); }
+.aneis__app--conectado text { fill: var(--primaria); }
+.aneis__centro circle { fill: var(--superficie-2); stroke: var(--tag-laranja); stroke-width: 1.5; }
+.aneis__centro text { fill: var(--texto); font-size: 7px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+
+@keyframes aneis-girar { to { stroke-dashoffset: -60; } }
+@keyframes aneis-pulsar { 50% { opacity: 0.1; transform: scale(1.5); } }
+@media (prefers-reduced-motion: reduce) {
+  .aneis__linha--skills, .aneis__brilho { animation: none !important; }
+}
+
+.cerebro__legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; color: var(--texto-suave); }
+.cerebro__legenda li { display: inline-flex; align-items: center; gap: 6px; }
+.cerebro__marca { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cerebro__marca--destaque { background: var(--perigo); box-shadow: 0 0 0 3px color-mix(in srgb, var(--perigo) 30%, transparent); }
+.cerebro__marca--ativa { background: var(--anel-rotinas); }
+.cerebro__marca--planejada { border: 1.5px solid var(--anel-rotinas); }
+.cerebro__marca--app { border-radius: 2px; background: var(--primaria-suave); border: 1.5px solid var(--primaria); }
+
+.cerebro-painel { position: sticky; top: 24px; display: grid; gap: 12px; padding: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); max-height: calc(100vh - 48px); overflow: auto; }
+.cerebro-painel h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.cerebro-painel p { margin: 0; color: var(--texto-suave); }
+.cerebro-painel .btn { justify-self: start; }
+.cerebro-painel__topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cerebro-painel__tipo { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
+.cerebro-painel__fechar { display: inline-flex; padding: 6px; border: 0; border-radius: var(--raio-controle); background: transparent; color: var(--texto-suave); cursor: pointer; }
+.cerebro-painel__fechar:hover { background: var(--superficie-2); color: var(--texto); }
+.cerebro-painel__texto { margin: 0; max-height: 60vh; overflow: auto; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.5; color: var(--texto); background: var(--superficie-2); padding: 12px; border-radius: var(--raio-controle); }
+.cerebro-painel__campos { display: grid; gap: 10px; margin: 0; }
+.cerebro-painel__campos dt { font-size: 0.8rem; color: var(--texto-suave); }
+.cerebro-painel__campos dd { margin: 2px 0 0; }
+
+@media (max-width: 767px) {
+  .cerebro__corpo--com-painel { grid-template-columns: minmax(0, 1fr); }
+  /* folha que sobe de baixo, acima da barra de navegação do celular */
+  .cerebro-painel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 70; max-height: 70vh; border-radius: var(--raio) var(--raio) 0 0; box-shadow: var(--sombra); padding-bottom: calc(20px + env(safe-area-inset-bottom)); animation: cerebro-folha 0.2s ease-out; }
+}
+@keyframes cerebro-folha { from { transform: translateY(100%); } }

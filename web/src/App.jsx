@@ -15,6 +15,7 @@ import { Config } from './pages/Config.jsx';
 import { Orcamento } from './pages/Orcamento.jsx';
 import { Orcamentos } from './pages/Orcamentos.jsx';
 import { Tarefas } from './pages/Tarefas.jsx';
+import { Cerebro } from './pages/Cerebro.jsx';
 import { alternarValoresOcultos, useValoresOcultos } from './lib/privacidade.js';
 import { rotularTabelas } from './lib/rotularTabelas.js';
 import { manterAbasVisiveis, mostrarAbasSelecionadas } from './lib/abasVisiveis.js';
@@ -61,6 +62,7 @@ export function App() {
           <Route path="/orcamentos/:id" element={<Orcamento />} />
           <Route path="/conteudo" element={<Conteudo />} />
           <Route path="/tarefas" element={<Tarefas />} />
+          <Route path="/cerebro" element={<Cerebro />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/configuracoes" element={<Config />} />

@@ -11,6 +11,7 @@ const NAVEGACAO = [
   { para: '/orcamentos', rotulo: 'Orçamentos', icone: 'orcamentos', principal: true },
   { para: '/conteudo', rotulo: 'Conteúdo', icone: 'conteudo', principal: true },
   { para: '/tarefas', rotulo: 'Tarefas', icone: 'tarefas' },
+  { para: '/cerebro', rotulo: 'Cérebro', icone: 'cerebro' },
   { para: '/portfolio', rotulo: 'Portfólio', icone: 'portfolio' },
   { para: '/financeiro', rotulo: 'Financeiro', icone: 'financeiro' },
   { para: '/configuracoes', rotulo: 'Configurações', icone: 'configuracoes' },

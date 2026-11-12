@@ -127,6 +127,13 @@ const DESENHOS = {
       <rect x="17" y="4" width="4" height="13" rx="1.5" />
     </>
   ),
+  cerebro: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" strokeDasharray="2 2.2" />
+      <circle cx="12" cy="12" r="1.5" />
+    </>
+  ),
   comentario: <path d="M4.5 5h15a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H10l-4.5 3.5v-3.5h-1a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />,
   descricao: <path d="M5 6.5h14M5 11h14M5 15.5h9" />,
   comercial: (
