@@ -46,4 +46,18 @@ describe('montarMemoria', () => {
     expect(pontos.find((x) => x.rotulo === 'Vencida')).toMatchObject({ destaque: true, link: `/projetos/${p.id}` });
     expect(pontos.find((x) => x.rotulo === 'Em dia').destaque).toBe(false);
   });
+
+  it('cada ponto diz com o que está ligado: projeto→cliente, tarefa e parcela→projeto', async () => {
+    const ctx = criarContexto();
+    const { ana, novo } = await base(ctx);
+    const p = await novo({ titulo: 'Site', etapa: 'andamento' });
+    await ctx.http.post(`/api/projetos/${p.id}/tarefas`).send({ texto: 'Revisar' });
+    await ctx.http.post(`/api/projetos/${p.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-12-10' });
+    const pontos = montarMemoria(ctx.db, '2026-09-23').areas.flatMap((a) => a.pontos);
+    const ligacoes = (prefixo) => pontos.find((x) => x.id.startsWith(prefixo)).ligacoes;
+    expect(ligacoes('projeto:')).toEqual([`cliente:${ana.id}`]);
+    expect(ligacoes('tarefa:')).toEqual([`projeto:${p.id}`]);
+    expect(ligacoes('parcela:')).toEqual([`projeto:${p.id}`]);
+    expect(pontos.every((x) => Array.isArray(x.ligacoes))).toBe(true);
+  });
 });

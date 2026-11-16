@@ -36,18 +36,19 @@ export function montarMemoria(db, hoje) {
     rotulo: p.titulo,
     destaque: p.etapa !== 'entregue' && Boolean(p.prazo_entrega) && p.prazo_entrega < hoje,
     link: `/projetos/${p.id}`,
+    ligacoes: [`cliente:${p.cliente_id}`],
     resumo: `${p.cliente_nome} · ${ROTULO_ETAPA[p.etapa] ?? p.etapa}${p.prazo_entrega ? ` · prazo ${dataBr(p.prazo_entrega)}` : ''}`,
   });
 
   const clientes = todas('SELECT id, nome, responsavel FROM clientes ORDER BY nome, id').map((c) => ({
-    id: `cliente:${c.id}`, rotulo: c.nome, destaque: false, link: `/clientes/${c.id}`, resumo: c.responsavel || 'Cliente',
+    id: `cliente:${c.id}`, rotulo: c.nome, destaque: false, link: `/clientes/${c.id}`, ligacoes: [], resumo: c.responsavel || 'Cliente',
   }));
 
   const orcamentos = todas(
-    'SELECT o.id, o.situacao, o.data, c.nome AS cliente_nome FROM orcamentos o JOIN clientes c ON c.id = o.cliente_id ORDER BY o.id',
+    'SELECT o.id, o.cliente_id, o.situacao, o.data, c.nome AS cliente_nome FROM orcamentos o JOIN clientes c ON c.id = o.cliente_id ORDER BY o.id',
   ).map((o) => ({
     id: `orcamento:${o.id}`, rotulo: `Orçamento ${o.id} · ${o.cliente_nome}`, destaque: false,
-    link: `/orcamentos/${o.id}`, resumo: `Orçamento ${o.situacao} em ${dataBr(o.data)}`,
+    link: `/orcamentos/${o.id}`, ligacoes: [`cliente:${o.cliente_id}`], resumo: `Orçamento ${o.situacao} em ${dataBr(o.data)}`,
   }));
 
   const comercial = [...projetos.filter((p) => COMERCIAL.includes(p.etapa)).map(pontoProjeto), ...orcamentos];
@@ -60,34 +61,37 @@ export function montarMemoria(db, hoje) {
   const processos = tarefas.map((t) => ({
     id: `tarefa:${t.id}`, rotulo: t.texto, destaque: tarefaVencida(t, hoje),
     link: t.projeto_id ? `/projetos/${t.projeto_id}` : '/tarefas',
+    ligacoes: t.projeto_id ? [`projeto:${t.projeto_id}`] : [],
     resumo: t.prazo ? `Tarefa com prazo ${dataBr(t.prazo)}` : 'Tarefa sem prazo',
   }));
 
   const dePlacas = vendasPlacasComoParcelas(db, hoje).filter((v) => !v.pago_em).map((v) => ({
     id: `venda:${v.id}`, rotulo: `${v.cliente_nome ?? 'Venda'} · ${v.projeto_titulo}`, destaque: v.estado === 'atrasada',
-    link: '/financeiro', resumo: `${brl(v.valor_centavos)} da venda de placas, vencimento ${dataBr(v.vencimento)}`,
+    link: '/financeiro', ligacoes: v.cliente_id ? [`cliente:${v.cliente_id}`] : [], resumo: `${brl(v.valor_centavos)} da venda de placas, vencimento ${dataBr(v.vencimento)}`,
   }));
   const administrativo = [
     ...parcelas.map((pa) => ({
       id: `parcela:${pa.id}`, rotulo: pa.projeto_titulo, destaque: estadoParcela(pa, hoje) === 'atrasada',
-      link: `/projetos/${pa.projeto_id}`, resumo: `${brl(pa.valor_centavos)} a receber, vencimento ${dataBr(pa.vencimento)}`,
+      link: `/projetos/${pa.projeto_id}`, ligacoes: [`projeto:${pa.projeto_id}`], resumo: `${brl(pa.valor_centavos)} a receber, vencimento ${dataBr(pa.vencimento)}`,
     })),
     ...dePlacas,
     ...todas(
-      `SELECT h.projeto_id, h.url, h.status, p.titulo FROM hospedagens h JOIN projetos p ON p.id = h.projeto_id
+      `SELECT h.projeto_id, h.tipo, h.url, h.status, p.titulo FROM hospedagens h JOIN projetos p ON p.id = h.projeto_id
        WHERE ${vivo} ORDER BY h.projeto_id`,
     ).map((h) => ({
       id: `hospedagem:${h.projeto_id}`, rotulo: `Site ${h.titulo}`, destaque: h.status === 'fora_do_ar',
-      link: `/projetos/${h.projeto_id}`, resumo: `Hospedagem ${h.status.replace(/_/g, ' ')}${h.url ? ` · ${h.url}` : ''}`,
+      link: `/projetos/${h.projeto_id}`,
+      ligacoes: [`projeto:${h.projeto_id}`, ...(h.tipo === 'vercel' ? ['app:vercel'] : [])],
+      resumo: `Hospedagem ${h.status.replace(/_/g, ' ')}${h.url ? ` · ${h.url}` : ''}`,
     })),
     ...todas('SELECT * FROM ferramentas WHERE cancelada_em IS NULL ORDER BY id').map((f) => ({
-      id: `ferramenta:${f.id}`, rotulo: f.nome, destaque: false, link: '/financeiro',
+      id: `ferramenta:${f.id}`, rotulo: f.nome, destaque: false, link: '/financeiro', ligacoes: [],
       resumo: f.cobranca === 'mensalidade' && f.valor_centavos ? `Mensalidade de ${brl(f.valor_centavos)}` : 'Créditos por recarga',
     })),
   ];
 
   const conteudo = todas('SELECT id, titulo, tipo, estado FROM conteudos ORDER BY id').map((c) => ({
-    id: `conteudo:${c.id}`, rotulo: c.titulo, destaque: false, link: '/conteudo', resumo: `${c.tipo} · ${c.estado}`,
+    id: `conteudo:${c.id}`, rotulo: c.titulo, destaque: false, link: '/conteudo', ligacoes: ['app:instagram'], resumo: `${c.tipo} · ${c.estado}`,
   }));
 
   const area = (id, rotulo, pontos) => ({ id, rotulo, pontos });

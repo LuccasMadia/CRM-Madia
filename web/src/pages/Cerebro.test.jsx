@@ -36,6 +36,23 @@ describe('Cerebro', () => {
     }
   });
 
+  it('passar o mouse num ponto liga ele ao que está conectado e apaga o resto; sair desfaz', async () => {
+    const comLigacao = structuredClone(DADOS);
+    comLigacao.memoria.areas[2].pontos[0].ligacoes = ['cliente:1'];
+    mockApi({ 'GET /cerebro': comLigacao });
+    const { container } = renderizar(<Cerebro />);
+    const user = userEvent.setup();
+    const ponto = await screen.findByRole('button', { name: 'Site da Ana' });
+    await user.hover(ponto);
+    expect(container.querySelectorAll('.aneis__ligacoes line')).toHaveLength(1);
+    expect(container.querySelector('svg.aneis')).toHaveClass('aneis--com-foco');
+    const nomes = [...container.querySelectorAll('.aneis__nomes-ligados text')].map((t) => t.textContent);
+    expect(nomes.sort()).toEqual(['Ana', 'Site da Ana']);
+    await user.unhover(ponto);
+    expect(container.querySelectorAll('.aneis__ligacoes line')).toHaveLength(0);
+    expect(container.querySelector('svg.aneis')).not.toHaveClass('aneis--com-foco');
+  });
+
   it('clicar num ponto abre o painel com o resumo e o link para o CRM', async () => {
     mockApi({ 'GET /cerebro': DADOS });
     renderizar(<Cerebro />);

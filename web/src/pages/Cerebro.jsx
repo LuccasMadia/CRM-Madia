@@ -31,7 +31,13 @@ export function Cerebro() {
                 <button type="button" className="btn cerebro__ver-tudo" onClick={() => setAproximada(null)}>Ver tudo</button>
               )}
               <div className="cerebro__anel">
-                <AneisCerebro dados={dados} aproximada={aproximada} aoAbrir={setAberto} aoAproximar={setAproximada} />
+                <AneisCerebro
+                  dados={dados}
+                  aproximada={aproximada}
+                  aoAbrir={setAberto}
+                  aoAproximar={setAproximada}
+                  selecionado={aberto?.tipo === 'ponto' ? aberto.dados.id : aberto?.tipo === 'app' ? `app:${aberto.dados.id}` : null}
+                />
                 {!dados.centro && !aproximada && (
                   <Link className="cerebro__configurar" to="/configuracoes">Configure a pasta do cérebro</Link>
                 )}

@@ -59,10 +59,34 @@
 .aneis__centro circle { fill: var(--superficie-2); stroke: var(--tag-laranja); stroke-width: 1.5; }
 .aneis__centro text { fill: var(--texto); font-size: 7px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 
+/* Movimento contínuo: pontos flutuando, anéis correndo devagar. */
+.aneis__linha--rotinas { stroke-dasharray: 10 6; animation: aneis-girar 60s linear infinite reverse; }
+.aneis__flutua { transform-box: fill-box; transform-origin: center; animation: aneis-flutuar 6s ease-in-out infinite; }
+
+/* Mouse em cima (ou ponto aberto): o ponto cresce, o que está ligado acende e o resto apaga. */
+.aneis__ponto, .aneis__app, .aneis__skill, .aneis__rotina, .aneis__area, .aneis__centro { transition: opacity 0.25s ease; }
+.aneis__marca, .aneis__app polygon { transform-box: fill-box; transform-origin: center; transition: transform 0.25s ease, fill 0.25s ease; }
+.aneis--com-foco .aneis__ponto:not(.aneis__item--foco):not(.aneis__item--aceso),
+.aneis--com-foco .aneis__app:not(.aneis__item--foco):not(.aneis__item--aceso) { opacity: 0.18; }
+.aneis--com-foco .aneis__skill, .aneis--com-foco .aneis__rotina, .aneis--com-foco .aneis__area, .aneis--com-foco .aneis__centro { opacity: 0.45; }
+.aneis__item--aceso .aneis__marca { fill: var(--cor); transform: scale(1.6); }
+.aneis__item--foco .aneis__marca { fill: var(--cor); transform: scale(2.6); }
+.aneis__ponto--destaque.aneis__item--foco .aneis__marca, .aneis__ponto--destaque.aneis__item--aceso .aneis__marca { fill: var(--perigo); }
+.aneis__app.aneis__item--foco polygon, .aneis__app.aneis__item--aceso polygon { transform: scale(1.2); stroke: var(--primaria); }
+
+.aneis__ligacoes { pointer-events: none; }
+.aneis__ligacoes line { stroke: var(--texto); stroke-opacity: 0.55; stroke-width: 1; stroke-dasharray: 4 3; animation: aneis-fluir 1.2s linear infinite; }
+.aneis__nomes-ligados { pointer-events: none; }
+.aneis__nomes-ligados text { font-size: 8px; fill: var(--texto-suave); text-anchor: middle; paint-order: stroke; stroke: var(--fundo); stroke-width: 4px; }
+.aneis__nomes-ligados .aneis__nome-ligado--foco { font-size: 10px; font-weight: 700; fill: var(--texto); }
+
 @keyframes aneis-girar { to { stroke-dashoffset: -60; } }
 @keyframes aneis-pulsar { 50% { opacity: 0.1; transform: scale(1.5); } }
+@keyframes aneis-flutuar { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(1.6px, -1.2px); } 66% { transform: translate(-1.2px, 1.4px); } }
+@keyframes aneis-fluir { to { stroke-dashoffset: -14; } }
 @media (prefers-reduced-motion: reduce) {
-  .aneis__linha--skills, .aneis__brilho { animation: none !important; }
+  .aneis__linha--skills, .aneis__linha--rotinas, .aneis__brilho, .aneis__flutua, .aneis__ligacoes line { animation: none !important; }
+  .aneis__marca, .aneis__app polygon, .aneis__ponto, .aneis__app { transition: none; }
 }
 
 .cerebro__legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; color: var(--texto-suave); }
