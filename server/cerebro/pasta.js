@@ -15,10 +15,13 @@ function frontmatter(texto) {
   return dados;
 }
 
-// Lê um arquivo de texto; qualquer falha vira aviso e null.
+const LIMITE = 200 * 1024;
+
+// Lê um arquivo de texto (cortado em 200 KB); qualquer falha vira aviso e null.
 function lerTexto(caminho, nome, avisos) {
   try {
-    return readFileSync(caminho, 'utf8');
+    const t = readFileSync(caminho, 'utf8');
+    return t.length > LIMITE ? `${t.slice(0, LIMITE)}\n\n[… arquivo cortado em 200 KB]` : t;
   } catch {
     avisos.push(`${nome} não pôde ser lido`);
     return null;
@@ -48,7 +51,7 @@ function lerLista(pasta, arquivo, avisos) {
 }
 
 export function lerPasta(caminho) {
-  const vazio = { configurada: false, centro: null, skills: [], rotinas: [], apps_base: [], avisos: [] };
+  const vazio = { configurada: false, centro: null, skills: [], rotinas: [], apps_base: [], arquivos: [], avisos: [] };
   if (!caminho) return vazio;
   if (!existsSync(caminho) || !statSync(caminho).isDirectory()) {
     return { ...vazio, avisos: ['Pasta do cérebro não encontrada'] };
@@ -74,8 +77,31 @@ export function lerPasta(caminho) {
       const textoSkill = lerTexto(arq, `${d.name}/SKILL.md`, avisos);
       if (textoSkill === null) continue;
       const fm = frontmatter(textoSkill);
-      skills.push({ id: d.name, nome: fm.name || d.name, descricao: fm.description || '' });
+      skills.push({ id: d.name, nome: fm.name || d.name, descricao: fm.description || '', texto: textoSkill });
     }
+  }
+
+  const arquivos = [];
+  const dirRel = path.join(caminho, 'relatorios');
+  if (existsSync(dirRel)) {
+    let entradas = [];
+    try {
+      entradas = readdirSync(dirRel, { withFileTypes: true });
+    } catch {
+      avisos.push('Não foi possível ler os relatórios da pasta do cérebro');
+    }
+    for (const d of entradas) {
+      if (!d.isFile() || !d.name.endsWith('.md')) continue;
+      const arq = path.join(dirRel, d.name);
+      const texto = lerTexto(arq, `relatorios/${d.name}`, avisos);
+      if (texto === null) continue;
+      try {
+        arquivos.push({ id: `arquivo:relatorios/${d.name}`, nome: d.name, texto, modificado_em: statSync(arq).mtime });
+      } catch {
+        avisos.push(`relatorios/${d.name} não pôde ser lido`);
+      }
+    }
+    arquivos.sort((a, b) => b.modificado_em - a.modificado_em);
   }
 
   const rotinas = lerLista(caminho, 'rotinas.json', avisos).map((r) => ({
@@ -84,5 +110,5 @@ export function lerPasta(caminho) {
   const apps_base = lerLista(caminho, 'apps.json', avisos).map((a) => ({
     id: a.id, nome: a.nome, para_que: a.para_que, conexao: a.conexao,
   }));
-  return { configurada: true, centro, skills, rotinas, apps_base, avisos };
+  return { configurada: true, centro, skills, rotinas, apps_base, arquivos, avisos };
 }

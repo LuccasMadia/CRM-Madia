@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { lerPasta } from './pasta.js';
@@ -20,7 +20,7 @@ function pastaTemp({ skill = '---\nname: relatorio-projetos\ndescription: Monta 
 
 describe('lerPasta', () => {
   it('null devolve pasta não configurada', () => {
-    expect(lerPasta(null)).toEqual({ configurada: false, centro: null, skills: [], rotinas: [], apps_base: [], avisos: [] });
+    expect(lerPasta(null)).toEqual({ configurada: false, centro: null, skills: [], rotinas: [], apps_base: [], arquivos: [], avisos: [] });
   });
 
   it('pasta inexistente avisa', () => {
@@ -33,7 +33,7 @@ describe('lerPasta', () => {
     const r = lerPasta(pastaTemp());
     expect(r.configurada).toBe(true);
     expect(r.centro).toEqual({ texto: '# Madia' });
-    expect(r.skills).toEqual([{ id: 'relatorio-projetos', nome: 'relatorio-projetos', descricao: 'Monta o relatório' }]);
+    expect(r.skills).toEqual([{ id: 'relatorio-projetos', nome: 'relatorio-projetos', descricao: 'Monta o relatório', texto: '---\nname: relatorio-projetos\ndescription: Monta o relatório\n---\n# Corpo' }]);
     expect(r.rotinas).toHaveLength(1);
     expect(r.rotinas[0]).toMatchObject({ id: 'checar', frequencia: 'a cada 5 minutos', ultima_execucao: null });
     expect(r.apps_base).toEqual([{ id: 'vercel', nome: 'Vercel', para_que: 'Hospedagem', conexao: 'crm:vercel_token' }]);
@@ -50,7 +50,49 @@ describe('lerPasta', () => {
 
   it('SKILL.md sem frontmatter usa o nome da pasta', () => {
     const r = lerPasta(pastaTemp({ skill: '# só texto' }));
-    expect(r.skills).toEqual([{ id: 'relatorio-projetos', nome: 'relatorio-projetos', descricao: '' }]);
+    expect(r.skills).toEqual([{ id: 'relatorio-projetos', nome: 'relatorio-projetos', descricao: '', texto: '# só texto' }]);
+  });
+
+  it('skill traz o texto inteiro do SKILL.md', () => {
+    const skill = `---\nname: x\n---\n${'linha\n'.repeat(500)}`;
+    expect(lerPasta(pastaTemp({ skill })).skills[0].texto).toBe(skill);
+  });
+});
+
+describe('lerPasta: relatorios', () => {
+  const comRelatorios = (fn) => {
+    const dir = pastaTemp();
+    mkdirSync(path.join(dir, 'relatorios', 'sub'), { recursive: true });
+    fn(path.join(dir, 'relatorios'));
+    return dir;
+  };
+
+  it('relatorios: só .md do primeiro nível, o mais recente primeiro', () => {
+    const dir = comRelatorios((rel) => {
+      writeFileSync(path.join(rel, 'velho.md'), 'a');
+      writeFileSync(path.join(rel, 'novo.md'), 'b');
+      writeFileSync(path.join(rel, 'nota.txt'), 'c');
+      writeFileSync(path.join(rel, 'sub', 'fundo.md'), 'd');
+      utimesSync(path.join(rel, 'velho.md'), new Date('2026-01-01'), new Date('2026-01-01'));
+      utimesSync(path.join(rel, 'novo.md'), new Date('2026-06-01'), new Date('2026-06-01'));
+    });
+    const r = lerPasta(dir);
+    expect(r.arquivos.map((a) => a.id)).toEqual(['arquivo:relatorios/novo.md', 'arquivo:relatorios/velho.md']);
+    expect(r.arquivos[0]).toMatchObject({ nome: 'novo.md', texto: 'b' });
+    expect(r.arquivos[0].modificado_em).toBeInstanceOf(Date);
+  });
+
+  it('arquivo acima de 200 KB vem cortado com o aviso no fim', () => {
+    const dir = comRelatorios((rel) => writeFileSync(path.join(rel, 'grande.md'), 'x'.repeat(300 * 1024)));
+    const { texto } = lerPasta(dir).arquivos[0];
+    expect(texto.length).toBeLessThanOrEqual(200 * 1024 + 60);
+    expect(texto.endsWith('[… arquivo cortado em 200 KB]')).toBe(true);
+  });
+
+  it('sem pasta relatorios, arquivos é [] sem aviso', () => {
+    const r = lerPasta(pastaTemp());
+    expect(r.arquivos).toEqual([]);
+    expect(r.avisos).toEqual([]);
   });
 });
 

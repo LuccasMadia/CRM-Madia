@@ -23,6 +23,15 @@ function pedeAtencao(pa) {
   return grupos.filter(([n]) => n > 0).map(([n, texto, tom, unico, varios]) => ({ texto, tom, para: n === 1 ? unico : varios }));
 }
 
+const areaArquivos = (arquivos) => ({
+  id: 'arquivos',
+  rotulo: 'Arquivos',
+  pontos: arquivos.map((a) => ({
+    id: a.id, tipo: 'arquivo', rotulo: a.nome.replace(/\.md$/, ''), destaque: false, vivo: true, link: null, ligacoes: [],
+    resumo: `Relatório · modificado em ${a.modificado_em.toLocaleDateString('pt-BR')}`, texto: a.texto,
+  })),
+});
+
 export function rotasCerebro({ db, hoje }) {
   const r = Router();
 
@@ -34,6 +43,7 @@ export function rotasCerebro({ db, hoje }) {
   r.get('/cerebro', (req, res) => {
     gerarTodasMensalidades(db, hoje());
     const pasta = lerPasta(obterConfig(db, 'cerebro_path') || null);
+    const memoria = montarMemoria(db, hoje());
     res.json({
       centro: pasta.centro,
       skills: pasta.skills,
@@ -41,7 +51,7 @@ export function rotasCerebro({ db, hoje }) {
       apps: pasta.apps_base.map((a) => ({
         ...a, conectado: Boolean(typeof a.conexao === 'string' && a.conexao.startsWith('crm:') && obterConfig(db, a.conexao.slice(4))),
       })),
-      memoria: montarMemoria(db, hoje()),
+      memoria: { ...memoria, areas: [...memoria.areas, areaArquivos(pasta.arquivos)] },
       pede_atencao: pedeAtencao(montarRelatorioProjetos(db, hoje()).pede_acao),
       avisos: pasta.avisos,
     });

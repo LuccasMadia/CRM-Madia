@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { definirConfig } from '../repos/config.js';
@@ -126,11 +126,32 @@ describe('GET /api/cerebro', () => {
     return dir;
   };
 
-  it('sem cerebro_path devolve centro nulo, 6 áreas e nenhum app', async () => {
+  it('traz 7 áreas, a última é Arquivos com o relatório da pasta', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const dir = pastaCerebro();
+    mkdirSync(path.join(dir, 'relatorios'));
+    const arq = path.join(dir, 'relatorios', 'semana-1.md');
+    writeFileSync(arq, '# Semana');
+    utimesSync(arq, new Date(2026, 8, 5, 12), new Date(2026, 8, 5, 12));
+    definirConfig(ctx.db, 'cerebro_path', dir);
+    const { areas } = (await ctx.http.get('/api/cerebro').expect(200)).body.memoria;
+    expect(areas).toHaveLength(7);
+    expect(areas[6]).toEqual({
+      id: 'arquivos',
+      rotulo: 'Arquivos',
+      pontos: [{
+        id: 'arquivo:relatorios/semana-1.md', tipo: 'arquivo', rotulo: 'semana-1', destaque: false, vivo: true, link: null, ligacoes: [],
+        resumo: 'Relatório · modificado em 05/09/2026', texto: '# Semana',
+      }],
+    });
+  });
+
+  it('sem cerebro_path devolve centro nulo, 7 áreas e nenhum app', async () => {
     const ctx = criarContexto({ hoje: '2026-09-23' });
     const res = (await ctx.http.get('/api/cerebro').expect(200)).body;
     expect(res.centro).toBeNull();
-    expect(res.memoria.areas).toHaveLength(6);
+    expect(res.memoria.areas).toHaveLength(7);
+    expect(res.memoria.areas[6].pontos).toEqual([]);
     expect(res.apps).toEqual([]);
     expect(res.pede_atencao).toEqual([]);
   });
