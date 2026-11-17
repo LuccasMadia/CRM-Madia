@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CENTRO, fatiaDaArea, noAnel, posicionarPontos } from './posicoes.js';
+import { emVolta } from './layout.js';
 import { ligadosA, montarVizinhos } from './ligacoes.js';
 
 const R = { centro: 22, skills: 70, memoriaDe: 95, memoriaAte: 200, rotulos: 216, rotinas: 235, apps: 275 };
@@ -9,9 +10,6 @@ const curto = (texto) => (texto.length > 24 ? `${texto.slice(0, 23)}…` : texto
 const atraso = (x, y) => ({ animationDelay: `-${((x * 7 + y * 13) % 60) / 10}s` });
 // raio do alvo de toque de cada ponto da memória, em unidades do viewBox (~5px de raio a 375px de largura, ~11px a 720px)
 export const ALVO_TOQUE = 9;
-
-// Itens distribuídos por igual num anel, deslocados meio passo para deixar o topo livre para o nome do anel.
-const emVolta = (lista, raio) => lista.map((item, i) => ({ item, ...noAnel(-Math.PI / 2 + ((i + 0.5) * 2 * Math.PI) / lista.length, raio) }));
 
 const hexagono = (x, y, r) => Array.from({ length: 6 }, (_, i) => {
   const a = Math.PI / 6 + (i * Math.PI) / 3;

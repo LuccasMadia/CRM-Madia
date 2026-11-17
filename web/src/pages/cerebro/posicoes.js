@@ -11,7 +11,7 @@ export function fatiaDaArea(i, n) {
 }
 
 // FNV-1a 32 bits: o mesmo id sempre cai no mesmo lugar, sem depender da ordem da lista.
-function fnv(texto) {
+export function fnv(texto) {
   let h = 0x811c9dc5;
   for (let i = 0; i < texto.length; i++) {
     h ^= texto.charCodeAt(i);
