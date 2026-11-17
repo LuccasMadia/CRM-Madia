@@ -1,7 +1,5 @@
 export const CENTRO = 300;
 const VOLTA = 2 * Math.PI;
-// folga em cada borda da fatia, para as nuvens de áreas vizinhas não se encostarem
-const FOLGA = 0.05;
 
 // Fatia i de n, começando no topo e seguindo no sentido horário (ângulos de tela, em radianos).
 export function fatiaDaArea(i, n) {
@@ -27,16 +25,3 @@ export function fnv(texto) {
 }
 
 export const noAnel = (angulo, raio) => ({ x: CENTRO + raio * Math.cos(angulo), y: CENTRO + raio * Math.sin(angulo) });
-
-export function posicionarPontos(areas, raioInterno, raioExterno) {
-  return areas.flatMap((area, i) => {
-    const { inicio, fim } = fatiaDaArea(i, areas.length);
-    const util = (fim - inicio) * (1 - 2 * FOLGA);
-    return area.pontos.map(({ id }) => {
-      const angulo = inicio + (fim - inicio) * FOLGA + fnv(id) * util;
-      // raiz quadrada: espalha por igual na área do anel, sem amontoar perto do centro
-      const raio = Math.sqrt(raioInterno ** 2 + fnv(`${id}#raio`) * (raioExterno ** 2 - raioInterno ** 2));
-      return { id, area: area.id, ...noAnel(angulo, raio) };
-    });
-  });
-}

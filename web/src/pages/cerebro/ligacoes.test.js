@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { montarVizinhos, ligadosA } from './ligacoes.js';
+import { montarVizinhos, ligadosA, vizinhosVisiveis } from './ligacoes.js';
 
 const pontos = [
   { id: 'cliente:1', ligacoes: [] },
@@ -39,5 +39,16 @@ describe('ligadosA', () => {
 
   it('ponto sem ligação só acende ele mesmo', () => {
     expect(ligadosA('nada:1', vizinhos)).toEqual({ linhas: [], acesos: new Set(['nada:1']) });
+  });
+});
+
+describe('vizinhosVisiveis', () => {
+  it('omite vizinho sem rótulo e marca quem está fora do mapa', () => {
+    const v = montarVizinhos([{ id: 'a', ligacoes: ['b', 'c', 'd'] }]);
+    const rotulos = new Map([['b', 'Bê'], ['c', 'Cê']]);
+    expect(vizinhosVisiveis('a', v, rotulos, new Set(['b']))).toEqual([
+      { id: 'b', rotulo: 'Bê', noMapa: true },
+      { id: 'c', rotulo: 'Cê', noMapa: false },
+    ]);
   });
 });

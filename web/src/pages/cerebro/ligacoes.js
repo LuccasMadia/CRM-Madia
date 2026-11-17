@@ -31,3 +31,11 @@ export function ligadosA(id, vizinhos) {
   }
   return { linhas, acesos };
 }
+
+// Vizinhos de um ponto para o cartão: só os que têm rótulo conhecido (id sem rótulo, como um projeto fictício, some).
+// `noMapa` diz se o vizinho tem posição no grafo (vira botão) ou não (vira texto).
+export function vizinhosVisiveis(id, vizinhos, rotulos, noMapa) {
+  return [...(vizinhos.get(id) ?? [])]
+    .filter((v) => rotulos.has(v))
+    .map((v) => ({ id: v, rotulo: rotulos.get(v), noMapa: noMapa.has(v) }));
+}
