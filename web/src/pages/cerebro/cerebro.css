@@ -6,6 +6,7 @@
   --area-processos: var(--tag-violeta);
   --area-administrativo: var(--tag-azul);
   --area-conteudo: var(--tag-fucsia);
+  --area-arquivos: var(--tag-ambar);
   --anel-skills: var(--tag-verde);
   --anel-rotinas: var(--tag-laranja);
   --anel-apps: var(--texto-suave);
@@ -17,6 +18,10 @@
 .cerebro__anel { position: relative; width: 100%; max-width: 720px; }
 .cerebro__ver-tudo { position: absolute; top: 0; left: 0; z-index: 1; }
 .cerebro__configurar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 8px 12px; border-radius: var(--raio-controle); background: var(--superficie); border: 1px solid var(--borda); font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+
+.cerebro__grafo { position: relative; width: 100%; }
+/* a altura vem do GrafoCanvas: max(420px, 100vh - topo do canvas - 24px) */
+.cerebro__canvas { display: block; width: 100%; height: 420px; border-radius: var(--raio); background: var(--fundo); touch-action: none; user-select: none; }
 
 .aneis { display: block; width: 100%; height: auto; font-family: inherit; }
 .aneis [role='button'] { cursor: pointer; outline: none; }
