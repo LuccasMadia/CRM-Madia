@@ -60,7 +60,7 @@ export function Cerebro() {
   const grafo = useRef(null);
   const indice = useMemo(() => (dados ? montarIndice(dados) : null), [dados]);
 
-  const abrir = useCallback((acao) => { setAberto(acao); setAba('item'); }, []);
+  const abrir = useCallback((acao) => { setAberto(acao); setAba('item'); setLista(false); setLegenda(false); }, []);
   const fechar = useCallback(() => setAberto(null), []);
   const voarPara = (id) => { if (id) grafo.current?.voarParaPonto(id); };
   const escolher = (acao, id) => { abrir(acao); setLista(false); voarPara(id); };

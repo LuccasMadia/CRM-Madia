@@ -118,6 +118,21 @@ describe('Cerebro', () => {
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
+  it('abrir um item com a Lista aberta fecha a Lista', async () => {
+    mockApi({ 'GET /cerebro': DADOS });
+    renderizar(<Cerebro />);
+    await abrirPelaLista('Ana');
+    expect(screen.queryByRole('region', { name: 'Lista do cérebro' })).not.toBeInTheDocument();
+  });
+
+  it('área sem pontos na Lista mostra "Nada aqui ainda"', async () => {
+    mockApi({ 'GET /cerebro': DADOS });
+    renderizar(<Cerebro />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Lista' }));
+    const lista = screen.getByRole('region', { name: 'Lista do cérebro' });
+    expect(within(lista).getAllByText('Nada aqui ainda')).toHaveLength(3);
+  });
+
   it('Legenda abre e fecha', async () => {
     mockApi({ 'GET /cerebro': DADOS });
     renderizar(<Cerebro />);

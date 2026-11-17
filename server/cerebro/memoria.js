@@ -129,7 +129,7 @@ export function montarMemoria(db, hoje) {
       `SELECT m.id, m.tipo, m.legenda, m.publicado_em, m.projeto_id FROM instagram_midias m
        WHERE m.removido = 0 AND NOT EXISTS (SELECT 1 FROM conteudos c WHERE c.midia_id = m.id) ORDER BY m.publicado_em, m.id`,
     ).map((m) => ponto('instagram', false, {
-      id: `instagram:${m.id}`, rotulo: m.legenda ? m.legenda.slice(0, 40) : 'Post do Instagram', destaque: false, link: '/conteudo',
+      id: `instagram:${m.id}`, rotulo: m.legenda ? Array.from(m.legenda).slice(0, 40).join('') : 'Post do Instagram', destaque: false, link: '/conteudo',
       ligacoes: m.projeto_id ? ['app:instagram', `projeto:${m.projeto_id}`] : ['app:instagram'],
       resumo: `${m.tipo} publicado em ${dataBr(m.publicado_em.slice(0, 10))}`,
     })),

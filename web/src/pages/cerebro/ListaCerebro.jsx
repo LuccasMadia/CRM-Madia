@@ -25,7 +25,7 @@ export function ListaCerebro({ dados, aoEscolher }) {
         return (
           <section key={area.id}>
             <h2>{area.rotulo}</h2>
-            <ul>{vivos.map(ponto(area))}</ul>
+            {vivos.length ? <ul>{vivos.map(ponto(area))}</ul> : historico.length === 0 && <p>Nada aqui ainda</p>}
             {historico.length > 0 && (
               <details>
                 <summary>Histórico ({historico.length})</summary>

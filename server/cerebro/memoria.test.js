@@ -121,6 +121,14 @@ describe('montarMemoria', () => {
     });
   });
 
+  it('rótulo do Instagram não corta emoji ao meio', () => {
+    const ctx = criarContexto();
+    ctx.db.prepare("INSERT INTO instagram_midias (id, tipo, legenda, publicado_em, removido, atualizado_em) VALUES ('e1', 'post', ?, '2026-09-10T12:00:00+0000', 0, '2026-09-10')").run(`${'a'.repeat(39)}😀resto`);
+    const p = montarMemoria(ctx.db, '2026-09-23').areas.find((a) => a.id === 'conteudo').pontos.find((x) => x.id === 'instagram:e1');
+    expect(p.rotulo).toBe(`${'a'.repeat(39)}😀`);
+    expect(p.rotulo).not.toMatch(/[�-�](?![�-�])/);
+  });
+
   it('tarefa solta com cliente liga ao cliente', async () => {
     const ctx = criarContexto();
     const { ana } = await base(ctx);

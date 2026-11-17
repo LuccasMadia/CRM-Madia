@@ -126,7 +126,10 @@ export const GrafoCanvas = forwardRef(function GrafoCanvas({ dados, selecionado 
 
     function medir() {
       const r = el.getBoundingClientRect();
-      tamanho = { largura: r.width, altura: Math.max(420, window.innerHeight - r.top - 24) };
+      const nav = document.querySelector('.sidebar');
+      const baixo = nav && getComputedStyle(nav).position === 'fixed' ? nav.offsetHeight : 0;
+      // topo relativo ao documento: a altura não muda com a rolagem da página
+      tamanho = { largura: r.width, altura: Math.max(420, window.innerHeight - (r.top + window.scrollY) - 24 - baixo) };
       dpr = window.devicePixelRatio || 1;
       canvas.style.height = `${tamanho.altura}px`;
       canvas.width = Math.round(tamanho.largura * dpr);
@@ -157,6 +160,7 @@ export const GrafoCanvas = forwardRef(function GrafoCanvas({ dados, selecionado 
     let arrastou = false;
 
     function aoApertar(e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       const p = naTela(e);
       ponteiros.set(e.pointerId, p);
       try { canvas.setPointerCapture?.(e.pointerId); } catch { /* ponteiro já solto */ }
@@ -184,8 +188,8 @@ export const GrafoCanvas = forwardRef(function GrafoCanvas({ dados, selecionado 
       const d0 = distancia(antes, outro);
       const m0 = meio(antes, outro);
       const m1 = meio(p, outro);
-      const aproximada = d0 > 0 ? aproximar(cam, distancia(p, outro) / d0, m1, tamanho) : cam;
-      mudarCamera(arrastar(aproximada, m1.x - m0.x, m1.y - m0.y, tamanho));
+      const movida = arrastar(cam, m1.x - m0.x, m1.y - m0.y, tamanho);
+      mudarCamera(d0 > 0 ? aproximar(movida, distancia(p, outro) / d0, m1, tamanho) : movida);
     }
     function aoSoltar(e) {
       if (!ponteiros.delete(e.pointerId)) return;

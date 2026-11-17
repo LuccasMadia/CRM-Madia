@@ -5,6 +5,12 @@ import { escala, paraMundo } from './camera.js';
 const FOLGA_TELA = 20; // px além da borda que ainda são desenhados
 const MEIO_MEMORIA = (R.memoriaDe + R.memoriaAte) / 2;
 
+// Quais acesos ganham nome: poucos, todos; muitos (hub), só o ativo e projetos/clientes.
+export function idsComNome(acesos, ativo) {
+  const todos = acesos.size <= 12;
+  return [...acesos].filter((id) => id === ativo || todos || id.startsWith('projeto:') || id.startsWith('cliente:'));
+}
+
 const curto = (texto) => (texto.length > 24 ? `${texto.slice(0, 23)}…` : texto);
 
 // Cores do tema, lidas do CSS a cada quadro: trocar o tema troca o desenho sem recarregar.
@@ -151,7 +157,8 @@ export function desenhar(ctx, { tamanho, dpr, cam, cena, cores, ativo, ligados, 
   anel(ctx, R.rotinas, cores.rotinas, px, [10, 6], t * 1);
   ctx.globalAlpha = apagado;
   anel(ctx, R.skills, cores.skills, 2, [2, 4], -t * 1.5);
-  ctx.font = `600 9px ${cores.fonte}`;
+  const fonteAnel = Math.max(9, 10 * px); // nunca menor que 10 px na tela
+  ctx.font = `600 ${fonteAnel}px ${cores.fonte}`;
   ctx.globalAlpha = 1;
   rotulo(ctx, 'APPS', CENTRO, CENTRO - R.apps + 4, cores.apps, cores.fundo, 6);
   rotulo(ctx, 'ROTINAS', CENTRO, CENTRO - R.rotinas + 4, cores.rotinas, cores.fundo, 6);
@@ -186,7 +193,7 @@ export function desenhar(ctx, { tamanho, dpr, cam, cena, cores, ativo, ligados, 
   }
 
   // nomes das áreas
-  ctx.font = `600 9px ${cores.fonte}`;
+  ctx.font = `600 ${fonteAnel}px ${cores.fonte}`;
   for (const { area, x, y } of cena.rotulos) {
     ctx.globalAlpha = apagado;
     rotulo(ctx, area.rotulo.toUpperCase(), x, y, cores.area[area.id], cores.fundo, 4);
@@ -260,7 +267,7 @@ export function desenhar(ctx, { tamanho, dpr, cam, cena, cores, ativo, ligados, 
   // nomes curtos do que está aceso, por cima de tudo
   if (comFoco) {
     ctx.globalAlpha = 1;
-    for (const id of ligados.acesos) {
+    for (const id of idsComNome(ligados.acesos, ativo)) {
       const p = cena.posicao.get(id);
       if (!p) continue;
       const { x, y } = onde(p, t);

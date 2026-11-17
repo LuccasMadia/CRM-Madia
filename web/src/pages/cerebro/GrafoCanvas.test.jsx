@@ -67,6 +67,14 @@ describe('GrafoCanvas', () => {
     expect(aoFechar).not.toHaveBeenCalled();
   });
 
+  it('botão direito do mouse sobre um ponto não abre', () => {
+    const { aoAbrir } = montar();
+    const { x, y } = naTela('cliente:1');
+    fireEvent.pointerDown(tela(), { clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 2 });
+    fireEvent.pointerUp(tela(), { clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 2 });
+    expect(aoAbrir).not.toHaveBeenCalled();
+  });
+
   it('arrastar mais de 5px não abre nada', () => {
     const { aoAbrir, aoFechar } = montar();
     const { x, y } = naTela('cliente:1');
