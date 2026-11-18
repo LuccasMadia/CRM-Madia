@@ -881,3 +881,7 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
   .tabela--mensalidades td:first-child > .tabela__sub { text-align: left; }
   .tabela--mensalidades .acoes-linha { width: 100%; }
 }
+
+.cartao-numero--link { color: inherit; text-decoration: none; }
+.cartao-numero--link:hover { text-decoration: none; border-color: var(--primaria); }
+.cartao-numero--link:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
