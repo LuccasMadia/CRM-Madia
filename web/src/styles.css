@@ -645,13 +645,22 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 
 .inicio__grupo { margin: 20px 0 10px; padding-top: 16px; border-top: 1px solid var(--borda); }
 .cartao > h2 + .inicio__grupo { margin-top: 12px; padding-top: 0; border-top: 0; }
-.tarefas-inicio li { justify-content: space-between; flex-wrap: nowrap; }
-.tarefas-inicio li > span:last-child:not(:first-child) { flex: none; font-size: 0.85rem; }
-.tarefas-inicio li > span:first-child { flex: 1 1 auto; min-width: 0; }
-.tarefas-inicio .etiqueta { flex: none; }
 .divulgacao__linha { justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--borda); }
 .divulgacao__linha:last-child { border-bottom: 0; }
 .divulgacao__etiquetas { display: flex; gap: 6px; flex-wrap: wrap; }
+.mission__numeros { position: relative; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 24px; }
+.mission__numeros::before { content: ''; position: absolute; inset: -24px -16px; background: radial-gradient(ellipse at 50% 40%, var(--primaria-suave), transparent 70%); pointer-events: none; }
+.mission__numeros .cartao { position: relative; margin-bottom: 0; text-decoration: none; color: inherit; }
+.mission__numeros .cartao-numero--link:hover { border-color: var(--primaria); }
+.mission__numeros .cartao-numero__valor { font-size: 2.5rem; line-height: 1.1; }
+.mission__colunas { display: grid; grid-template-columns: 11fr 9fr; gap: 20px; align-items: start; margin-bottom: 20px; }
+.mission__colunas > .cartao { margin-bottom: 0; }
+.mission__colunas h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
+@media (max-width: 900px) {
+  .mission__numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mission__numeros .cartao-numero__valor { font-size: 1.8rem; }
+  .mission__colunas { grid-template-columns: 1fr; }
+}
 .btn--icone { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-color: transparent; background: transparent; color: var(--texto-suave); }
 .btn--icone:hover { background: var(--superficie-2); border-color: transparent; color: var(--texto); }
 .btn--icone-perigo:hover { color: var(--perigo); }
