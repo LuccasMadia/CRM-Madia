@@ -22,6 +22,8 @@ describe('GET /api/painel', () => {
       a_receber_mes_centavos: 3000,
       atrasadas: { quantidade: 1, total_centavos: 1000 },
       em_andamento: 2,
+      em_andamento_detalhe: { prototipo: 1, andamento: 1 },
+      recebido_mes_centavos: 0,
       propostas: { quantidade: 2, total_centavos: 100000 },
     });
     expect(res.body.proximos).toBeUndefined();
@@ -175,5 +177,71 @@ describe('GET /api/painel mensalidades', () => {
     await ctx.http.get('/api/painel').expect(200);
     expect(ctx.db.prepare('SELECT vencimento FROM parcelas WHERE projeto_id = ? ORDER BY vencimento').all(proj.id).map((p) => p.vencimento))
       .toEqual(['2026-08-10', '2026-09-10']);
+  });
+});
+
+describe('GET /api/painel Mission Control', () => {
+  const projeto = (ctx, clienteId, titulo, etapa, ficticio = 0) => ctx.db.prepare(
+    `INSERT INTO projetos (cliente_id, titulo, etapa, servico, ficticio, criado_em, atualizado_em)
+     VALUES (?, ?, ?, 'site_sistema', ?, '2026-01-01', '2026-01-01')`,
+  ).run(clienteId, titulo, etapa, ficticio).lastInsertRowid;
+  const paga = (ctx, projetoId, valor, pagoEm) => ctx.db.prepare(
+    `INSERT INTO parcelas (projeto_id, valor_centavos, vencimento, pago_em, criado_em, atualizado_em)
+     VALUES (?, ?, ?, ?, '2026-01-01', '2026-01-01')`,
+  ).run(projetoId, valor, pagoEm, pagoEm);
+
+  async function comPagas() {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const real = projeto(ctx, ana.id, 'Site', 'entregue');
+    const ficticio = projeto(ctx, ana.id, 'Case', 'entregue', 1);
+    paga(ctx, real, 1000, '2026-09-10');
+    paga(ctx, real, 500, '2026-08-30');
+    paga(ctx, ficticio, 700, '2026-09-10');
+    return ctx;
+  }
+
+  it('recebido no mês soma parcelas e placas pagas no mês atual e ignora outro mês e fictício', async () => {
+    const ctx = await comPagas();
+    const res = await ctx.http.get('/api/painel').expect(200);
+    expect(res.body.cartoes.recebido_mes_centavos).toBe(1000);
+  });
+
+  it('recebido no mês bate com o mês atual de /painel/graficos', async () => {
+    const ctx = await comPagas();
+    const painel = (await ctx.http.get('/api/painel')).body;
+    const graficos = (await ctx.http.get('/api/painel/graficos')).body;
+    expect(painel.cartoes.recebido_mes_centavos).toBe(graficos.recebido_por_mes.find((m) => m.mes === '2026-09').total_centavos);
+  });
+
+  it('em_andamento_detalhe separa protótipo e versão final e soma em_andamento', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    projeto(ctx, ana.id, 'P1', 'prototipo');
+    projeto(ctx, ana.id, 'A1', 'andamento');
+    projeto(ctx, ana.id, 'A2', 'andamento');
+    projeto(ctx, ana.id, 'Case', 'andamento', 1);
+    const { cartoes } = (await ctx.http.get('/api/painel')).body;
+    expect(cartoes.em_andamento_detalhe).toEqual({ prototipo: 1, andamento: 2 });
+    expect(cartoes.em_andamento_detalhe.prototipo + cartoes.em_andamento_detalhe.andamento).toBe(cartoes.em_andamento);
+  });
+
+  it('pede_atencao é igual ao do cérebro', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = (await ctx.http.post('/api/clientes').send({ nome: 'Ana' })).body;
+    const proj = (await ctx.http.post('/api/projetos').send({ cliente_id: ana.id, titulo: 'Site', etapa: 'andamento' })).body;
+    await ctx.http.post(`/api/projetos/${proj.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-09-10' });
+    const painel = (await ctx.http.get('/api/painel')).body;
+    const cerebro = (await ctx.http.get('/api/cerebro')).body;
+    expect(painel.pede_atencao.length).toBeGreaterThan(0);
+    expect(painel.pede_atencao).toEqual(cerebro.pede_atencao);
+  });
+
+  it('banco vazio: recebido 0, detalhe {0,0}, pede_atencao []', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const { cartoes, pede_atencao } = (await ctx.http.get('/api/painel')).body;
+    expect(cartoes.recebido_mes_centavos).toBe(0);
+    expect(cartoes.em_andamento_detalhe).toEqual({ prototipo: 0, andamento: 0 });
+    expect(pede_atencao).toEqual([]);
   });
 });

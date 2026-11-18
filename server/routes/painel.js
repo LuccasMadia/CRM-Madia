@@ -6,10 +6,16 @@ import { agruparTarefasPorProjeto, montarDivulgacao } from '../domain/painel.js'
 import { montarFunil, recebidoPorMes, agruparOrigens, faturamentoPorServico } from '../domain/graficos.js';
 import { vendasPlacasComoParcelas, repoPlacasMontagens, repoPlacasVendas, repoPlacasModelos } from '../repos/placas.js';
 import { montadasDoModelo } from '../domain/placas.js';
+import { montarRelatorioProjetos } from '../cerebro/relatorio.js';
+import { pedeAtencao } from '../cerebro/pedeAtencao.js';
 
 export function rotasPainel({ db, hoje }) {
   const r = Router();
   const todas = (sql) => db.prepare(sql).all().map(linha);
+  const parcelasPagas = (dia) => todas(
+    `SELECT pa.valor_centavos, pa.pago_em, p.servico FROM parcelas pa
+     JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NOT NULL AND p.ficticio = 0`,
+  ).concat(vendasPlacasComoParcelas(db, dia).filter((v) => v.pago_em));
 
   r.get('/painel', (req, res) => {
     gerarTodasMensalidades(db, hoje());
@@ -26,7 +32,7 @@ export function rotasPainel({ db, hoje }) {
     const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa IN ('apresentado', 'valor_definido', 'teste') AND ficticio = 0 AND servico = 'site_sistema'");
     // Em andamento = protótipo + versão final: o que está nas mãos do Lucca, não do cliente.
     const emAndamento = todas(
-      "SELECT id FROM projetos WHERE etapa IN ('prototipo', 'andamento') AND ficticio = 0 AND servico = 'site_sistema'",
+      "SELECT id, etapa FROM projetos WHERE etapa IN ('prototipo', 'andamento') AND ficticio = 0 AND servico = 'site_sistema'",
     );
 
     const paraEntregar = todas(
@@ -43,12 +49,20 @@ export function rotasPainel({ db, hoje }) {
           quantidade: atrasadas.length,
           total_centavos: atrasadas.reduce((s, p) => s + p.valor_centavos, 0),
         },
+        recebido_mes_centavos: parcelasPagas(dia)
+          .filter((p) => p.pago_em.slice(0, 7) === dia.slice(0, 7))
+          .reduce((s, p) => s + p.valor_centavos, 0),
         em_andamento: emAndamento.length,
+        em_andamento_detalhe: {
+          prototipo: emAndamento.filter((p) => p.etapa === 'prototipo').length,
+          andamento: emAndamento.filter((p) => p.etapa === 'andamento').length,
+        },
         propostas: {
           quantidade: propostas.length,
           total_centavos: propostas.reduce((s, p) => s + p.valor_total_centavos, 0),
         },
       },
+      pede_atencao: pedeAtencao(montarRelatorioProjetos(db, dia).pede_acao),
       para_entregar: {
         gmn: paraEntregar.filter((i) => i.servico === 'google_meu_negocio').length,
         placas: vendasAbertas.length,
@@ -76,10 +90,7 @@ export function rotasPainel({ db, hoje }) {
   r.get('/painel/graficos', (req, res) => {
     gerarTodasMensalidades(db, hoje());
     const dia = hoje();
-    const pagas = todas(
-      `SELECT pa.valor_centavos, pa.pago_em, p.servico FROM parcelas pa
-       JOIN projetos p ON p.id = pa.projeto_id WHERE pa.pago_em IS NOT NULL AND p.ficticio = 0`,
-    ).concat(vendasPlacasComoParcelas(db, dia).filter((v) => v.pago_em));
+    const pagas = parcelasPagas(dia);
     res.json({
       funil: montarFunil(todas('SELECT etapa, servico FROM projetos WHERE ficticio = 0')),
       recebido_por_mes: recebidoPorMes(pagas, dia),
