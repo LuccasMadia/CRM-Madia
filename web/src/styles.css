@@ -653,6 +653,8 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .mission__numeros .cartao { position: relative; margin-bottom: 0; text-decoration: none; color: inherit; }
 .mission__numeros .cartao-numero--link:hover { border-color: var(--primaria); }
 .mission__numeros .cartao-numero__valor { font-size: 2.5rem; line-height: 1.1; }
+.mission__atencao .pede-atencao { padding: 0; margin: 0; border: 0; background: none; box-shadow: none; }
+.mission__atencao h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
 .mission__colunas { display: grid; grid-template-columns: 11fr 9fr; gap: 20px; align-items: start; margin-bottom: 20px; }
 .mission__colunas > .cartao { margin-bottom: 0; }
 .mission__colunas h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }

@@ -62,6 +62,15 @@ describe('Inicio', () => {
     expect(screen.queryByText(/cobranças? atrasadas?/)).not.toBeInTheDocument();
   });
 
+  it('Pede ação vem antes do to-do e dos follow-ups', async () => {
+    mockApi({ ...AVISOS, 'GET /painel': PAINEL, 'GET /painel/graficos': GRAFICOS });
+    renderizar(<Inicio />);
+    const pede = await screen.findByRole('heading', { name: 'Pede ação' });
+    const antes = (a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(antes(pede, screen.getByLabelText('Nova tarefa'))).toBeTruthy();
+    expect(antes(pede, screen.getByRole('heading', { name: 'Follow-ups' }))).toBeTruthy();
+  });
+
   it('Vencido fica em perigo quando há atrasadas', async () => {
     mockApi({ ...AVISOS, 'GET /painel': PAINEL, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);

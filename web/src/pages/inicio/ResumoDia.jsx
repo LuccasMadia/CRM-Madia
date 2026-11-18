@@ -1,5 +1,4 @@
 import { Link } from 'react-router';
-import { PedeAtencao } from '../../components/PedeAtencao.jsx';
 import { ABA_DO_SERVICO } from '../../lib/rotulos.js';
 
 const ROTULO_CANAL = { instagram: 'Instagram', portfolio: 'Portfólio' };
@@ -14,7 +13,7 @@ function ClientesDoServico({ itens, vazio }) {
   );
 }
 
-export function ResumoDia({ pedeAtencao, followUps, paraEntregar, divulgacao }) {
+export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
   const { orcamentos, projetos, aguardando } = followUps;
   const semFollowUps = !orcamentos.length && !projetos.length && !aguardando.length;
   const gmn = paraEntregar.itens.filter((i) => i.servico === 'google_meu_negocio');
@@ -22,9 +21,6 @@ export function ResumoDia({ pedeAtencao, followUps, paraEntregar, divulgacao }) 
 
   return (
     <section className="cartao">
-      <h2>Pede ação</h2>
-      <PedeAtencao itens={pedeAtencao} />
-
       <h2>Follow-ups</h2>
       {semFollowUps ? <p className="vazio">Ninguém esperando por você.</p> : (
         <ul className="lista">

@@ -5,13 +5,13 @@ import { Numero } from '../../components/Numero.jsx';
 import { renderizar } from '../../test/renderizar.jsx';
 
 const vazio = { orcamentos: [], projetos: [], aguardando: [] };
-const props = (extra = {}) => ({ pedeAtencao: [], followUps: vazio, paraEntregar: { gmn: 0, placas: 0, itens: [] }, divulgacao: [], ...extra });
+const props = (extra = {}) => ({ followUps: vazio, paraEntregar: { gmn: 0, placas: 0, itens: [] }, divulgacao: [], ...extra });
 
 describe('ResumoDia', () => {
   it('mostra os títulos na ordem', () => {
     renderizar(<ResumoDia {...props()} />);
     const titulos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titulos).toEqual(['Pede ação', 'Follow-ups', 'Para entregar', 'Divulgação', 'Agenda']);
+    expect(titulos).toEqual(['Follow-ups', 'Para entregar', 'Divulgação', 'Agenda']);
   });
 
   it('follow-ups vazios mostram Ninguém esperando por você.', () => {

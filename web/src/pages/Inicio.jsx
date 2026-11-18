@@ -5,6 +5,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { Carregando } from '../components/Carregando.jsx';
 import { AvisosPublicacao } from '../components/AvisosPublicacao.jsx';
 import { AvisosSites } from '../components/AvisosSites.jsx';
+import { PedeAtencao } from '../components/PedeAtencao.jsx';
 import { Numero } from '../components/Numero.jsx';
 import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
@@ -67,9 +68,14 @@ export function Inicio() {
         <Numero rotulo="Propostas abertas" para="/servicos?aba=sites" detalhe={formatarDinheiro(propostas.total_centavos)}>{propostas.quantidade}</Numero>
       </div>
 
+      <section className="cartao mission__atencao">
+        <h2>Pede ação</h2>
+        <PedeAtencao itens={pedeAtencao} />
+      </section>
+
       <div className="mission__colunas">
         <TodoInicio tarefas={tarefas} aoMudar={recarregar} />
-        <ResumoDia pedeAtencao={pedeAtencao} followUps={followUps} paraEntregar={paraEntregar} divulgacao={divulgacao} />
+        <ResumoDia followUps={followUps} paraEntregar={paraEntregar} divulgacao={divulgacao} />
       </div>
 
       <Graficos />
