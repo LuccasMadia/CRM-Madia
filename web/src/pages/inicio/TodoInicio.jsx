@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../../api/client.js';
 import { Aviso } from '../../components/Aviso.jsx';
@@ -11,16 +11,26 @@ export function TodoInicio({ tarefas, aoMudar }) {
   const [texto, setTexto] = useState('');
   const [erro, setErro] = useState(null);
 
+  const emAndamento = useRef(false);
+  const [ocupado, setOcupado] = useState(false);
+
+  // guarda síncrona: dois Enter/cliques seguidos não disparam duas chamadas
   async function executar(chamada) {
+    if (emAndamento.current) return false;
+    emAndamento.current = true;
+    setOcupado(true);
     setErro(null);
     try {
       await chamada();
-      aoMudar();
-      return true;
     } catch (e) {
       setErro(e);
       return false;
+    } finally {
+      emAndamento.current = false;
+      setOcupado(false);
     }
+    aoMudar();
+    return true;
   }
 
   async function adicionar(e) {
@@ -37,14 +47,14 @@ export function TodoInicio({ tarefas, aoMudar }) {
       <h2>Para fazer</h2>
       <form className="linha" onSubmit={adicionar}>
         <input aria-label="Nova tarefa" placeholder="Nova tarefa" value={texto} onChange={(e) => setTexto(e.target.value)} />
-        <button type="submit">Adicionar</button>
+        <button type="submit" disabled={ocupado}>Adicionar</button>
       </form>
       <Aviso erro={erro} />
       {tarefas.itens.length ? (
         <ul className="lista">
           {tarefas.itens.map((t) => (
             <li key={t.id}>
-              <input type="checkbox" aria-label={`Concluir: ${t.texto}`} checked={false} onChange={() => concluir(t)} />
+              <input type="checkbox" aria-label={`Concluir: ${t.texto}`} checked={false} disabled={ocupado} onChange={() => concluir(t)} />
               {t.link && t.link !== '/tarefas' ? <Link to={t.link}>{t.texto}</Link> : <span>{t.texto}</span>}
               {(t.projeto_titulo || t.cliente_nome) && <small className="vazio">{t.projeto_titulo || t.cliente_nome}</small>}
               {t.dias_atraso > 0 && <span className="item-atrasado">atrasada {t.dias_atraso}d</span>}

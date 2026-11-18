@@ -885,3 +885,4 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .cartao-numero--link { color: inherit; text-decoration: none; }
 .cartao-numero--link:hover { text-decoration: none; border-color: var(--primaria); }
 .cartao-numero--link:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.cartao-numero--link:not(.cartao-numero) { display: block; }

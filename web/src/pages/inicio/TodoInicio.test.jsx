@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TodoInicio } from './TodoInicio.jsx';
 import { mockApi, resposta } from '../../test/mockApi.js';
@@ -71,5 +71,24 @@ describe('TodoInicio', () => {
   it('Ver todas (18) quando há mais que os itens', () => {
     renderizar(<TodoInicio tarefas={lista([tarefa()], 18)} aoMudar={vi.fn()} />);
     expect(screen.getByRole('link', { name: 'Ver todas (18)' })).toHaveAttribute('href', '/tarefas');
+  });
+
+  it('Enter duas vezes seguidas cria só uma tarefa', async () => {
+    const { chamadas } = mockApi({ 'POST /tarefas': { id: 9 } });
+    renderizar(<TodoInicio tarefas={lista([])} aoMudar={vi.fn()} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Nova tarefa'), 'Uma{Enter}{Enter}');
+    await vi.waitFor(() => expect(screen.getByLabelText('Nova tarefa')).toHaveValue(''));
+    expect(chamadas.filter((c) => c.metodo === 'POST')).toHaveLength(1);
+  });
+
+  it('duplo clique na caixa faz só um PUT', async () => {
+    const { chamadas } = mockApi({ 'PUT /tarefas/1': { id: 1 } });
+    renderizar(<TodoInicio tarefas={lista([tarefa()])} aoMudar={vi.fn()} />);
+    const caixa = screen.getByRole('checkbox', { name: 'Concluir: Ligar' });
+    fireEvent.click(caixa);
+    fireEvent.click(caixa); // síncrono: o primeiro PUT ainda está em andamento
+    await vi.waitFor(() => expect(chamadas.length).toBeGreaterThan(0));
+    expect(chamadas.filter((c) => c.metodo === 'PUT')).toHaveLength(1);
   });
 });
