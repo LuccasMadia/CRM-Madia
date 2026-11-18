@@ -45,9 +45,9 @@ export function TodoInicio({ tarefas, aoMudar }) {
   return (
     <section className="cartao">
       <h2>Para fazer</h2>
-      <form className="linha" onSubmit={adicionar}>
+      <form className="mission__nova" onSubmit={adicionar}>
         <input aria-label="Nova tarefa" placeholder="Nova tarefa" value={texto} onChange={(e) => setTexto(e.target.value)} />
-        <button type="submit" disabled={ocupado}>Adicionar</button>
+        <button type="submit" className="btn btn--primario" disabled={ocupado}>Adicionar</button>
       </form>
       <Aviso erro={erro} />
       {tarefas.itens.length ? (
