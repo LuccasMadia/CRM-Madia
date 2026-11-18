@@ -8,6 +8,26 @@ import { vendasPlacasComoParcelas, repoPlacasMontagens, repoPlacasVendas, repoPl
 import { montadasDoModelo } from '../domain/placas.js';
 import { montarRelatorioProjetos } from '../cerebro/relatorio.js';
 import { pedeAtencao } from '../cerebro/pedeAtencao.js';
+import { alertasOrcamento, diasEntre } from '../domain/orcamentos.js';
+import { tarefaVencida } from '../domain/cerebro.js';
+import { dataValida } from '../domain/datas.js';
+
+const MAX_TAREFAS = 15;
+const DIAS_PROJETO_PARADO = 14;
+
+// Mesmo filtro do relatório do cérebro: tarefa solta ou de projeto real e não perdido.
+const TAREFAS_ABERTAS_SQL = `FROM tarefas t LEFT JOIN projetos p ON p.id = t.projeto_id LEFT JOIN clientes c ON c.id = t.cliente_id
+  WHERE t.concluida = 0 AND (t.projeto_id IS NULL OR (p.ficticio = 0 AND p.etapa <> 'perdido'))`;
+
+// Vencidas (mais atrasada primeiro), depois com prazo válido por prazo, depois o resto da mais nova.
+function ordemTarefa(a, b) {
+  const grupo = (t) => (t.dias_atraso > 0 ? 0 : dataValida(t.prazo) ? 1 : 2);
+  return grupo(a) - grupo(b)
+    || (grupo(a) === 0 ? b.dias_atraso - a.dias_atraso : 0)
+    || (grupo(a) === 1 ? a.prazo.localeCompare(b.prazo) : 0)
+    || (grupo(a) === 2 ? b.criado_em.localeCompare(a.criado_em) : 0)
+    || a.id - b.id;
+}
 
 export function rotasPainel({ db, hoje }) {
   const r = Router();
@@ -42,7 +62,46 @@ export function rotasPainel({ db, hoje }) {
        ORDER BY c.nome COLLATE NOCASE, p.id`,
     );
 
+    const abertas = todas(
+      `SELECT t.id, t.texto, t.prazo, t.etapa, t.criado_em, t.projeto_id, p.titulo AS projeto_titulo, t.cliente_id, c.nome AS cliente_nome ${TAREFAS_ABERTAS_SQL}`,
+    ).map((t) => ({
+      ...t,
+      dias_atraso: tarefaVencida({ ...t, concluida: 0 }, dia) ? diasEntre(t.prazo, dia) : 0,
+      link: t.projeto_id ? `/projetos/${t.projeto_id}` : t.cliente_id ? `/clientes/${t.cliente_id}` : '/tarefas',
+    })).sort(ordemTarefa);
+
+    const aguardando = new Map();
+    for (const t of abertas.filter((x) => x.etapa === 'aguardando_cliente')) {
+      const g = aguardando.get(t.cliente_id) ?? {
+        cliente_id: t.cliente_id,
+        cliente_nome: t.cliente_nome ?? 'Sem cliente',
+        quantidade: 0,
+        link: t.cliente_id ? `/clientes/${t.cliente_id}` : '/tarefas',
+      };
+      g.quantidade += 1;
+      aguardando.set(t.cliente_id, g);
+    }
+
     res.json({
+      tarefas_abertas: {
+        total: abertas.length,
+        itens: abertas.slice(0, MAX_TAREFAS).map(({ criado_em: _c, ...t }) => t),
+      },
+      follow_ups: {
+        orcamentos: todas(
+          `SELECT o.id, o.data, o.validade_dias, o.situacao, c.nome AS cliente_nome
+           FROM orcamentos o JOIN clientes c ON c.id = o.cliente_id WHERE o.situacao = 'enviado' ORDER BY o.data, o.id`,
+        ).filter((o) => alertasOrcamento(o, dia).sem_resposta)
+          .map((o) => ({ id: o.id, cliente_nome: o.cliente_nome, dias: diasEntre(o.data, dia), link: `/orcamentos/${o.id}` })),
+        projetos: todas(
+          `SELECT p.id, p.titulo, c.nome AS cliente_nome, substr(p.atualizado_em, 1, 10) AS desde
+           FROM projetos p JOIN clientes c ON c.id = p.cliente_id
+           WHERE p.servico = 'site_sistema' AND p.ficticio = 0 AND p.etapa IN ('prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento')
+           ORDER BY desde, p.id`,
+        ).map((p) => ({ id: p.id, titulo: p.titulo, cliente_nome: p.cliente_nome, dias: diasEntre(p.desde, dia), link: `/projetos/${p.id}` }))
+          .filter((p) => p.dias > DIAS_PROJETO_PARADO),
+        aguardando: [...aguardando.values()].sort((a, b) => b.quantidade - a.quantidade || a.cliente_nome.localeCompare(b.cliente_nome)),
+      },
       cartoes: {
         a_receber_mes_centavos: aReceberNoMes([...parcelasAbertas, ...vendasAbertas], dia),
         atrasadas: {

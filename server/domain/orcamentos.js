@@ -155,7 +155,7 @@ export function sugerirParcelas(pagamento) {
 const DIAS_SEM_RESPOSTA = 7;
 const DIAS_PARADO = 7;
 const DIAS_AVISO_VENCER = 3;
-const diasEntre = (de, ate) => Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86400000);
+export const diasEntre = (de, ate) => Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86400000);
 
 // O que pede atenção num orçamento. "Enviado" conta da data do orçamento (é a data que vai no PDF);
 // rascunho parado conta da última mudança nele ou nos itens (`mexido_em`, AAAA-MM-DD).

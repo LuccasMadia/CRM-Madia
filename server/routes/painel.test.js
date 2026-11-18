@@ -245,3 +245,131 @@ describe('GET /api/painel Mission Control', () => {
     expect(pede_atencao).toEqual([]);
   });
 });
+
+describe('GET /api/painel — tarefas abertas e follow-ups', () => {
+  const novo = async (ctx, nome = 'Ana') => (await ctx.http.post('/api/clientes').send({ nome })).body;
+  const tarefa = async (ctx, corpo) => (await ctx.http.post('/api/tarefas').send(corpo).expect(201)).body;
+
+  it('tarefas abertas: vencidas primeiro, depois por prazo, depois sem prazo da mais nova', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const velha = await tarefa(ctx, { texto: 'sem prazo velha' });
+    const nova = await tarefa(ctx, { texto: 'sem prazo nova' });
+    ctx.db.prepare('UPDATE tarefas SET criado_em = ? WHERE id = ?').run('2026-09-01', velha.id);
+    ctx.db.prepare('UPDATE tarefas SET criado_em = ? WHERE id = ?').run('2026-09-10', nova.id);
+    await tarefa(ctx, { texto: 'futura longe', prazo: '2026-10-30' });
+    await tarefa(ctx, { texto: 'futura perto', prazo: '2026-09-25' });
+    await tarefa(ctx, { texto: 'venceu ontem', prazo: '2026-09-22' });
+    await tarefa(ctx, { texto: 'venceu há 5 dias', prazo: '2026-09-18' });
+
+    const { tarefas_abertas } = (await ctx.http.get('/api/painel').expect(200)).body;
+    expect(tarefas_abertas.total).toBe(6);
+    expect(tarefas_abertas.itens.map((t) => t.texto)).toEqual([
+      'venceu há 5 dias', 'venceu ontem', 'futura perto', 'futura longe', 'sem prazo nova', 'sem prazo velha',
+    ]);
+    expect(tarefas_abertas.itens.map((t) => t.dias_atraso)).toEqual([5, 1, 0, 0, 0, 0]);
+  });
+
+  it('tarefa com prazo que não é data não conta como atrasada e vai para o fim', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const sexta = await tarefa(ctx, { texto: 'sexta' });
+    ctx.db.prepare('UPDATE tarefas SET prazo = ? WHERE id = ?').run('sexta', sexta.id); // a API não aceita, mas dado antigo pode existir
+    await tarefa(ctx, { texto: 'com data', prazo: '2026-12-01' });
+    const itens = (await ctx.http.get('/api/painel')).body.tarefas_abertas.itens;
+    expect(itens.map((t) => t.texto)).toEqual(['com data', 'sexta']);
+    expect(itens[1].dias_atraso).toBe(0);
+  });
+
+  it('inclui tarefa interna e exclui fictício, perdido e concluída', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const c = await novo(ctx);
+    const real = (await ctx.http.post('/api/projetos').send({ cliente_id: c.id, titulo: 'Real', etapa: 'andamento' })).body;
+    const fic = (await ctx.http.post('/api/projetos').send({ cliente_id: c.id, titulo: 'Fic', etapa: 'andamento', ficticio: true })).body;
+    const perdido = (await ctx.http.post('/api/projetos').send({ cliente_id: c.id, titulo: 'Perdido', etapa: 'perdido' })).body;
+    await tarefa(ctx, { texto: 'interna' });
+    await ctx.http.post(`/api/projetos/${real.id}/tarefas`).send({ texto: 'do real' });
+    await ctx.http.post(`/api/projetos/${real.id}/tarefas`).send({ texto: 'feita', etapa: 'concluido' });
+    await ctx.http.post(`/api/projetos/${fic.id}/tarefas`).send({ texto: 'do fictício' });
+    await ctx.http.post(`/api/projetos/${perdido.id}/tarefas`).send({ texto: 'do perdido' });
+    const { tarefas_abertas } = (await ctx.http.get('/api/painel')).body;
+    expect(tarefas_abertas.itens.map((t) => t.texto).sort()).toEqual(['do real', 'interna']);
+    expect(tarefas_abertas.total).toBe(2);
+  });
+
+  it('link da tarefa: projeto, senão cliente, senão /tarefas', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const c = await novo(ctx);
+    const p = (await ctx.http.post('/api/projetos').send({ cliente_id: c.id, titulo: 'Site', etapa: 'andamento' })).body;
+    await ctx.http.post(`/api/projetos/${p.id}/tarefas`).send({ texto: 'a' });
+    await tarefa(ctx, { texto: 'b', cliente_id: c.id });
+    await tarefa(ctx, { texto: 'c' });
+    const por = Object.fromEntries((await ctx.http.get('/api/painel')).body.tarefas_abertas.itens.map((t) => [t.texto, t]));
+    expect(por.a).toMatchObject({ link: `/projetos/${p.id}`, projeto_titulo: 'Site', cliente_nome: 'Ana' });
+    expect(por.b).toMatchObject({ link: `/clientes/${c.id}`, cliente_nome: 'Ana' });
+    expect(por.c.link).toBe('/tarefas');
+  });
+
+  it('corta em 15 e total conta todas', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    for (let i = 0; i < 18; i += 1) await tarefa(ctx, { texto: `t${i}` });
+    const { tarefas_abertas } = (await ctx.http.get('/api/painel')).body;
+    expect(tarefas_abertas.itens).toHaveLength(15);
+    expect(tarefas_abertas.total).toBe(18);
+  });
+
+  it('orçamento enviado há 8 dias aparece; há 7 não; rascunho não', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const c = await novo(ctx);
+    const inserir = (data, situacao) => ctx.db.prepare(
+      "INSERT INTO orcamentos (cliente_id, data, situacao, criado_em, atualizado_em) VALUES (?, ?, ?, '2026-09-01', '2026-09-01')",
+    ).run(c.id, data, situacao).lastInsertRowid;
+    const oito = inserir('2026-09-15', 'enviado');
+    inserir('2026-09-16', 'enviado');
+    inserir('2026-09-01', 'rascunho');
+    const { follow_ups } = (await ctx.http.get('/api/painel')).body;
+    expect(follow_ups.orcamentos).toEqual([{ id: Number(oito), cliente_nome: 'Ana', dias: 8, link: `/orcamentos/${oito}` }]);
+  });
+
+  it('projeto de site parado há 15 dias aparece; GMN parado, entregue e fictício não', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const c = await novo(ctx);
+    const criar = async (extra) => (await ctx.http.post('/api/projetos').send({ cliente_id: c.id, titulo: 'P', etapa: 'prototipo', ...extra })).body;
+    const parado = await criar({ titulo: 'Parado' });
+    const quatorze = await criar({ titulo: 'Quatorze' });
+    const gmn = await criar({ servico: 'google_meu_negocio', etapa: 'andamento' });
+    const entregue = await criar({ etapa: 'entregue' });
+    const fic = await criar({ ficticio: true });
+    const antigo = (id, dia) => ctx.db.prepare('UPDATE projetos SET atualizado_em = ? WHERE id = ?').run(`${dia}T10:00:00.000Z`, id);
+    antigo(parado.id, '2026-09-08');
+    antigo(quatorze.id, '2026-09-09');
+    [gmn, entregue, fic].forEach((p) => antigo(p.id, '2026-08-01'));
+    const { follow_ups } = (await ctx.http.get('/api/painel')).body;
+    expect(follow_ups.projetos).toEqual([
+      { id: parado.id, titulo: 'Parado', cliente_nome: 'Ana', dias: 15, link: `/projetos/${parado.id}` },
+    ]);
+  });
+
+  it('aguardando cliente agrupa por cliente e junta sem cliente em Sem cliente', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const ana = await novo(ctx);
+    const bia = await novo(ctx, 'Bia');
+    const esp = { etapa: 'aguardando_cliente' };
+    await tarefa(ctx, { texto: '1', cliente_id: ana.id, ...esp });
+    await tarefa(ctx, { texto: '2', cliente_id: bia.id, ...esp });
+    await tarefa(ctx, { texto: '3', cliente_id: bia.id, ...esp });
+    await tarefa(ctx, { texto: '4', ...esp });
+    await tarefa(ctx, { texto: '5', cliente_id: ana.id });
+    const { follow_ups } = (await ctx.http.get('/api/painel')).body;
+    expect(follow_ups.aguardando).toEqual([
+      { cliente_id: bia.id, cliente_nome: 'Bia', quantidade: 2, link: `/clientes/${bia.id}` },
+      { cliente_id: ana.id, cliente_nome: 'Ana', quantidade: 1, link: `/clientes/${ana.id}` },
+      { cliente_id: null, cliente_nome: 'Sem cliente', quantidade: 1, link: '/tarefas' },
+    ]);
+  });
+
+  it('banco vazio: tarefas_abertas {total 0, itens []} e follow_ups com listas vazias', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    const b = (await ctx.http.get('/api/painel')).body;
+    expect(b.tarefas_abertas).toEqual({ total: 0, itens: [] });
+    expect(b.follow_ups).toEqual({ orcamentos: [], projetos: [], aguardando: [] });
+  });
+});
