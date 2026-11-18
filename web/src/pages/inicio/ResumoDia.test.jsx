@@ -38,6 +38,18 @@ describe('ResumoDia', () => {
     expect(screen.getByRole('link', { name: 'Sem cliente · 1 tarefa aguardando' })).toHaveAttribute('href', '/tarefas');
   });
 
+  it('mostra no máximo 5 follow-ups por grupo e "+N outros"', () => {
+    const orcamentos = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, cliente_nome: `Cli${i + 1}`, dias: 5, link: '/x' }));
+    renderizar(<ResumoDia {...props({ followUps: { ...vazio, orcamentos } })} />);
+    expect(screen.getAllByRole('link', { name: /^Orçamento/ })).toHaveLength(5);
+    expect(screen.getByText('+3 outros')).toBeInTheDocument();
+  });
+
+  it('divulgação mostra etiqueta fictício', () => {
+    renderizar(<ResumoDia {...props({ divulgacao: [{ projeto_id: 1, projeto_titulo: 'Demo', falta: ['instagram'], ficticio: true }] })} />);
+    expect(screen.getByText('fictício')).toBeInTheDocument();
+  });
+
   it('agenda reservada aparece', () => {
     renderizar(<ResumoDia {...props()} />);
     expect(screen.getByText('Agenda do dia — em breve (Google Agenda)')).toBeInTheDocument();

@@ -13,6 +13,10 @@ function ClientesDoServico({ itens, vazio }) {
   );
 }
 
+const MAX_POR_GRUPO = 5;
+const primeiros = (itens) => itens.slice(0, MAX_POR_GRUPO);
+const Resto = ({ itens }) => itens.length > MAX_POR_GRUPO && <li className="vazio">+{itens.length - MAX_POR_GRUPO} outros</li>;
+
 export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
   const { orcamentos, projetos, aguardando } = followUps;
   const semFollowUps = !orcamentos.length && !projetos.length && !aguardando.length;
@@ -24,13 +28,16 @@ export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
       <h2>Follow-ups</h2>
       {semFollowUps ? <p className="vazio">Ninguém esperando por você.</p> : (
         <ul className="lista">
-          {orcamentos.map((o) => <li key={`o${o.id}`}><Link to={o.link}>Orçamento · {o.cliente_nome} · enviado há {o.dias} d</Link></li>)}
-          {projetos.map((p) => <li key={`p${p.id}`}><Link to={p.link}>{p.titulo} · {p.cliente_nome} · parado há {p.dias} d</Link></li>)}
-          {aguardando.map((a) => (
+          {primeiros(orcamentos).map((o) => <li key={`o${o.id}`}><Link to={o.link}>Orçamento · {o.cliente_nome} · enviado há {o.dias} d</Link></li>)}
+          <Resto itens={orcamentos} />
+          {primeiros(projetos).map((p) => <li key={`p${p.id}`}><Link to={p.link}>{p.titulo} · {p.cliente_nome} · parado há {p.dias} d</Link></li>)}
+          <Resto itens={projetos} />
+          {primeiros(aguardando).map((a) => (
             <li key={`a${a.cliente_id}`}>
               <Link to={a.link}>{a.cliente_nome} · {a.quantidade} {a.quantidade === 1 ? 'tarefa aguardando' : 'tarefas aguardando'}</Link>
             </li>
           ))}
+          <Resto itens={aguardando} />
         </ul>
       )}
 
@@ -50,6 +57,7 @@ export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
               <span className="divulgacao__etiquetas">
                 {p.falta.map((canal) => <span key={canal} className={`etiqueta etiqueta--${canal}`}>{ROTULO_CANAL[canal]}</span>)}
               </span>
+              {p.ficticio && <span className="etiqueta">fictício</span>}
             </li>
           ))}
         </ul>

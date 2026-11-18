@@ -91,4 +91,14 @@ describe('TodoInicio', () => {
     await vi.waitFor(() => expect(chamadas.length).toBeGreaterThan(0));
     expect(chamadas.filter((c) => c.metodo === 'PUT')).toHaveLength(1);
   });
+
+  it('texto digitado durante o salvamento não é apagado', async () => {
+    const aoMudar = vi.fn();
+    mockApi({ 'POST /tarefas': () => { fireEvent.change(screen.getByLabelText('Nova tarefa'), { target: { value: 'Outra coisa' } }); return { id: 9 }; } });
+    renderizar(<TodoInicio tarefas={lista([])} aoMudar={aoMudar} />);
+    const campo = screen.getByLabelText('Nova tarefa');
+    await userEvent.setup().type(campo, 'Primeira{Enter}');
+    await vi.waitFor(() => expect(aoMudar).toHaveBeenCalledTimes(1));
+    expect(campo).toHaveValue('Outra coisa');
+  });
 });

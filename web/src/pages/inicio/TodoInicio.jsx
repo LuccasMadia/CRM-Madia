@@ -37,7 +37,7 @@ export function TodoInicio({ tarefas, aoMudar }) {
     e.preventDefault();
     const limpo = texto.trim();
     if (!limpo) return;
-    if (await executar(() => api('/tarefas', { method: 'POST', body: { texto: limpo } }))) setTexto('');
+    if (await executar(() => api('/tarefas', { method: 'POST', body: { texto: limpo } }))) setTexto((t) => (t.trim() === limpo ? '' : t));
   }
 
   const concluir = (t) => executar(() => api(`/tarefas/${t.id}`, { method: 'PUT', body: { concluida: true } }));

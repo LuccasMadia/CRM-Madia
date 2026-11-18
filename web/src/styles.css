@@ -648,11 +648,12 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .divulgacao__linha { justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--borda); }
 .divulgacao__linha:last-child { border-bottom: 0; }
 .divulgacao__etiquetas { display: flex; gap: 6px; flex-wrap: wrap; }
-.mission__numeros { position: relative; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 24px; }
+.mission__numeros { position: relative; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 24px; }
 .mission__numeros::before { content: ''; position: absolute; inset: -24px -16px; background: radial-gradient(ellipse at 50% 40%, var(--primaria-suave), transparent 70%); pointer-events: none; }
 .mission__numeros .cartao { position: relative; margin-bottom: 0; text-decoration: none; color: inherit; }
 .mission__numeros .cartao-numero--link:hover { border-color: var(--primaria); }
-.mission__numeros .cartao-numero__valor { font-size: 2.5rem; line-height: 1.1; }
+.mission__numeros .cartao-numero__valor { font-size: clamp(1.4rem, 2.2vw, 2.5rem); line-height: 1.1; min-width: 0; overflow-wrap: anywhere; }
+.mission__colunas .lista li > a, .mission__colunas .lista li > span { overflow-wrap: anywhere; min-width: 0; }
 .mission__atencao .pede-atencao { padding: 0; margin: 0; border: 0; background: none; box-shadow: none; }
 .mission__atencao h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
 .mission__colunas { display: grid; grid-template-columns: 11fr 9fr; gap: 20px; align-items: start; margin-bottom: 20px; }
@@ -660,7 +661,7 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .mission__colunas h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
 @media (max-width: 900px) {
   .mission__numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mission__numeros .cartao-numero__valor { font-size: 1.8rem; }
+  .mission__numeros .cartao-numero__valor { font-size: 1.3rem; }
   .mission__colunas { grid-template-columns: 1fr; }
 }
 .btn--icone { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-color: transparent; background: transparent; color: var(--texto-suave); }
