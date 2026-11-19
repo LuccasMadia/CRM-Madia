@@ -902,3 +902,43 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 .cartao-numero--link:hover { text-decoration: none; border-color: var(--primaria); }
 .cartao-numero--link:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
 .cartao-numero--link:not(.cartao-numero) { display: block; }
+
+/* Início: painel financeiro + faixa de projetos */
+.financa { display: grid; grid-template-columns: 1.6fr 1fr 1fr; padding: 0; overflow: hidden; margin-bottom: 12px; background: linear-gradient(135deg, var(--primaria-suave), var(--superficie) 55%); }
+.financa > * { padding: 22px 24px; min-width: 0; }
+.financa > * + * { border-left: 1px solid var(--borda); }
+.financa__bloco { display: flex; flex-direction: column; gap: 10px; }
+.financa__bloco .financa__item { padding: 0; }
+.financa__item { display: flex; flex-direction: column; gap: 6px; color: inherit; text-decoration: none; }
+.financa__item:hover { text-decoration: none; }
+.financa > a.financa__item:hover { background: var(--superficie-2); }
+.financa__rotulo { color: var(--texto-suave); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+.financa__valor { font-size: clamp(1.4rem, 2.2vw, 1.9rem); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+.financa__valor--grande { font-size: clamp(2rem, 4vw, 3rem); color: var(--primaria); }
+.financa__nota { margin: 0; font-size: 0.8rem; color: var(--texto-suave); }
+.financa__barra { height: 6px; border-radius: 999px; background: var(--borda); overflow: hidden; }
+.financa__barra span { display: block; height: 100%; background: var(--primaria); border-radius: inherit; }
+.financa__item--perigo .financa__valor { color: var(--perigo); }
+.faixa { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.faixa__item { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); color: inherit; text-decoration: none; }
+.faixa__item:hover { border-color: var(--primaria); text-decoration: none; }
+.faixa__valor { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 2ch; color: var(--primaria); }
+.faixa__item b { display: block; font-weight: 600; }
+.faixa__item small { display: block; color: var(--texto-suave); margin-top: 2px; }
+.mission__atencao { border-left: 3px solid var(--atencao); }
+@media (max-width: 900px) {
+  .financa { grid-template-columns: 1fr 1fr; }
+  .financa__bloco { grid-column: 1 / -1; }
+  .financa > * + * { border-left: 0; border-top: 1px solid var(--borda); }
+  .financa > .financa__item + .financa__item { border-left: 1px solid var(--borda); }
+  .faixa { grid-template-columns: 1fr; }
+}
+
+/* Pede ação como notificação */
+.mission__topo-acoes { display: flex; align-items: center; gap: 16px; }
+.notif { position: relative; }
+.notif__botao { position: relative; color: var(--atencao); }
+.notif__contagem { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--perigo); color: #fff; font-size: 0.7rem; font-weight: 700; display: grid; place-items: center; }
+.notif__painel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: min(380px, 86vw); padding: 16px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: var(--sombra); }
+.notif__painel h2 { margin: 0 0 10px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
+.notif__painel .pede-atencao { padding: 0; margin: 0; border: 0; background: none; }

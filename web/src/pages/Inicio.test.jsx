@@ -62,28 +62,28 @@ describe('Inicio', () => {
     expect(screen.queryByText(/cobranças? atrasadas?/)).not.toBeInTheDocument();
   });
 
-  it('Pede ação vem antes do to-do e dos follow-ups', async () => {
-    mockApi({ ...AVISOS, 'GET /painel': PAINEL, 'GET /painel/graficos': GRAFICOS });
+  it('Pede ação é uma notificação no topo: contagem e painel ao clicar', async () => {
+    mockApi({ ...AVISOS, 'GET /painel': { ...PAINEL, pede_atencao: [{ texto: '2 parcelas vencidas', tom: 'perigo' }] }, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);
-    const pede = await screen.findByRole('heading', { name: 'Pede ação' });
-    const antes = (a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
-    expect(antes(pede, screen.getByLabelText('Nova tarefa'))).toBeTruthy();
-    expect(antes(pede, screen.getByRole('heading', { name: 'Follow-ups' }))).toBeTruthy();
+    const botao = await screen.findByRole('button', { name: 'Pede ação (1)' });
+    expect(screen.queryByText('2 parcelas vencidas')).not.toBeInTheDocument();
+    await userEvent.setup().click(botao);
+    expect(screen.getByText('2 parcelas vencidas')).toBeInTheDocument();
   });
 
   it('Vencido fica em perigo quando há atrasadas', async () => {
     mockApi({ ...AVISOS, 'GET /painel': PAINEL, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);
     await screen.findByText('Vencido');
-    expect(cartao('Vencido')).toHaveClass('cartao-numero--perigo');
-    expect(cartao('A receber no mês')).not.toHaveClass('cartao-numero--perigo');
+    expect(cartao('Vencido')).toHaveClass('financa__item--perigo');
+    expect(cartao('A receber no mês')).not.toHaveClass('financa__item--perigo');
   });
 
   it('sem atrasadas o Vencido não fica em perigo', async () => {
     mockApi({ ...AVISOS, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);
     await screen.findByText('Vencido');
-    expect(cartao('Vencido')).not.toHaveClass('cartao-numero--perigo');
+    expect(cartao('Vencido')).not.toHaveClass('financa__item--perigo');
     expect(cartao('Vencido')).toHaveTextContent('0 parcelas');
   });
 
