@@ -101,4 +101,9 @@ describe('TodoInicio', () => {
     await vi.waitFor(() => expect(aoMudar).toHaveBeenCalledTimes(1));
     expect(campo).toHaveValue('Outra coisa');
   });
+
+  it('botão Abrir Tarefas leva para a aba de tarefas', () => {
+    renderizar(<TodoInicio tarefas={lista([])} aoMudar={vi.fn()} />);
+    expect(screen.getByRole('link', { name: /Abrir Tarefas/ })).toHaveAttribute('href', '/tarefas');
+  });
 });
