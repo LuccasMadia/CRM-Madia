@@ -43,7 +43,7 @@ function Graficos() {
 
 export function Inicio() {
   const [aberto, setAberto] = useState(false);
-  const { dados, erro, recarregar } = useCarregar(() => api('/painel'), []);
+  const { dados, erro } = useCarregar(() => api('/painel'), []);
   if (erro) return <Aviso erro={erro} />;
   if (!dados) return <Carregando />;
   const { cartoes, tarefas_abertas: tarefas, pede_atencao: pedeAtencao, follow_ups: followUps, divulgacao = [], para_entregar: paraEntregar = { gmn: 0, placas: 0, itens: [] } } = dados;
@@ -111,7 +111,7 @@ export function Inicio() {
       </div>
 
       <div className="mission__colunas">
-        <TodoInicio tarefas={tarefas} aoMudar={recarregar} />
+        <TodoInicio tarefas={tarefas} />
         <ResumoDia followUps={followUps} paraEntregar={paraEntregar} divulgacao={divulgacao} />
       </div>
 

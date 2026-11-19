@@ -98,14 +98,6 @@ describe('Inicio', () => {
     expect(cartao('Recebido no mês')).toHaveTextContent('R$ •••••');
   });
 
-  it('concluir uma tarefa recarrega o painel', async () => {
-    const { chamadas } = mockApi({ ...AVISOS, 'GET /painel': PAINEL, 'GET /painel/graficos': GRAFICOS, 'PUT /tarefas/5': { id: 5 } });
-    renderizar(<Inicio />);
-    const user = userEvent.setup();
-    await user.click(await screen.findByLabelText('Concluir: Ligar para Ana'));
-    await vi.waitFor(() => expect(chamadas.filter((c) => c.metodo === 'GET' && c.caminho === '/painel')).toHaveLength(2));
-  });
-
   it('CRM vazio abre sem quebrar', async () => {
     mockApi({ ...AVISOS, 'GET /painel': PAINEL_VAZIO, 'GET /painel/graficos': resposta(500, { erro: 'Falhou' }) });
     renderizar(<Inicio />);
