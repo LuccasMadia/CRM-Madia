@@ -106,4 +106,17 @@ describe('Config', () => {
     expect(await screen.findByText('Barbearia')).toBeInTheDocument();
     expect(screen.queryByLabelText('Sistemas (R$)')).toBeNull();
   });
+
+  it('agenda: gera o link e mostra os botões do Google e do Apple', async () => {
+    mockApi({
+      'GET /config': { portfolio_repo_path: null, cerebro_path: null },
+      'GET /agenda': { ativo: false, url: null },
+      'POST /agenda': { ativo: true, url: 'https://crm.luccasmadia.com.br/publico/agenda/abc.ics' },
+    });
+    renderizar(<Config />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Gerar link da agenda' }));
+    expect(await screen.findByLabelText('Link da agenda')).toHaveValue('https://crm.luccasmadia.com.br/publico/agenda/abc.ics');
+    expect(screen.getByRole('link', { name: 'Adicionar ao Apple Agenda' })).toHaveAttribute('href', 'webcal://crm.luccasmadia.com.br/publico/agenda/abc.ics');
+    expect(screen.getByRole('link', { name: 'Adicionar ao Google Agenda' }).getAttribute('href')).toContain('calendar.google.com/calendar/r?cid=webcal');
+  });
 });

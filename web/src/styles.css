@@ -956,3 +956,5 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 .btn--primario:hover:not(:disabled) { background: var(--t1); }
 .lista li:hover { background: var(--superficie-2); border-radius: var(--raio-controle); }
 .tabela tbody tr:hover td { background: var(--superficie-2); }
+
+.agenda__link { width: 100%; margin-bottom: 12px; font-family: ui-monospace, monospace; font-size: 0.85rem; }

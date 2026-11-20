@@ -9,6 +9,7 @@ import { Aviso } from '../components/Aviso.jsx';
 import { CadastroLista } from './config/CadastroLista.jsx';
 import { ConexaoInstagram } from './config/ConexaoInstagram.jsx';
 import { ConexaoVercel } from './config/ConexaoVercel.jsx';
+import { ConexaoAgenda } from './config/ConexaoAgenda.jsx';
 import { ModelosTarefas } from './config/ModelosTarefas.jsx';
 
 export function Config() {
@@ -19,6 +20,7 @@ export function Config() {
       <Aviso erro={erro} />
       <ConexaoInstagram />
       <ConexaoVercel />
+      <ConexaoAgenda />
       {config && <Repositorio inicial={config} />}
       {config && <PastaCerebro inicial={config} />}
       <CadastroLista titulo="Categorias" caminho="/categorias" rotuloNovo="Nova categoria" ordenavel />
