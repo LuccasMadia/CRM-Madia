@@ -26,6 +26,7 @@ import { rotasCategorias, rotasNichos } from './routes/cadastros.js';
 import { rotasFerramentas } from './routes/ferramentas.js';
 import { rotasTabelaPrecos } from './routes/tabelaPrecos.js';
 import { rotasOrcamentos } from './routes/orcamentos.js';
+import { rotasAgenda } from './routes/agenda.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
   const app = express();
@@ -59,6 +60,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasPlacas(ctx));
   app.use('/api', rotasInstagram(ctx));
   app.use('/api', rotasHospedagem(ctx));
+  app.use('/api', rotasAgenda(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));

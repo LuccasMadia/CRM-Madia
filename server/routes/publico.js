@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import path from 'node:path';
+import { montarAgenda, tokenAgenda } from '../agenda/agenda.js';
 
 // Única rota alcançável sem login pelo host público (o Cloudflare Access libera /publico/*).
 // O Instagram baixa daqui a mídia enquanto o post é publicado; tudo que não bater exatamente vira 404 vazio.
@@ -22,6 +23,13 @@ export function rotasPublico({ db, dataDir }) {
     res.sendFile(linha.arquivo, { root: uploadsDir, dotfiles: 'deny' }, (erro) => {
       if (erro && !res.headersSent) res.status(404).end();
     });
+  });
+
+  // Google e Apple assinam este link; o token longo e secreto é a única chave.
+  router.get('/agenda/:token.ics', (req, res) => {
+    const atual = tokenAgenda(db);
+    if (!atual || req.params.token !== atual) return res.status(404).end();
+    res.set({ 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-store' }).send(montarAgenda(db));
   });
 
   router.use((req, res) => res.status(404).end());
