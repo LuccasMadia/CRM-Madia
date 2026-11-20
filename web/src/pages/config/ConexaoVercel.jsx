@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icone } from '../../components/Icone.jsx';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
@@ -42,7 +43,7 @@ export function ConexaoVercel() {
 
   return (
     <section className="cartao">
-      <h2>Vercel</h2>
+      <h2 className="conexao__titulo"><Icone nome="vercel" tamanho={22} /> Vercel</h2>
       <Aviso erro={carregado.erro} />
       {atual?.conectado && (
         <div className="form--linha">

@@ -945,3 +945,14 @@ label.btn:focus-within { outline: 2px solid var(--primaria); outline-offset: 2px
 
 .mission__cabeca { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
 .mission__cabeca h2 { margin: 0; }
+
+/* Ícones das conexões e hover em tudo que reage ao clique */
+.conexao__titulo { display: flex; align-items: center; gap: 10px; }
+.conexao__titulo svg { color: var(--primaria); }
+.btn, .pilula, .abas__aba, .cartao, .sidebar a, .lista li, .tabela tbody tr td, .faixa__item, .financa__item { transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.12s ease; }
+a.cartao:hover, .cartao a:hover { text-decoration: none; }
+a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: translateY(-1px); }
+.btn:hover:not(:disabled) { background: var(--borda); }
+.btn--primario:hover:not(:disabled) { background: var(--t1); }
+.lista li:hover { background: var(--superficie-2); border-radius: var(--raio-controle); }
+.tabela tbody tr:hover td { background: var(--superficie-2); }

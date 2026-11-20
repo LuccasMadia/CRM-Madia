@@ -53,6 +53,7 @@ const DESENHOS = {
       <path d="M17 7v.01" />
     </>
   ),
+  vercel: <path d="M12 4 22 20H2z" />,
   portfolio: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />

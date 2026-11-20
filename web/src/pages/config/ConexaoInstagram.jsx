@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icone } from '../../components/Icone.jsx';
 import { api } from '../../api/client.js';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
@@ -32,7 +33,7 @@ export function ConexaoInstagram() {
 
   return (
     <section className="cartao">
-      <h2>Instagram</h2>
+      <h2 className="conexao__titulo"><Icone nome="instagram" tamanho={22} /> Instagram</h2>
       <Aviso erro={carregado.erro} />
       {atual?.conectado && (
         <div className="form--linha">
