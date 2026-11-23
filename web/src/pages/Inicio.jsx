@@ -12,7 +12,7 @@ import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
 import { formatarDinheiro } from '../lib/dinheiro.js';
 import { TodoInicio } from './inicio/TodoInicio.jsx';
-import { ResumoDia } from './inicio/ResumoDia.jsx';
+import { FollowUps, ParaEntregar, Divulgacao, AgendaDoDia } from './inicio/ResumoDia.jsx';
 
 // Recharts só é baixado quando a Início abre.
 const GraficoRosca = lazy(() => import('../components/graficos/GraficoRosca.jsx').then((m) => ({ default: m.GraficoRosca })));
@@ -112,7 +112,13 @@ export function Inicio() {
 
       <div className="mission__colunas">
         <TodoInicio tarefas={tarefas} />
-        <ResumoDia followUps={followUps} paraEntregar={paraEntregar} divulgacao={divulgacao} />
+        <ParaEntregar paraEntregar={paraEntregar} />
+      </div>
+
+      <div className="inicio__linha">
+        <FollowUps followUps={followUps} />
+        <Divulgacao divulgacao={divulgacao} />
+        <AgendaDoDia />
       </div>
 
       <Graficos />

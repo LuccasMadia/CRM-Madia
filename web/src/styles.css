@@ -662,6 +662,10 @@ a.pede-atencao__item:hover { text-decoration: none; background: color-mix(in srg
 .mission__atencao h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
 .mission__colunas { display: grid; grid-template-columns: 11fr 9fr; gap: 20px; align-items: start; margin-bottom: 20px; }
 .mission__colunas > .cartao { margin-bottom: 0; }
+.inicio__coluna { display: grid; gap: 20px; min-width: 0; }
+.inicio__coluna > .cartao { margin-bottom: 0; }
+.inicio__linha { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 20px; align-items: start; margin-bottom: 20px; }
+.inicio__linha > .cartao { margin-bottom: 0; }
 .mission__colunas h2 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
 @media (max-width: 900px) {
   .mission__numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }

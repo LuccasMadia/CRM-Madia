@@ -17,12 +17,9 @@ const MAX_POR_GRUPO = 5;
 const primeiros = (itens) => itens.slice(0, MAX_POR_GRUPO);
 const Resto = ({ itens }) => itens.length > MAX_POR_GRUPO && <li className="vazio">+{itens.length - MAX_POR_GRUPO} outros</li>;
 
-export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
+export function FollowUps({ followUps }) {
   const { orcamentos, projetos, aguardando } = followUps;
   const semFollowUps = !orcamentos.length && !projetos.length && !aguardando.length;
-  const gmn = paraEntregar.itens.filter((i) => i.servico === 'google_meu_negocio');
-  const placas = paraEntregar.itens.filter((i) => i.servico === 'placas_nfc');
-
   return (
     <section className="cartao">
       <h2>Follow-ups</h2>
@@ -40,13 +37,27 @@ export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
           <Resto itens={aguardando} />
         </ul>
       )}
+    </section>
+  );
+}
 
+export function ParaEntregar({ paraEntregar }) {
+  const gmn = paraEntregar.itens.filter((i) => i.servico === 'google_meu_negocio');
+  const placas = paraEntregar.itens.filter((i) => i.servico === 'placas_nfc');
+  return (
+    <section className="cartao">
       <h2>Para entregar</h2>
       <h3 className="cartao__titulo inicio__grupo">Google Meu Negócio</h3>
       <ClientesDoServico itens={gmn} vazio="Nenhum GMN pendente." />
       <h3 className="cartao__titulo inicio__grupo">Placas NFC</h3>
       <ClientesDoServico itens={placas} vazio="Nenhuma placa pendente." />
+    </section>
+  );
+}
 
+export function Divulgacao({ divulgacao }) {
+  return (
+    <section className="cartao">
       <h2>Divulgação</h2>
       <h3 className="cartao__titulo inicio__grupo">Falta divulgar</h3>
       {divulgacao.length ? (
@@ -62,9 +73,27 @@ export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
           ))}
         </ul>
       ) : <p className="vazio">Tudo divulgado.</p>}
+    </section>
+  );
+}
 
+export function AgendaDoDia() {
+  return (
+    <section className="cartao">
       <h2>Agenda</h2>
       <p className="vazio">Agenda do dia — em breve (Google Agenda)</p>
     </section>
+  );
+}
+
+// Os quatro cartões empilhados numa coluna; cada um também pode ser usado sozinho.
+export function ResumoDia({ followUps, paraEntregar, divulgacao }) {
+  return (
+    <div className="inicio__coluna">
+      <FollowUps followUps={followUps} />
+      <ParaEntregar paraEntregar={paraEntregar} />
+      <Divulgacao divulgacao={divulgacao} />
+      <AgendaDoDia />
+    </div>
   );
 }
