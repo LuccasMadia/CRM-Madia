@@ -20,6 +20,24 @@ describe('parcelas', () => {
     expect(res.body.resumo).toMatchObject({ atrasado_centavos: 5000, pendente_centavos: 3000, nao_parcelado_centavos: 2000 });
   });
 
+  it('a primeira parcela paga leva o site de Orçamento enviado para Versão final', async () => {
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'valor_definido' }).expect(200);
+    const parcela = (await nova({ valor_centavos: 5000, vencimento: '2026-10-10' }).expect(201)).body;
+    const etapa = async () => (await ctx.http.get(`/api/projetos/${projeto.id}`)).body;
+    expect((await etapa()).etapa).toBe('valor_definido');
+    await ctx.http.put(`/api/parcelas/${parcela.id}`).send({ pago_em: '2026-09-23' }).expect(200);
+    const depois = await etapa();
+    expect(depois.etapa).toBe('andamento');
+    expect(depois.data_inicio).toBeTruthy();
+  });
+
+  it('pagar parcela não mexe em projeto de outra etapa nem em fictício', async () => {
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'teste' }).expect(200);
+    const parcela = (await nova({ valor_centavos: 5000, vencimento: '2026-10-10' }).expect(201)).body;
+    await ctx.http.put(`/api/parcelas/${parcela.id}`).send({ pago_em: '2026-09-23' }).expect(200);
+    expect((await ctx.http.get(`/api/projetos/${projeto.id}`)).body.etapa).toBe('teste');
+  });
+
   it('valida valor positivo e vencimento', async () => {
     const res = await nova({ valor_centavos: 0 }).expect(400);
     expect(res.body.erros.map((e) => e.campo).sort()).toEqual(['valor_centavos', 'vencimento']);
