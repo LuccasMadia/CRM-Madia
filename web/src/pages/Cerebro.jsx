@@ -53,14 +53,12 @@ function Legenda({ areas }) {
 export function Cerebro() {
   const { dados, erro } = useCarregar(() => api('/cerebro'), []);
   const [aberto, setAberto] = useState(null);
-  const [emInicio, setEmInicio] = useState(true);
   const [lista, setLista] = useState(false);
-  const [legenda, setLegenda] = useState(false);
   const [aba, setAba] = useState('item');
   const grafo = useRef(null);
   const indice = useMemo(() => (dados ? montarIndice(dados) : null), [dados]);
 
-  const abrir = useCallback((acao) => { setAberto(acao); setAba('item'); setLista(false); setLegenda(false); }, []);
+  const abrir = useCallback((acao) => { setAberto(acao); setAba('item'); setLista(false); }, []);
   // Fechar (clique fora, Escape ou o X) devolve a câmera ao enquadramento inicial.
   const fechar = useCallback(() => {
     if (aberto) grafo.current?.verTudo();
@@ -109,15 +107,10 @@ export function Cerebro() {
                 selecionado={idAberto}
                 aoAbrir={abrir}
                 aoFechar={fechar}
-                aoMudarCamera={setEmInicio}
               />
               <span className="cerebro__canto cerebro__canto--titulo">Madia · Cérebro</span>
-              {!emInicio && (
-                <button type="button" className="btn cerebro__canto cerebro__canto--ver-tudo" onClick={() => grafo.current?.verTudo()}>Ver tudo</button>
-              )}
-              <button type="button" className="btn cerebro__canto cerebro__canto--legenda" aria-expanded={legenda} onClick={() => setLegenda((v) => !v)}>Legenda</button>
               <button type="button" className="btn cerebro__canto cerebro__canto--lista" aria-expanded={lista} onClick={() => setLista((v) => !v)}>Lista</button>
-              {legenda && <Legenda areas={dados.memoria.areas} />}
+              <Legenda areas={dados.memoria.areas} />
               {lista && <ListaCerebro dados={dados} aoEscolher={escolher} />}
               {!dados.centro && <Link className="cerebro__configurar" to="/configuracoes">Configure a pasta do cérebro</Link>}
             </div>

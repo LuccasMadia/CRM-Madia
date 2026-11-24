@@ -38,12 +38,14 @@ async function abrirPelaLista(nome) {
 }
 
 describe('Cerebro', () => {
-  it('mostra pede atenção, o canvas com aria-label e os botões Legenda e Lista', async () => {
+  it('mostra pede atenção, o canvas com aria-label, a legenda sempre visível e o botão Lista', async () => {
     mockApi({ 'GET /cerebro': DADOS });
     renderizar(<Cerebro />);
     expect(await screen.findByText('1 projeto atrasado')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /Mapa do cérebro: .*Projetos 2/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Legenda' })).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Legenda' })).getByText('Pede ação')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Legenda' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ver tudo' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Lista' })).toBeInTheDocument();
     expect(screen.getByText('Madia · Cérebro')).toBeInTheDocument();
   });
@@ -131,18 +133,6 @@ describe('Cerebro', () => {
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Lista' }));
     const lista = screen.getByRole('region', { name: 'Lista do cérebro' });
     expect(within(lista).getAllByText('Nada aqui ainda')).toHaveLength(3);
-  });
-
-  it('Legenda abre e fecha', async () => {
-    mockApi({ 'GET /cerebro': DADOS });
-    renderizar(<Cerebro />);
-    const user = userEvent.setup();
-    const botao = await screen.findByRole('button', { name: 'Legenda' });
-    expect(screen.queryByRole('list', { name: 'Legenda' })).not.toBeInTheDocument();
-    await user.click(botao);
-    expect(within(screen.getByRole('list', { name: 'Legenda' })).getByText('Pede ação')).toBeInTheDocument();
-    await user.click(botao);
-    expect(screen.queryByRole('list', { name: 'Legenda' })).not.toBeInTheDocument();
   });
 
   it('mostra os avisos da pasta e, sem pasta, o link das configurações', async () => {

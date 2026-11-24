@@ -23,11 +23,9 @@
 /* botões e título nos cantos do palco */
 .cerebro__canto { position: absolute; z-index: 2; margin: 0; }
 .cerebro__canto--titulo { top: 14px; left: 16px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); pointer-events: none; }
-.cerebro__canto--ver-tudo { top: 10px; right: 12px; }
-.cerebro__canto--legenda { bottom: 12px; left: 12px; }
 .cerebro__canto--lista { bottom: 12px; right: 12px; }
 
-.cerebro__legenda { position: absolute; z-index: 3; left: 12px; bottom: 56px; display: grid; gap: 6px; margin: 0; padding: 12px 14px; list-style: none; font-size: 0.85rem; color: var(--texto-suave); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
+.cerebro__legenda { position: absolute; z-index: 3; left: 12px; bottom: 12px; display: grid; gap: 6px; margin: 0; padding: 12px 14px; list-style: none; font-size: 0.85rem; color: var(--texto-suave); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
 .cerebro__legenda li { display: inline-flex; align-items: center; gap: 6px; }
 .cerebro__marca { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .cerebro__marca--vivo { background: var(--texto); }
