@@ -13,6 +13,10 @@ function preencherData(atual, mudancas, { campo, valor, campoData }, hoje) {
 }
 
 export function aplicarRegrasProjeto(atual, mudancas, hoje) {
+  // Desfazer uma entrega: ao sair de Entregue a data de entrega some (a menos que venha uma nova na mesma edição).
+  if (atual?.etapa === 'entregue' && mudancas.etapa !== undefined && mudancas.etapa !== 'entregue' && !('data_entrega' in mudancas)) {
+    mudancas = { ...mudancas, data_entrega: null };
+  }
   const comInicio = preencherData(atual, mudancas, { campo: 'etapa', valor: 'andamento', campoData: 'data_inicio' }, hoje);
   return preencherData(atual, comInicio, { campo: 'etapa', valor: 'entregue', campoData: 'data_entrega' }, hoje);
 }

@@ -38,7 +38,7 @@ describe('Projeto', () => {
     await screen.findByRole('heading', { name: 'Site Ana' });
     const put = chamadas.find((c) => c.metodo === 'PUT');
     expect(put.corpo).toMatchObject({ valor_total_centavos: 350000, cliente_id: 1, categorias: [1], nicho_id: null });
-    expect(put.corpo).not.toHaveProperty('etapa');
+    expect(put.corpo.etapa).toBe(projetoExemplo.etapa);
     expect(put.corpo).not.toHaveProperty('valor');
   });
 
@@ -91,11 +91,16 @@ describe('Projeto', () => {
     expect(put.corpo).toMatchObject({ postou_instagram: true });
   });
 
-  it('etapa é só leitura, com link para o Funil', async () => {
-    mockApi(rotasBase());
+  it('a etapa pode ser mudada aqui, por exemplo para desfazer uma entrega', async () => {
+    const { chamadas } = mockApi(rotasBase({ 'PUT /projetos/5': { ...projetoExemplo, etapa: 'teste', atualizado_em: 'T2' } }));
     renderizar(<Projeto />, { rota: '/projetos/5', padrao: '/projetos/:id' });
-    expect(await screen.findByRole('link', { name: 'alterar no Funil' })).toHaveAttribute('href', '/servicos?aba=sites&ver=funil');
-    expect(screen.queryByLabelText('Etapa')).toBeNull();
+    const etapa = await screen.findByLabelText('Etapa');
+    expect(etapa).toHaveValue(projetoExemplo.etapa);
+    const user = userEvent.setup();
+    await user.selectOptions(etapa, 'teste');
+    await user.click(screen.getByRole('button', { name: 'Salvar projeto' }));
+    await screen.findByRole('heading', { name: 'Site Ana' });
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo.etapa).toBe('teste');
   });
 
   it('desmarcar a última categoria mostra o erro e não salva', async () => {

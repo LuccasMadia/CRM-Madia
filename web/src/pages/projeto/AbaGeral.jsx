@@ -10,7 +10,7 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { SeletorCategorias } from '../../components/SeletorCategorias.jsx';
 import { SeletorNicho } from '../../components/SeletorNicho.jsx';
 import { centavosParaTexto, paraCentavos } from '../../lib/dinheiro.js';
-import { ROTULO_ETAPA, ROTULO_MOTIVO_PERDA } from '../../lib/rotulos.js';
+import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA, ROTULO_MOTIVO_PERDA } from '../../lib/rotulos.js';
 import { CobrancaMensal, comDiaSugerido } from './CobrancaMensal.jsx';
 import { PreviaSite } from './PreviaSite.jsx';
 
@@ -36,6 +36,7 @@ function valoresIniciais(projeto) {
     postou_instagram: Boolean(projeto.postou_instagram),
     ficticio: Boolean(projeto.ficticio),
     privado: Boolean(projeto.privado),
+    etapa: projeto.etapa,
     motivo_perda: projeto.motivo_perda ?? '',
   };
 }
@@ -52,6 +53,9 @@ export function AbaGeral({ projeto, onSalvo }) {
 
   // Só sites e sistemas têm categorias (GMN/placas ainda abrem esta página pelas tarefas do Início).
   const temCategorias = projeto.servico === 'site_sistema';
+  // Fictício só tem andamento e entregue; GMN e placas também.
+  const etapasBase = valores.ficticio || !temCategorias ? ETAPAS_FICTICIO : ETAPAS;
+  const etapasPossiveis = etapasBase.includes(valores.etapa) ? etapasBase : [valores.etapa, ...etapasBase];
 
   function salvar(e) {
     e.preventDefault();
@@ -126,7 +130,7 @@ export function AbaGeral({ projeto, onSalvo }) {
               erro={erros.find((e) => e.campo === 'categorias')?.mensagem}
             />
           )}
-          {projeto.etapa === 'perdido' && (
+          {valores.etapa === 'perdido' && (
             <Campo rotulo="Motivo da perda" nome="motivo_perda" erros={erros}>
               <select value={valores.motivo_perda} onChange={(e) => alterar({ motivo_perda: e.target.value })}>
                 <option value="">Sem motivo definido</option>
@@ -154,10 +158,12 @@ export function AbaGeral({ projeto, onSalvo }) {
       <aside className="visao-geral__lado">
         <PreviaSite projeto={projeto} />
         <section className="cartao">
-          <p className="visao-geral__etapa">
-            <span className={`etapa etapa--${projeto.etapa}`}>{ROTULO_ETAPA[projeto.etapa]}</span>
-            <Link to="/servicos?aba=sites&ver=funil">alterar no Funil</Link>
-          </p>
+          {/* a etapa também muda aqui, para desfazer algo (ex.: voltar de Entregue); o Salvar grava */}
+          <Campo rotulo="Etapa" nome="etapa" erros={erros}>
+            <select value={valores.etapa} onChange={(e) => alterar({ etapa: e.target.value })}>
+              {etapasPossiveis.map((id) => <option key={id} value={id}>{ROTULO_ETAPA[id]}</option>)}
+            </select>
+          </Campo>
           <label className="campo--check">
             <input type="checkbox" checked={valores.postou_instagram} onChange={(e) => alterar({ postou_instagram: e.target.checked })} />
             Postou no Instagram
