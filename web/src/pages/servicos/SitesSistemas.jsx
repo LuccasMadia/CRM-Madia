@@ -101,7 +101,8 @@ function ListaNoAr({ filtros: { clienteId, instagram, categoriaId }, hospedagens
                   <td>
                     {Boolean(p.postou_instagram) && <Selo icone="instagram" rotulo="Postou no Instagram" />}
                     {Boolean(p.no_portfolio) && <Selo icone="portfolio" rotulo="No portfólio" />}
-                    {Boolean(p.ficticio) && <span className="etiqueta">Fictício</span>}
+                    {Boolean(p.privado) && <span className="etiqueta">Privado</span>}
+                    {Boolean(p.ficticio) && !p.privado && <span className="etiqueta">Fictício</span>}
                   </td>
                   <td className="num tabela__valor">{p.valor_total_centavos ? formatarDinheiro(p.valor_total_centavos) : '—'}</td>
                 </tr>
@@ -118,7 +119,7 @@ const CHAVE_VISAO = 'crm.sitesVisao';
 const VISOES = [['andamento', 'Em andamento'], ['no_ar', 'No ar']];
 // Links e escolhas salvas antes da divisão por momento: o funil virou "Em andamento" e a lista, "No ar".
 const VISOES_ANTIGAS = { funil: 'andamento', lista: 'no_ar' };
-const MODOS = [['reais', 'Reais'], ['ficticios', 'Fictícios'], ['perdidos', 'Perdidos']];
+const MODOS = [['reais', 'Reais'], ['privados', 'Privados'], ['ficticios', 'Fictícios'], ['perdidos', 'Perdidos']];
 
 const lerVisao = (valor) => {
   const visao = VISOES_ANTIGAS[valor] ?? valor;
@@ -142,7 +143,8 @@ export function SitesSistemas() {
   const [modo, setModo] = useState('reais');
   const [filtros, setFiltros] = useState({ clienteId: '', instagram: '', categoriaId: '' });
   const [criando, setCriando] = useState(false);
-  const ficticio = visao === 'andamento' && modo === 'ficticios';
+  const ficticio = visao === 'andamento' && (modo === 'ficticios' || modo === 'privados');
+  const privado = visao === 'andamento' && modo === 'privados';
 
   const categorias = useCarregar(() => api('/categorias'), []);
   const projetos = useCarregar(() => api('/projetos?servico=site_sistema&ficticio=0'), []);
@@ -201,7 +203,7 @@ export function SitesSistemas() {
         : <ListaNoAr filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
       {criando && (
         <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>
-          <FormOportunidade onSalvar={criar} ficticioFixo={ficticio} />
+          <FormOportunidade onSalvar={criar} ficticioFixo={ficticio} privadoFixo={privado} />
         </Modal>
       )}
     </div>

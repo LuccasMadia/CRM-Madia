@@ -5,7 +5,7 @@ export const CAMPOS_PROJETO = [
   'data_inicio', 'prazo_entrega', 'data_entrega', 'notas',
   'mensalidade_ativa', 'mensalidade_valor_centavos', 'mensalidade_dia_vencimento',
   'mensalidade_inicio_modo', 'mensalidade_inicio_data',
-  'postou_instagram', 'ficticio', 'servico', 'link_perfil', 'nicho_id',
+  'postou_instagram', 'ficticio', 'privado', 'servico', 'link_perfil', 'nicho_id',
   'prototipo_pronto', 'teste_inicio', 'orcamento_id', 'orcamento_vinculado', 'loja_id',
 ];
 
@@ -23,7 +23,7 @@ export function repoProjetos(db) {
   const base = criarRepo(db, 'projetos', CAMPOS_PROJETO);
   return {
     ...base,
-    listarComCliente({ etapa, cliente_id, postou_instagram, ficticio, servico } = {}) {
+    listarComCliente({ etapa, cliente_id, postou_instagram, ficticio, privado, servico } = {}) {
       const condicoes = [];
       const args = [];
       if (etapa) {
@@ -41,6 +41,10 @@ export function repoProjetos(db) {
       if (ficticio) {
         condicoes.push('p.ficticio = ?');
         args.push(Number(ficticio));
+      }
+      if (privado !== undefined && privado !== '') {
+        condicoes.push('p.privado = ?');
+        args.push(Number(privado));
       }
       if (servico) {
         condicoes.push('p.servico = ?');

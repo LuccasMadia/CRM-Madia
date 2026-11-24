@@ -70,16 +70,18 @@ const ENCERRADAS = ['entregue', 'perdido'];
 const MODOS = {
   reais: { colunas: etapas(ETAPAS.filter((e) => !ENCERRADAS.includes(e))), destinos: etapas(ENCERRADAS) },
   ficticios: { colunas: etapas(ETAPAS_FICTICIO), destinos: [] },
+  privados: { colunas: etapas(ETAPAS_FICTICIO), destinos: [] },
   perdidos: { colunas: etapas(['perdido']), destinos: etapas(ETAPAS.filter((e) => e !== 'perdido')) },
 };
 
 // Visão em quadro dos sites e sistemas: cada coluna é uma etapa, e o card muda de etapa pelo menu.
-// modo: 'reais' (o trabalho em andamento), 'ficticios' (cases do portfólio) ou 'perdidos'.
+// modo: 'reais' (o trabalho em andamento), 'ficticios' (cases do portfólio), 'privados' (uso interno) ou 'perdidos'.
+const FILTRO_DO_MODO = { reais: 'ficticio=0', ficticios: 'ficticio=1&privado=0', privados: 'privado=1', perdidos: 'ficticio=0' };
 export function QuadroFunil({ modo = 'reais', categoriaId = '', onMudou }) {
-  const ficticio = modo === 'ficticios';
+  const ficticio = modo === 'ficticios' || modo === 'privados';
   const { dados: projetos, erro, recarregar } = useCarregar(
-    () => api(`/projetos?servico=site_sistema&ficticio=${ficticio ? 1 : 0}`),
-    [ficticio],
+    () => api(`/projetos?servico=site_sistema&${FILTRO_DO_MODO[modo] ?? FILTRO_DO_MODO.reais}`),
+    [modo],
   );
   const mudanca = useEnvio();
   const { colunas, destinos } = MODOS[modo] ?? MODOS.reais;

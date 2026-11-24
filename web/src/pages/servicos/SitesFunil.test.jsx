@@ -80,7 +80,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Site', etapa: 'ideia', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, novo_cliente: { nome: 'Diego' }, categorias: [1], nicho_id: null,
+      titulo: 'Site', etapa: 'ideia', valor_total_centavos: 150050, prazo_entrega: '', ficticio: false, privado: false, novo_cliente: { nome: 'Diego' }, categorias: [1], nicho_id: null,
     });
   });
 
@@ -98,7 +98,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     const ficticios = [
       { id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null },
     ];
-    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'GET /projetos?servico=site_sistema&ficticio=1': ficticios });
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'GET /projetos?servico=site_sistema&ficticio=1&privado=0': ficticios });
     abrir();
     await screen.findByRole('region', { name: 'Ideia' });
     await mostrar(userEvent.setup(), 'ficticios');
@@ -112,7 +112,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
 
   it('+ Oportunidade com Fictícios cria com ficticio travado e etapa andamento', async () => {
     const { chamadas } = mockApi({
-      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1&privado=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },
       'GET /categorias': [{ id: 1, nome: 'Site' }], 'GET /nichos': [],
     });
     abrir();
@@ -130,14 +130,14 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Case Padaria', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: '', ficticio: true, novo_cliente: { nome: 'Case' }, categorias: [1], nicho_id: null,
+      titulo: 'Case Padaria', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: '', ficticio: true, privado: false, novo_cliente: { nome: 'Case' }, categorias: [1], nicho_id: null,
     });
   });
 
   it('move um card fictício pelo menu do card', async () => {
     const ficticios = [{ id: 5, titulo: 'Case Padaria', cliente_nome: 'Case', etapa: 'andamento', valor_total_centavos: 0, prazo_entrega: null }];
     const { chamadas } = mockApi({
-      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1': ficticios, 'PUT /projetos/5': { ...ficticios[0], etapa: 'entregue' },
+      'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /projetos?servico=site_sistema&ficticio=1&privado=0': ficticios, 'PUT /projetos/5': { ...ficticios[0], etapa: 'entregue' },
     });
     abrir();
     await mostrar(userEvent.setup(), 'ficticios');
@@ -164,7 +164,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
-      titulo: 'Site', etapa: 'ideia', prazo_entrega: '', ficticio: false, cliente_id: 3,
+      titulo: 'Site', etapa: 'ideia', prazo_entrega: '', ficticio: false, privado: false, cliente_id: 3,
       categorias: [4], nicho_id: 7, valor_total_centavos: 150000,
     });
   });

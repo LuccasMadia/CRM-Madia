@@ -106,6 +106,22 @@ describe('/api/projetos', () => {
     expect(res.body.ficticio).toBe(1);
   });
 
+  it('projeto privado também é fictício e tem filtro próprio', async () => {
+    const interno = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Cérebro', privado: true }).expect(201)).body;
+    expect(interno.privado).toBe(1);
+    expect(interno.ficticio).toBe(1);
+    const caso = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Caso', ficticio: true }).expect(201)).body;
+    expect(caso.privado).toBe(0);
+    await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Real' }).expect(201);
+    const nomes = async (q) => (await ctx.http.get(`/api/projetos?${q}`).expect(200)).body.map((p) => p.titulo);
+    expect(await nomes('privado=1')).toEqual(['Cérebro']);
+    expect(await nomes('ficticio=1&privado=0')).toEqual(['Caso']);
+    expect(await nomes('ficticio=0')).toEqual(['Real']);
+    // deixar de ser fictício também deixa de ser privado
+    const res = await ctx.http.put(`/api/projetos/${interno.id}`).send({ ficticio: false }).expect(200);
+    expect(res.body.privado).toBe(0);
+  });
+
   it('lista filtrando por ficticio', async () => {
     const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' })).body;
     await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' });

@@ -96,7 +96,7 @@ describe('SitesSistemas', () => {
     expect(screen.queryByRole('group', { name: 'Etapa' })).toBeNull();
     expect(screen.queryByText('App Carla')).toBeNull();
     const mostrar = screen.getByLabelText('Mostrar');
-    expect(within(mostrar).getAllByRole('option').map((o) => o.textContent)).toEqual(['Reais', 'Fictícios', 'Perdidos']);
+    expect(within(mostrar).getAllByRole('option').map((o) => o.textContent)).toEqual(['Reais', 'Privados', 'Fictícios', 'Perdidos']);
     await userEvent.setup().selectOptions(mostrar, 'perdidos');
     expect(await screen.findByRole('link', { name: 'App Carla' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Site Ana' })).toBeNull();

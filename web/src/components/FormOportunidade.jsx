@@ -11,12 +11,12 @@ import { CaixaModeloTarefas, modeloPadrao, useModelosTarefas } from './tarefas/M
 import { paraCentavos } from '../lib/dinheiro.js';
 import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../lib/rotulos.js';
 
-export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicial = null }) {
+export function FormOportunidade({ onSalvar, ficticioFixo = false, privadoFixo = false, clienteInicial = null }) {
   const { dados: clientes } = useCarregar(() => api('/clientes'), []);
   const { dados: categorias, erro: erroCategorias } = useCarregar(() => api('/categorias'), []);
   const { valores, campo, setValores } = useFormulario({
     titulo: '', cliente_id: clienteInicial ? String(clienteInicial) : '', novo_cliente_nome: '', valor: '', prazo_entrega: '',
-    etapa: ficticioFixo ? 'andamento' : 'ideia', ficticio: ficticioFixo,
+    etapa: ficticioFixo ? 'andamento' : 'ideia', ficticio: ficticioFixo, privado: privadoFixo,
   });
   const [categoriasMarcadas, setCategoriasMarcadas] = useState([]);
   const [nichoId, setNichoId] = useState('');
@@ -31,6 +31,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
     setValores((v) => ({
       ...v,
       ficticio: marcado,
+      privado: marcado ? v.privado : false,
       etapa: marcado ? 'andamento' : 'ideia',
     }));
   }
@@ -47,7 +48,7 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
       return;
     }
     const corpo = {
-      titulo: valores.titulo, etapa: valores.etapa, prazo_entrega: valores.prazo_entrega, ficticio: valores.ficticio,
+      titulo: valores.titulo, etapa: valores.etapa, prazo_entrega: valores.prazo_entrega, ficticio: valores.ficticio, privado: Boolean(valores.privado),
       categorias: categoriasMarcadas, nicho_id: nichoId ? Number(nichoId) : null, valor_total_centavos: valor ?? 0,
     };
     if (modeloSite && criarTarefas && !valores.ficticio) corpo.modelo_tarefas_id = modeloSite.id;
@@ -95,6 +96,19 @@ export function FormOportunidade({ onSalvar, ficticioFixo = false, clienteInicia
           Projeto fictício (só portfólio)
         </label>
       </div>
+      {valores.ficticio && (
+        <div className="campo">
+          <label>
+            <input
+              type="checkbox"
+              checked={Boolean(valores.privado)}
+              disabled={privadoFixo}
+              onChange={(e) => setValores((v) => ({ ...v, privado: e.target.checked }))}
+            />{' '}
+            Privado (uso interno, não entra no portfólio)
+          </label>
+        </div>
+      )}
       {!valores.ficticio && <CaixaModeloTarefas modelo={modeloSite} marcado={criarTarefas} onMudar={setCriarTarefas} />}
       <Aviso erro={erro} />
       <div><button className="btn btn--primario" disabled={enviando}>Criar oportunidade</button></div>

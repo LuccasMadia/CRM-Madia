@@ -34,6 +34,7 @@ const REGRAS_PROJETO = {
   mensalidade_dia_vencimento: { tipo: 'inteiro', min: 1, max: 31 },
   postou_instagram: { tipo: 'bool', padrao: 0 },
   ficticio: { tipo: 'bool', padrao: 0 },
+  privado: { tipo: 'bool', padrao: 0 },
   servico: { tipo: 'enum', valores: SERVICOS },
   link_perfil: { tipo: 'texto' },
   nicho_id: { tipo: 'inteiro', min: 1 },
@@ -262,6 +263,7 @@ export function rotasProjetos({ db, hoje }) {
       cliente_id: req.query.cliente_id,
       postou_instagram: req.query.postou_instagram,
       ficticio: req.query.ficticio,
+      privado: req.query.privado,
       servico,
     }).map(comServicos));
   });
@@ -283,6 +285,8 @@ export function rotasProjetos({ db, hoje }) {
 
     function prepararDados(dadosValidados) {
       const servico = dadosValidados.servico ?? 'site_sistema';
+      // privado é um tipo de fictício: fica fora do financeiro e dos números reais
+      if (dadosValidados.privado) dadosValidados.ficticio = 1;
       categoriasValidadas = validarCategorias(corpo.categorias, servico, { criando: true });
       exigirRegrasDoServico({
         servico, etapa: dadosValidados.etapa, ficticio: dadosValidados.ficticio,
@@ -354,6 +358,8 @@ export function rotasProjetos({ db, hoje }) {
 
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
+    if (dadosBase.privado) dadosBase.ficticio = 1;
+    else if (dadosBase.ficticio === 0 && !('privado' in dadosBase)) dadosBase.privado = 0;
     if (dadosBase.servico !== undefined && dadosBase.servico !== atual.servico) {
       throw new ErroValidacao([{ campo: 'servico', mensagem: 'Não é possível mudar o tipo de serviço' }]);
     }

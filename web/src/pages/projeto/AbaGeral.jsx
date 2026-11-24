@@ -35,6 +35,7 @@ function valoresIniciais(projeto) {
     apagar_mensalidades_abertas: false,
     postou_instagram: Boolean(projeto.postou_instagram),
     ficticio: Boolean(projeto.ficticio),
+    privado: Boolean(projeto.privado),
   };
 }
 
@@ -152,9 +153,15 @@ export function AbaGeral({ projeto, onSalvo }) {
             Postou no Instagram
           </label>
           <label className="campo--check">
-            <input type="checkbox" checked={valores.ficticio} onChange={(e) => alterar({ ficticio: e.target.checked })} />
+            <input type="checkbox" checked={valores.ficticio} onChange={(e) => alterar({ ficticio: e.target.checked, privado: e.target.checked ? valores.privado : false })} />
             Projeto fictício (só portfólio)
           </label>
+          {valores.ficticio && (
+            <label className="campo--check">
+              <input type="checkbox" checked={valores.privado} onChange={(e) => alterar({ privado: e.target.checked })} />
+              Privado (uso interno, não entra no portfólio)
+            </label>
+          )}
         </section>
       </aside>
       <div className="visao-geral__rodape">
