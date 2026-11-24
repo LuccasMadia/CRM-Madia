@@ -82,6 +82,24 @@ describe('SitesSistemas', () => {
     expect(screen.getByText('Site Edu')).toBeInTheDocument();
   });
 
+  it('No ar separa reais, privados e fictícios pelo seletor Mostrar', async () => {
+    const privado = { ...entregueAntes, id: 8, titulo: 'Cérebro interno', ficticio: 1, privado: 1 };
+    const caso = { ...entregueAntes, id: 9, titulo: 'Caso loja', ficticio: 1, privado: 0 };
+    mockApi({ 'GET /projetos?servico=site_sistema': [entregue, privado, caso] });
+    abrir('/servicos?aba=sites&ver=no_ar');
+    expect(await screen.findByRole('row', { name: /Loja Bruno/ })).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Cérebro interno/ })).toBeNull();
+    expect(screen.queryByRole('row', { name: /Caso loja/ })).toBeNull();
+    const mostrar = screen.getByRole('combobox', { name: 'Mostrar' });
+    expect(within(mostrar).queryByRole('option', { name: 'Perdidos' })).toBeNull();
+    await userEvent.setup().selectOptions(mostrar, 'privados');
+    expect(await screen.findByRole('row', { name: /Cérebro interno/ })).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Loja Bruno/ })).toBeNull();
+    await userEvent.setup().selectOptions(mostrar, 'ficticios');
+    expect(await screen.findByRole('row', { name: /Caso loja/ })).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Cérebro interno/ })).toBeNull();
+  });
+
   it('+ Oportunidade fica nas duas visões', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /categorias': [], 'GET /nichos': [] });
     abrirNoAr();

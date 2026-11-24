@@ -52,7 +52,14 @@ function FiltrosNoAr({ filtros: { clienteId, instagram }, onMudar }) {
   );
 }
 
-function ListaNoAr({ filtros: { clienteId, instagram, categoriaId }, hospedagens, mensalidades }) {
+// Qual grupo a lista mostra: reais, privados (uso interno) ou fictícios (cases do portfólio).
+const NO_GRUPO = {
+  reais: (p) => !p.ficticio,
+  privados: (p) => Boolean(p.privado),
+  ficticios: (p) => Boolean(p.ficticio) && !p.privado,
+};
+
+function ListaNoAr({ modo, filtros: { clienteId, instagram, categoriaId }, hospedagens, mensalidades }) {
   const navegar = useNavigate();
   const consulta = new URLSearchParams(
     Object.entries({ servico: 'site_sistema', cliente_id: clienteId, postou_instagram: instagram }).filter(([, v]) => v),
@@ -62,7 +69,7 @@ function ListaNoAr({ filtros: { clienteId, instagram, categoriaId }, hospedagens
   const mensalidadeDe = (id) => (mensalidades ?? []).find((m) => m.projeto_id === id);
 
   const lista = (projetos ?? [])
-    .filter((p) => estaNoAr(p, hospedagemDe(p.id)) && temCategoria(p, categoriaId))
+    .filter((p) => estaNoAr(p, hospedagemDe(p.id)) && temCategoria(p, categoriaId) && (NO_GRUPO[modo] ?? NO_GRUPO.reais)(p))
     .sort((a, b) => (b.data_entrega ?? '9999').localeCompare(a.data_entrega ?? '9999') || b.atualizado_em.localeCompare(a.atualizado_em));
 
   // A linha toda abre o projeto; cliques em links (título, cliente) seguem o próprio link.
@@ -143,8 +150,10 @@ export function SitesSistemas() {
   const [modo, setModo] = useState('reais');
   const [filtros, setFiltros] = useState({ clienteId: '', instagram: '', categoriaId: '' });
   const [criando, setCriando] = useState(false);
-  const ficticio = visao === 'andamento' && (modo === 'ficticios' || modo === 'privados');
-  const privado = visao === 'andamento' && modo === 'privados';
+  // "Perdidos" só existe no quadro; na lista No ar volta para Reais
+  const modoAtual = visao === 'andamento' || modo !== 'perdidos' ? modo : 'reais';
+  const ficticio = modoAtual === 'ficticios' || modoAtual === 'privados';
+  const privado = modoAtual === 'privados';
 
   const categorias = useCarregar(() => api('/categorias'), []);
   const projetos = useCarregar(() => api('/projetos?servico=site_sistema&ficticio=0'), []);
@@ -189,18 +198,17 @@ export function SitesSistemas() {
           ))}
         </div>
         <div className="barra-visao__filtros">
-          {visao === 'andamento' ? (
-            <select className="select-compacto" aria-label="Mostrar" value={modo} onChange={(e) => setModo(e.target.value)}>
-              {MODOS.map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
-            </select>
-          ) : <FiltrosNoAr filtros={filtros} onMudar={(mudou) => setFiltros((f) => ({ ...f, ...mudou }))} />}
+          <select className="select-compacto" aria-label="Mostrar" value={modoAtual} onChange={(e) => setModo(e.target.value)}>
+            {MODOS.filter(([chave]) => visao === 'andamento' || chave !== 'perdidos').map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
+          </select>
+          {visao !== 'andamento' && <FiltrosNoAr filtros={filtros} onMudar={(mudou) => setFiltros((f) => ({ ...f, ...mudou }))} />}
         </div>
         <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Oportunidade</button>
       </div>
       <FiltroCategorias categorias={categorias.dados} valor={filtros.categoriaId} onMudar={(categoriaId) => setFiltros((f) => ({ ...f, categoriaId }))} />
       {visao === 'andamento'
-        ? <QuadroFunil modo={modo} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />
-        : <ListaNoAr filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
+        ? <QuadroFunil modo={modoAtual} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />
+        : <ListaNoAr modo={modoAtual} filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
       {criando && (
         <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>
           <FormOportunidade onSalvar={criar} ficticioFixo={ficticio} privadoFixo={privado} />
