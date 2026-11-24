@@ -134,6 +134,7 @@ describe('GET /api/painel/graficos', () => {
     expect(res.body.funil).toEqual({
       etapas: [
         { etapa: 'ideia', quantidade: 3, percentual: 100 },
+        { etapa: 'prototipo', quantidade: 2, percentual: 67 },
         { etapa: 'apresentado', quantidade: 2, percentual: 67 },
         { etapa: 'valor_definido', quantidade: 2, percentual: 67 },
         { etapa: 'teste', quantidade: 1, percentual: 33 },

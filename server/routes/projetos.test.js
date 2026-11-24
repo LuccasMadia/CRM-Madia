@@ -24,6 +24,15 @@ describe('/api/projetos', () => {
     expect(movido.etapa_desde).not.toBe('2026-01-01');
   });
 
+  it('guarda o motivo da perda e apaga quando o projeto volta ao funil', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201)).body;
+    const perdido = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'perdido', motivo_perda: 'preco' }).expect(200)).body;
+    expect(perdido.motivo_perda).toBe('preco');
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send({ motivo_perda: 'inventado' }).expect(400);
+    const de_volta = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'ideia' }).expect(200)).body;
+    expect(de_volta.motivo_perda).toBeNull();
+  });
+
   it('cria junto com um cliente novo', async () => {
     const res = await ctx.http
       .post('/api/projetos')

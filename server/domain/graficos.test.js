@@ -14,6 +14,7 @@ describe('montarFunil', () => {
     const r = montarFunil([site('ideia'), site('valor_definido'), site('andamento'), site('entregue'), site('entregue')]);
     expect(r.etapas).toEqual([
       { etapa: 'ideia', quantidade: 5, percentual: 100 },
+      { etapa: 'prototipo', quantidade: 4, percentual: 80 },
       { etapa: 'apresentado', quantidade: 4, percentual: 80 },
       { etapa: 'valor_definido', quantidade: 4, percentual: 80 },
       { etapa: 'teste', quantidade: 3, percentual: 60 },
@@ -25,19 +26,19 @@ describe('montarFunil', () => {
 
   it('perdido conta só em ideia e em perdidos', () => {
     const r = montarFunil([site('perdido'), site('valor_definido')]);
-    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 1, 1, 0, 0, 0]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 1, 1, 1, 0, 0, 0]);
     expect(r.perdidos).toBe(1);
   });
 
   it('só com perdidos não divide por zero', () => {
     const r = montarFunil([site('perdido'), site('perdido')]);
-    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 0, 0, 0, 0, 0]);
-    expect(r.etapas.map((e) => e.percentual)).toEqual([100, 0, 0, 0, 0, 0]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 0, 0, 0, 0, 0, 0]);
+    expect(r.etapas.map((e) => e.percentual)).toEqual([100, 0, 0, 0, 0, 0, 0]);
   });
 
   it('sem projetos fica tudo zero', () => {
     const r = montarFunil([]);
-    expect(r.etapas.map((e) => [e.quantidade, e.percentual])).toEqual([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]);
+    expect(r.etapas.map((e) => [e.quantidade, e.percentual])).toEqual([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]);
     expect(r.perdidos).toBe(0);
   });
 
@@ -52,12 +53,12 @@ describe('montarFunil', () => {
 
   it('arredonda o percentual', () => {
     const r = montarFunil([site('ideia'), site('ideia'), site('valor_definido')]);
-    expect(r.etapas[1].percentual).toBe(33);
+    expect(r.etapas[2].percentual).toBe(33);
   });
 
-  it('protótipo é opcional: conta só como ideia', () => {
+  it('protótipo tem a própria faixa, como no quadro', () => {
     const r = montarFunil([site('prototipo'), site('teste')]);
-    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 1, 1, 1, 0, 0]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 2, 1, 1, 1, 0, 0]);
   });
 });
 

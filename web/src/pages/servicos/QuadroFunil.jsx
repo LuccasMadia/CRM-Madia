@@ -1,13 +1,15 @@
 import { Link } from 'react-router';
 import { api } from '../../api/client.js';
+import { useState } from 'react';
 import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Kanban } from '../../components/Kanban.jsx';
+import { Modal } from '../../components/Modal.jsx';
 import { EtiquetasCategorias, temCategoria } from '../../components/CategoriaSite.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, diasDesde } from '../../lib/datas.js';
-import { DIAS_PARADO, ETAPAS, ETAPAS_FICTICIO, ETAPAS_SEM_PARADO, ROTULO_ETAPA, VEZ_DA_ETAPA } from '../../lib/rotulos.js';
+import { DIAS_PARADO, ETAPAS, ETAPAS_FICTICIO, ETAPAS_SEM_PARADO, ROTULO_ETAPA, ROTULO_MOTIVO_PERDA, VEZ_DA_ETAPA } from '../../lib/rotulos.js';
 import { notificar } from '../../lib/notificacoes.js';
 import { DIAS_DE_TESTE } from './atencaoSites.js';
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
@@ -38,6 +40,25 @@ function VezDaEtapa({ projeto: p }) {
       <span className={`etiqueta ${vez === 'voce' ? 'etiqueta--voce' : 'etiqueta--aguardando'}`}>{vez === 'voce' ? 'Sua vez' : 'Com o cliente'}</span>
       <span className={parado ? 'kanban__parado' : undefined}>{dias === 0 ? 'hoje' : `há ${plural(dias, 'dia', 'dias')}`}</span>
     </p>
+  );
+}
+
+// Ao marcar como perdido, pergunta o motivo (pode ficar em branco) para dar para aprender com as vendas que não fecharam.
+function MotivoDaPerda({ projeto, onConfirmar, onFechar }) {
+  const [motivo, setMotivo] = useState('');
+  return (
+    <Modal titulo={`Por que ${projeto.titulo} foi perdido?`} onFechar={onFechar}>
+      <form className="form" onSubmit={(e) => { e.preventDefault(); onConfirmar(motivo || null); }}>
+        <div className="campo">
+          <label htmlFor="motivo-perda">Motivo</label>
+          <select id="motivo-perda" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+            <option value="">Sem motivo definido</option>
+            {Object.entries(ROTULO_MOTIVO_PERDA).map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
+          </select>
+        </div>
+        <button type="submit" className="btn btn--primario">Marcar como perdido</button>
+      </form>
+    </Modal>
   );
 }
 
@@ -98,6 +119,7 @@ export function QuadroFunil({ modo = 'reais', categoriaId = '', layout = 'coluna
     [modo],
   );
   const mudanca = useEnvio();
+  const [perdendo, setPerdendo] = useState(null);
   const { colunas, destinos } = MODOS[modo] ?? MODOS.reais;
 
   function mudar(projeto, corpo) {
@@ -122,7 +144,7 @@ export function QuadroFunil({ modo = 'reais', categoriaId = '', layout = 'coluna
           colunaDe={(p) => p.etapa}
           tituloDe={(p) => p.titulo}
           destinosExtras={destinos}
-          onMover={(projeto, etapa) => mudar(projeto, { etapa })}
+          onMover={(projeto, etapa) => (etapa === 'perdido' ? setPerdendo(projeto) : mudar(projeto, { etapa }))}
           renderItem={(p) => (
             <>
               <Link to={`/projetos/${p.id}`} className="kanban__titulo">{p.titulo}</Link>
@@ -130,9 +152,17 @@ export function QuadroFunil({ modo = 'reais', categoriaId = '', layout = 'coluna
               <p className="kanban__meta"><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></p>
               <p className="kanban__meta">{formatarDinheiro(p.valor_total_centavos)} · prazo {formatarData(p.prazo_entrega)}</p>
               {!ficticio && <VezDaEtapa projeto={p} />}
+              {p.etapa === 'perdido' && p.motivo_perda && <p className="kanban__meta">{`Motivo: ${ROTULO_MOTIVO_PERDA[p.motivo_perda] ?? p.motivo_perda}`}</p>}
               <ExtrasDoCard projeto={p} ficticio={ficticio} onMudar={mudar} />
             </>
           )}
+        />
+      )}
+      {perdendo && (
+        <MotivoDaPerda
+          projeto={perdendo}
+          onFechar={() => setPerdendo(null)}
+          onConfirmar={(motivo) => { mudar(perdendo, { etapa: 'perdido', motivo_perda: motivo }); setPerdendo(null); }}
         />
       )}
     </div>

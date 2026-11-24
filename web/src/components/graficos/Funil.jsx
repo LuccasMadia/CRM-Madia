@@ -1,5 +1,4 @@
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
-import { ESCALA } from './tema.js';
 
 const LARGURA = 340;
 const AREA = 200; // largura máxima das faixas; o resto é para nome e percentual
@@ -24,7 +23,7 @@ export function Funil({ etapas, perdidos }) {
           return (
             <g key={e.etapa}>
               <title>{`${ROTULO_ETAPA[e.etapa]}: ${e.quantidade}`}</title>
-              <path d={d} fill={ESCALA[i]} />
+              <path d={d} fill="#2dd4bf" fillOpacity={Math.max(0.4, 1 - i * 0.1)} />
               <text x={centro} y={y + ALTURA / 2 + 5} textAnchor="middle" className="funil__quantidade">{e.quantidade}</text>
               <text x={AREA + 16} y={y + 16} className="funil__nome">{ROTULO_ETAPA[e.etapa]}</text>
               <text x={AREA + 16} y={y + 32} className="funil__percentual">{`${e.percentual}%`}</text>

@@ -273,6 +273,19 @@ describe('SitesSistemas', () => {
     expect(within(faixa).queryByText(/Site Fabi parado/)).toBeNull();
   });
 
+  it('Pede atenção: versão final sem nenhuma parcela paga', async () => {
+    mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': [
+        { ...naoEntregue, id: 1, titulo: 'Site Ana', etapa: 'andamento', parcelas_total: 2, parcelas_pagas: 0 },
+        { ...naoEntregue, id: 2, titulo: 'Loja Edu', etapa: 'andamento', parcelas_total: 2, parcelas_pagas: 1 },
+      ],
+    });
+    abrir();
+    const faixa = await screen.findByRole('region', { name: 'Pede atenção' });
+    expect(await within(faixa).findByRole('link', { name: 'Site Ana em versão final sem nenhuma parcela paga' })).toHaveAttribute('href', '/projetos/1');
+    expect(within(faixa).queryByText(/Loja Edu em versão final sem/)).toBeNull();
+  });
+
   it('o card mostra de quem é a vez e há quantos dias está na etapa', async () => {
     const hoje = hojeISO();
     mockApi({

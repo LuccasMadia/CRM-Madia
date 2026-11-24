@@ -52,6 +52,11 @@ export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = 
     atencao.push({ texto: `${parados.length} projetos parados há ${DIAS_PARADO}+ dias`, para: NO_QUADRO });
   }
 
+  // Versão final sem nenhuma parcela paga: trabalho sem sinal.
+  const semPagamento = projetos.filter((p) => p.etapa === 'andamento' && !p.parcelas_pagas);
+  if (semPagamento.length === 1) atencao.push({ texto: `${semPagamento[0].titulo} em versão final sem nenhuma parcela paga`, para: `/projetos/${semPagamento[0].id}` });
+  else if (semPagamento.length) atencao.push({ texto: `${semPagamento.length} projetos em versão final sem nenhuma parcela paga`, para: NO_QUADRO });
+
   // O trabalho ativo: um projeto só leva direto a ele; vários levam ao quadro.
   for (const [etapa, rotulo] of [['prototipo', 'em protótipo'], ['andamento', 'em versão final']]) {
     const daEtapa = projetos.filter((p) => p.etapa === etapa);

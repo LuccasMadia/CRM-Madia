@@ -1,7 +1,7 @@
 import { somarMeses, mesDe } from './datas.js';
 
-// Protótipo é opcional, então fica fora do gráfico e conta como ideia.
-export const ETAPAS_FUNIL = ['ideia', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
+// As mesmas etapas do quadro, na ordem; quem pulou o protótipo conta nele porque o gráfico é cumulativo.
+export const ETAPAS_FUNIL = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
 export const SERVICOS_GRAFICO = ['site_sistema', 'google_meu_negocio', 'placas_nfc'];
 const NAO_INFORMADO = 'Não informado';
 const MAX_FATIAS = 4;
@@ -13,7 +13,7 @@ export function ultimosMeses(hoje, n) {
 
 export function montarFunil(projetos) {
   const sites = projetos.filter((p) => p.servico === 'site_sistema');
-  // Até que etapa o projeto chegou; perdido e protótipo só contam como ideia.
+  // Até que etapa o projeto chegou; perdido só conta como ideia (não se sabe onde ele caiu).
   const alcance = (p) => Math.max(0, ETAPAS_FUNIL.indexOf(p.etapa));
   const total = sites.length;
   const etapas = ETAPAS_FUNIL.map((etapa, i) => {

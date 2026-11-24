@@ -10,6 +10,11 @@ export const ROTULO_ETAPA = {
   perdido: 'Perdido',
 };
 export const ETAPAS = Object.keys(ROTULO_ETAPA);
+
+// Por que um projeto foi perdido; a chave é a que o servidor guarda.
+export const ROTULO_MOTIVO_PERDA = {
+  preco: 'Preço', sem_resposta: 'Sumiu / sem resposta', concorrente: 'Escolheu outro', sem_verba: 'Sem verba agora', desistiu: 'Desistiu do projeto', outro: 'Outro',
+};
 export const ETAPAS_FICTICIO = ['andamento', 'entregue'];
 // "Em andamento" é o que está nas suas mãos: construindo o protótipo ou a versão final.
 export const ETAPAS_EM_ANDAMENTO = ['prototipo', 'andamento'];

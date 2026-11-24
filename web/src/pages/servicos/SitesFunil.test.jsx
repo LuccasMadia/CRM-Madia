@@ -145,6 +145,21 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/5', corpo: { etapa: 'entregue' } });
   });
 
+  it('mover para Perdido pergunta o motivo e envia junto com a etapa', async () => {
+    const projetos = [{ id: 5, titulo: 'Loja Edu', cliente_nome: 'Edu', etapa: 'ideia', valor_total_centavos: 0, prazo_entrega: null }];
+    const { chamadas } = mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'PUT /projetos/5': { ...projetos[0], etapa: 'perdido' },
+    });
+    abrir();
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByLabelText('Mover Loja Edu'), 'perdido');
+    expect(chamadas.find((c) => c.metodo === 'PUT')).toBeUndefined();
+    const janela = await screen.findByRole('dialog');
+    await user.selectOptions(within(janela).getByLabelText('Motivo'), 'preco');
+    await user.click(within(janela).getByRole('button', { name: 'Marcar como perdido' }));
+    await waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/5', corpo: { etapa: 'perdido', motivo_perda: 'preco' } }));
+  });
+
   it('nova oportunidade exige categoria e envia categorias, nicho e valor', async () => {
     const { chamadas } = mockApi({
       'GET /projetos?servico=site_sistema&ficticio=0': [], 'GET /clientes': [{ id: 3, nome: 'Carla' }], 'POST /projetos': { id: 9 },

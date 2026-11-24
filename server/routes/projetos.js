@@ -9,7 +9,7 @@ import { obterConfig } from '../repos/config.js';
 import { emTransacao } from '../repos/crud.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
-import { ETAPAS, aplicarRegrasProjeto } from '../domain/regras.js';
+import { ETAPAS, MOTIVOS_PERDA, aplicarRegrasProjeto } from '../domain/regras.js';
 import { SERVICOS, TIPOS_SERVICO, calcularValorTotal, errosDoServico, valorLinhaServico } from '../domain/servicos.js';
 import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { repoCategorias, repoNichos, repoProjetosCategorias } from '../repos/categorias.js';
@@ -35,6 +35,7 @@ const REGRAS_PROJETO = {
   postou_instagram: { tipo: 'bool', padrao: 0 },
   ficticio: { tipo: 'bool', padrao: 0 },
   privado: { tipo: 'bool', padrao: 0 },
+  motivo_perda: { tipo: 'enum', valores: MOTIVOS_PERDA },
   servico: { tipo: 'enum', valores: SERVICOS },
   link_perfil: { tipo: 'texto' },
   nicho_id: { tipo: 'inteiro', min: 1 },
@@ -358,6 +359,8 @@ export function rotasProjetos({ db, hoje }) {
 
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
+    // o motivo só vale enquanto o projeto está perdido
+    if (dadosBase.etapa !== undefined && dadosBase.etapa !== 'perdido') dadosBase.motivo_perda = null;
     if (dadosBase.privado) dadosBase.ficticio = 1;
     else if (dadosBase.ficticio === 0 && !('privado' in dadosBase)) dadosBase.privado = 0;
     if (dadosBase.servico !== undefined && dadosBase.servico !== atual.servico) {

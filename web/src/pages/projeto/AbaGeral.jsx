@@ -10,7 +10,7 @@ import { Aviso } from '../../components/Aviso.jsx';
 import { SeletorCategorias } from '../../components/SeletorCategorias.jsx';
 import { SeletorNicho } from '../../components/SeletorNicho.jsx';
 import { centavosParaTexto, paraCentavos } from '../../lib/dinheiro.js';
-import { ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { ROTULO_ETAPA, ROTULO_MOTIVO_PERDA } from '../../lib/rotulos.js';
 import { CobrancaMensal, comDiaSugerido } from './CobrancaMensal.jsx';
 import { PreviaSite } from './PreviaSite.jsx';
 
@@ -36,6 +36,7 @@ function valoresIniciais(projeto) {
     postou_instagram: Boolean(projeto.postou_instagram),
     ficticio: Boolean(projeto.ficticio),
     privado: Boolean(projeto.privado),
+    motivo_perda: projeto.motivo_perda ?? '',
   };
 }
 
@@ -76,6 +77,7 @@ export function AbaGeral({ projeto, onSalvo }) {
           ...resto,
           ...(temCategorias ? { categorias: categoriasEscolhidas } : {}),
           cliente_id: Number(resto.cliente_id),
+          motivo_perda: resto.motivo_perda || null,
           nicho_id: resto.nicho_id ? Number(resto.nicho_id) : null,
           valor_total_centavos: valorCentavos ?? 0,
           mensalidade_valor_centavos: mensalidadeCentavos ?? 0,
@@ -123,6 +125,14 @@ export function AbaGeral({ projeto, onSalvo }) {
               onChange={(ids) => alterar({ categorias: ids })}
               erro={erros.find((e) => e.campo === 'categorias')?.mensagem}
             />
+          )}
+          {projeto.etapa === 'perdido' && (
+            <Campo rotulo="Motivo da perda" nome="motivo_perda" erros={erros}>
+              <select value={valores.motivo_perda} onChange={(e) => alterar({ motivo_perda: e.target.value })}>
+                <option value="">Sem motivo definido</option>
+                {Object.entries(ROTULO_MOTIVO_PERDA).map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
+              </select>
+            </Campo>
           )}
           <Campo rotulo="Descrição (interna)" nome="descricao" erros={erros}><textarea rows={3} {...texto('descricao')} /></Campo>
           <Campo rotulo="Notas" nome="notas" erros={erros}><textarea rows={4} {...texto('notas')} /></Campo>
