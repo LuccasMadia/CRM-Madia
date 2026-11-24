@@ -25,8 +25,9 @@
 .cerebro__canto--titulo { top: 14px; left: 16px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-suave); pointer-events: none; }
 .cerebro__canto--lista { bottom: 12px; right: 12px; }
 
-.cerebro__legenda { position: absolute; z-index: 3; left: 12px; bottom: 12px; display: grid; gap: 6px; margin: 0; padding: 12px 14px; list-style: none; font-size: 0.85rem; color: var(--texto-suave); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); }
-.cerebro__legenda li { display: inline-flex; align-items: center; gap: 6px; }
+/* legenda em faixa na base do palco: não cobre o cartão do item, que fica no alto à esquerda */
+.cerebro__legenda { position: absolute; z-index: 1; left: 12px; right: 96px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 7px 12px; list-style: none; font-size: 0.76rem; color: var(--texto-suave); background: color-mix(in srgb, var(--superficie) 80%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--borda); border-radius: var(--raio-controle); pointer-events: none; }
+.cerebro__legenda li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .cerebro__marca { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .cerebro__marca--vivo { background: var(--texto); }
 .cerebro__marca--historico { background: color-mix(in srgb, var(--texto) 35%, transparent); width: 6px; height: 6px; }
@@ -45,7 +46,7 @@
 /* cartão do item à esquerda e texto à direita, por cima do palco */
 .cerebro__folha { display: contents; }
 .cerebro__abas { display: none; }
-.cerebro-painel { position: absolute; z-index: 2; top: 44px; display: grid; align-content: start; gap: 12px; padding: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); max-height: calc(100% - 100px); overflow: auto; }
+.cerebro-painel { position: absolute; z-index: 2; top: 44px; display: grid; align-content: start; gap: 12px; padding: 20px; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); max-height: calc(100% - 140px); overflow: auto; }
 .cerebro-painel--item { left: 12px; width: 300px; }
 .cerebro-painel--conteudo { right: 12px; width: min(420px, 40%); }
 .cerebro-painel h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
@@ -75,5 +76,7 @@
   .cerebro-painel { position: static; width: auto; max-height: none; border: 0; border-radius: 0; }
   .cerebro__folha[data-aba='item'] .cerebro-painel--conteudo, .cerebro__folha[data-aba='conteudo'] .cerebro-painel--item { display: none; }
   .cerebro-lista { bottom: 56px; right: 12px; left: 12px; width: auto; }
+  /* no celular a folha do item sobe por cima: a legenda fica acima do botão Lista */
+  .cerebro__legenda { right: 12px; bottom: 56px; gap: 2px 12px; font-size: 0.72rem; padding: 6px 10px; }
 }
 @keyframes cerebro-folha { from { transform: translateY(100%); } }
