@@ -1004,3 +1004,6 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 
 /* Projeto parado há dias demais na etapa */
 .kanban__parado { color: var(--atencao); font-weight: 600; }
+
+/* Entregar direto do card em teste: o menu Mover fica escondido para quem usa mouse */
+.kanban__entregar { margin-top: 4px; }

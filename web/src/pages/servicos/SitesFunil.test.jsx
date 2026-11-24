@@ -45,6 +45,15 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     expect(await screen.findByText('Site Ana foi para No ar')).toBeInTheDocument();
   });
 
+  it('o card em teste tem o botão Marcar como entregue, que manda o projeto para No ar', async () => {
+    const emTeste = { ...projetos[0], id: 3, titulo: 'Site Bia', etapa: 'teste', teste_inicio: '2026-11-20' };
+    const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [emTeste], 'PUT /projetos/3': { ...emTeste, etapa: 'entregue' } });
+    abrir();
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Marcar como entregue' }));
+    expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/3', corpo: { etapa: 'entregue' } });
+    expect(await screen.findByText('Site Bia foi para No ar')).toBeInTheDocument();
+  });
+
   it('muda a etapa pelo menu do card', async () => {
     const { chamadas } = mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': projetos, 'PUT /projetos/1': { ...projetos[0], etapa: 'apresentado' } });
     abrir();

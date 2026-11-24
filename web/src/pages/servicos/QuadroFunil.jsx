@@ -85,6 +85,9 @@ function ExtrasDoCard({ projeto: p, ficticio, onMudar }) {
           onChange={(e) => onMudar(p, { teste_inicio: e.target.value || null })}
         />
         {p.teste_inicio ? <SituacaoTeste inicio={p.teste_inicio} /> : <span>defina quando o teste começou</span>}
+        {!ficticio && (
+          <button type="button" className="btn btn--pequeno kanban__entregar" onClick={() => onMudar(p, { etapa: 'entregue' })}>Marcar como entregue</button>
+        )}
       </div>
     );
   }
