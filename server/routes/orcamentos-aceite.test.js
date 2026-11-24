@@ -342,7 +342,7 @@ describe('aceite vinculando a um projeto que já existe', () => {
     }]);
   });
 
-  it('site em protótipo vai para Valor definido com o valor do orçamento, sem perder tarefas, parcelas e dados', async () => {
+  it('site em protótipo vai para Orçamento enviado com o valor do orçamento, sem perder tarefas, parcelas e dados', async () => {
     const existente = await cardapioExistente();
     await comParcelas(existente);
     const antes = projeto(existente.id);

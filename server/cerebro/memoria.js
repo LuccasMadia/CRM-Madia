@@ -5,7 +5,7 @@ import { tarefaVencida, entregueRelevante } from '../domain/cerebro.js';
 
 const COMERCIAL = ['ideia', 'apresentado', 'valor_definido', 'teste'];
 const ROTULO_ETAPA = {
-  ideia: 'Ideia', prototipo: 'Protótipo', apresentado: 'Apresentado', valor_definido: 'Valor definido',
+  ideia: 'Ideia', prototipo: 'Protótipo', apresentado: 'Apresentado', valor_definido: 'Orçamento enviado',
   teste: 'Em teste', andamento: 'Em andamento', entregue: 'Entregue',
 };
 const brl = (c) => `R$ ${(c / 100).toFixed(2).replace('.', ',')}`;

@@ -69,7 +69,7 @@ export function destinoPadrao(it) {
 
 // Só site e GMN viram projeto; cada um só pode usar projeto do mesmo serviço.
 export const SERVICO_DO_DESTINO = { site: 'site_sistema', gmn: 'google_meu_negocio' };
-// Etapa de um projeto criado pelo aceite: site em Valor definido, GMN pendente.
+// Etapa de um projeto criado pelo aceite: site em Orçamento enviado (valor_definido), GMN pendente.
 export const ETAPA_DO_DESTINO = { site: 'valor_definido', gmn: 'andamento' };
 export const ORDEM_ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
 

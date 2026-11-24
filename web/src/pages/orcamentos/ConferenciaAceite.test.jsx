@@ -61,7 +61,7 @@ describe('Conferência do aceite', () => {
     expect(within(cardapio).getByRole('checkbox')).toBeChecked();
     expect(cardapio).toHaveTextContent(/R\$\s1\.350,00/);
     expect(cardapio).toHaveTextContent(/de R\$\s1\.500,00, com o desconto/);
-    expect(cardapio).toHaveTextContent('Valor definido');
+    expect(cardapio).toHaveTextContent('Orçamento enviado');
     // "50% + 50%" na forma de pagamento já escolhe o atalho
     expect(within(cardapio).getByRole('combobox', { name: 'Parcelas' })).toHaveValue('entrada_entrega');
     expect(blocoDe(dialogo, 'Placa NFC — Redonda')).toHaveTextContent(/Venda de 1 placa a R\$\s72,00 cada, a receber/);
@@ -222,7 +222,7 @@ describe('Conferência com projeto existente', () => {
     expect(cardapio).toHaveTextContent('Já existe "Cardápio digital p/ empresas" em Protótipo — usar esse?');
     expect(within(cardapio).getByRole('combobox', { name: 'Projeto' })).toHaveValue('13');
     const previa = within(cardapio).getByLabelText('O que muda no projeto');
-    expect(previa).toHaveTextContent('Etapa: Protótipo → Valor definido');
+    expect(previa).toHaveTextContent('Etapa: Protótipo → Orçamento enviado');
     expect(previa).toHaveTextContent(/Valor: de R\$\s1\.500,00 para R\$\s1\.350,00/);
     expect(previa).toHaveTextContent(/Já tem 2 parcelas \(1 paga\).*01\/10\/2026: R\$\s200,00 paga · 01\/12\/2026: R\$\s300,00/);
     expect(cardapio).not.toHaveTextContent('Vira um projeto em Sites');
@@ -265,7 +265,7 @@ describe('Conferência com projeto existente', () => {
     const dialogo = await abrirConferencia(user);
     const cardapio = blocoDe(dialogo, 'Cardápio digital');
     await user.selectOptions(within(cardapio).getByRole('combobox', { name: 'Projeto' }), 'Criar projeto novo');
-    expect(cardapio).toHaveTextContent('Vira um projeto em Sites, na etapa Valor definido.');
+    expect(cardapio).toHaveTextContent('Vira um projeto em Sites, na etapa Orçamento enviado.');
     expect(within(cardapio).queryByLabelText('O que muda no projeto')).toBeNull();
     expect(within(cardapio).getByRole('combobox', { name: 'Parcelas' })).toHaveValue('entrada_entrega');
     expect(blocoDe(dialogo, 'Hospedagem e suporte')).toHaveTextContent('Mensalidade em "Cardápio digital"');

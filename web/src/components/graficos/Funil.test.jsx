@@ -13,7 +13,7 @@ describe('Funil', () => {
   it('mostra quantidade, nome e percentual de cada etapa', () => {
     render(<Funil etapas={etapas} perdidos={0} />);
     expect(screen.getByRole('img', { name: 'Funil de oportunidades' })).toBeInTheDocument();
-    for (const texto of ['24', '12', '7', '5', 'Ideia', 'Valor definido', 'Versão final', 'Entregue', '100%', '50%', '29%', '21%']) {
+    for (const texto of ['24', '12', '7', '5', 'Ideia', 'Orçamento enviado', 'Versão final', 'Entregue', '100%', '50%', '29%', '21%']) {
       expect(screen.getByText(texto)).toBeInTheDocument();
     }
     expect(screen.queryByText(/perdido/)).not.toBeInTheDocument();

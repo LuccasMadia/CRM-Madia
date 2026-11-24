@@ -3,7 +3,7 @@ export const ROTULO_ETAPA = {
   ideia: 'Ideia',
   prototipo: 'Protótipo',
   apresentado: 'Apresentado',
-  valor_definido: 'Valor definido',
+  valor_definido: 'Orçamento enviado',
   teste: 'Em teste',
   andamento: 'Versão final',
   entregue: 'Entregue',
