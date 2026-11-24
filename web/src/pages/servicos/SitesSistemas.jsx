@@ -32,7 +32,7 @@ function Mensalidade({ item }) {
 
 // "No ar" é o que já está com o cliente: entregues e a versão final já publicada.
 // Protótipo publicado é só prévia para apresentar, não conta.
-const estaNoAr = (p, hospedagem) => p.etapa === 'entregue' || (p.etapa === 'andamento' && hospedagem?.tipo === 'vercel');
+const estaNoAr = (p, hospedagem) => p.etapa === 'entregue' || (['andamento', 'teste'].includes(p.etapa) && hospedagem?.tipo === 'vercel');
 
 // Filtros da visão No ar; ficam na própria barra da visão para não abrir mais uma linha.
 function FiltrosNoAr({ filtros: { clienteId, instagram }, onMudar }) {

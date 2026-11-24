@@ -49,7 +49,7 @@ export function rotasPainel({ db, hoje }) {
       ...parcelasAbertas.filter((p) => estadoParcela(p, dia) === 'atrasada'),
       ...vendasAbertas.filter((v) => v.estado === 'atrasada'),
     ];
-    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa IN ('apresentado', 'valor_definido', 'teste') AND ficticio = 0 AND servico = 'site_sistema'");
+    const propostas = todas("SELECT valor_total_centavos FROM projetos WHERE etapa IN ('apresentado', 'valor_definido') AND ficticio = 0 AND servico = 'site_sistema'");
     // Em andamento = protótipo + versão final: o que está nas mãos do Lucca, não do cliente.
     const emAndamento = todas(
       "SELECT id, etapa FROM projetos WHERE etapa IN ('prototipo', 'andamento') AND ficticio = 0 AND servico = 'site_sistema'",

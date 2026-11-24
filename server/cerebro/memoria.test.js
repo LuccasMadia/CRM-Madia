@@ -17,18 +17,19 @@ describe('montarMemoria', () => {
       .toEqual(['clientes', 'comercial', 'projetos', 'processos', 'administrativo', 'conteudo']);
   });
 
-  it('separa teste (comercial) de prototipo (projetos), sem id repetido, sem fictício nem perdido', async () => {
+  it('separa orçamento enviado (comercial) de prototipo e teste (projetos), sem id repetido, sem fictício nem perdido', async () => {
     const ctx = criarContexto();
     const { ana, novo } = await base(ctx);
     const t = await novo({ titulo: 'Em teste', etapa: 'teste' });
+    const o = await novo({ titulo: 'Orçamento', etapa: 'valor_definido' });
     const p = await novo({ titulo: 'Protótipo', etapa: 'prototipo' });
     await novo({ titulo: 'Case', etapa: 'andamento', ficticio: true });
     await novo({ titulo: 'Perdido', etapa: 'perdido' });
     await ctx.http.post(`/api/projetos/${p.id}/parcelas`).send({ valor_centavos: 1000, vencimento: '2026-12-10' });
     const mem = montarMemoria(ctx.db, '2026-09-23');
-    expect(ids(mem, 'comercial')).toContain(`projeto:${t.id}`);
-    expect(ids(mem, 'projetos')).not.toContain(`projeto:${t.id}`);
-    expect(ids(mem, 'projetos')).toEqual([`projeto:${p.id}`]);
+    expect(ids(mem, 'comercial')).toContain(`projeto:${o.id}`);
+    expect(ids(mem, 'comercial')).not.toContain(`projeto:${t.id}`);
+    expect(ids(mem, 'projetos')).toEqual([`projeto:${t.id}`, `projeto:${p.id}`]);
     expect(ids(mem, 'clientes')).toEqual([`cliente:${ana.id}`]);
     const todos = mem.areas.flatMap((a) => a.pontos.map((x) => x.id));
     expect(new Set(todos).size).toBe(todos.length);

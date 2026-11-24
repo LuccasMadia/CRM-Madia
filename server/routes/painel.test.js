@@ -24,7 +24,7 @@ describe('GET /api/painel', () => {
       em_andamento: 2,
       em_andamento_detalhe: { prototipo: 1, andamento: 1 },
       recebido_mes_centavos: 0,
-      propostas: { quantidade: 2, total_centavos: 100000 },
+      propostas: { quantidade: 1, total_centavos: 80000 },
     });
     expect(res.body.proximos).toBeUndefined();
   });
@@ -137,8 +137,8 @@ describe('GET /api/painel/graficos', () => {
         { etapa: 'prototipo', quantidade: 2, percentual: 67 },
         { etapa: 'apresentado', quantidade: 2, percentual: 67 },
         { etapa: 'valor_definido', quantidade: 2, percentual: 67 },
-        { etapa: 'teste', quantidade: 1, percentual: 33 },
         { etapa: 'andamento', quantidade: 1, percentual: 33 },
+        { etapa: 'teste', quantidade: 1, percentual: 33 },
         { etapa: 'entregue', quantidade: 1, percentual: 33 },
       ],
       perdidos: 1,

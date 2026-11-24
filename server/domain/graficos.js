@@ -1,7 +1,7 @@
 import { somarMeses, mesDe } from './datas.js';
 
 // As mesmas etapas do quadro, na ordem; quem pulou o protótipo conta nele porque o gráfico é cumulativo.
-export const ETAPAS_FUNIL = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue'];
+export const ETAPAS_FUNIL = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'andamento', 'teste', 'entregue'];
 export const SERVICOS_GRAFICO = ['site_sistema', 'google_meu_negocio', 'placas_nfc'];
 const NAO_INFORMADO = 'Não informado';
 const MAX_FATIAS = 4;

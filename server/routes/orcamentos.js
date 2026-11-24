@@ -10,7 +10,7 @@ import { repoPlacasVendas } from '../repos/placas.js';
 import { repoCategorias, repoProjetosCategorias } from '../repos/categorias.js';
 import {
   calcularTotais, nomeArquivoPdf, DESTINOS, destinosDoItem, valoresComDesconto, MODOS_PARCELAS, planejarParcelas,
-  alertasOrcamento, etapaAoVincular, motivoNaoVincula,
+  alertasOrcamento, etapaAoVincular, motivoNaoVincula, ETAPA_DO_DESTINO,
 } from '../domain/orcamentos.js';
 import { planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { aplicarRegrasProjeto } from '../domain/regras.js';
@@ -436,7 +436,7 @@ export function rotasOrcamentos({ db, hoje }) {
       } else if (e.destino === 'site') {
         const projeto = criarProjeto({
           servico: 'site_sistema', titulo: e.item.nome, descricao: e.item.frase || null,
-          etapa: 'valor_definido', valor_total_centavos: valor,
+          etapa: ETAPA_DO_DESTINO.site, valor_total_centavos: valor,
         }, e.parcelas);
         const categoria = categoriaDo(e.item.nome);
         if (categoria) projetosCategorias.substituir(projeto.id, [categoria]);

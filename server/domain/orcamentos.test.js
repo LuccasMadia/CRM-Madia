@@ -164,9 +164,9 @@ describe('aceite', () => {
 
 describe('vincular a um projeto existente', () => {
   it('a etapa só avança até a do aceite, nunca volta', () => {
-    expect(['ideia', 'prototipo', 'apresentado'].map((e) => etapaAoVincular(e, 'site'))).toEqual(Array(3).fill('valor_definido'));
-    expect(['valor_definido', 'teste', 'andamento', 'entregue'].map((e) => etapaAoVincular(e, 'site')))
-      .toEqual(['valor_definido', 'teste', 'andamento', 'entregue']);
+    expect(['ideia', 'prototipo', 'apresentado', 'valor_definido'].map((e) => etapaAoVincular(e, 'site'))).toEqual(Array(4).fill('andamento'));
+    expect(['andamento', 'teste', 'entregue'].map((e) => etapaAoVincular(e, 'site')))
+      .toEqual(['andamento', 'teste', 'entregue']);
     expect(etapaAoVincular('andamento', 'gmn')).toBe('andamento');
     expect(etapaAoVincular('entregue', 'gmn')).toBe('entregue');
     expect(etapaAoVincular('ideia', 'gmn')).toBe('andamento');

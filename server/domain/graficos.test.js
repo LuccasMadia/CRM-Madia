@@ -17,8 +17,8 @@ describe('montarFunil', () => {
       { etapa: 'prototipo', quantidade: 4, percentual: 80 },
       { etapa: 'apresentado', quantidade: 4, percentual: 80 },
       { etapa: 'valor_definido', quantidade: 4, percentual: 80 },
-      { etapa: 'teste', quantidade: 3, percentual: 60 },
       { etapa: 'andamento', quantidade: 3, percentual: 60 },
+      { etapa: 'teste', quantidade: 2, percentual: 40 },
       { etapa: 'entregue', quantidade: 2, percentual: 40 },
     ]);
     expect(r.perdidos).toBe(0);
@@ -58,7 +58,7 @@ describe('montarFunil', () => {
 
   it('protótipo tem a própria faixa, como no quadro', () => {
     const r = montarFunil([site('prototipo'), site('teste')]);
-    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 2, 1, 1, 1, 0, 0]);
+    expect(r.etapas.map((e) => e.quantidade)).toEqual([2, 2, 1, 1, 1, 1, 0]);
   });
 });
 

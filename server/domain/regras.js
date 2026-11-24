@@ -1,6 +1,6 @@
 // andamento é a versão final dos sites e o "em andamento" de GMN e placas.
 export const MOTIVOS_PERDA = ['preco', 'sem_resposta', 'concorrente', 'sem_verba', 'desistiu', 'outro'];
-export const ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'teste', 'andamento', 'entregue', 'perdido'];
+export const ETAPAS = ['ideia', 'prototipo', 'apresentado', 'valor_definido', 'andamento', 'teste', 'entregue', 'perdido'];
 export const TIPOS_CONTEUDO = ['post', 'carrossel', 'reels'];
 export const ESTADOS_CONTEUDO = ['rascunho', 'pronto'];
 export const ESTADOS_PUBLICACAO = ['agendado', 'publicando', 'publicado', 'falhou', 'atrasado'];

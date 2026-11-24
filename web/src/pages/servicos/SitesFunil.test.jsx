@@ -39,7 +39,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     abrir();
     const mover = await screen.findByLabelText('Mover Site Ana');
     expect(within(mover).getAllByRole('option').map((o) => o.textContent))
-      .toEqual(['Ideia', 'Protótipo', 'Apresentado', 'Orçamento enviado', 'Em teste', 'Versão final', 'Entregue', 'Perdido']);
+      .toEqual(['Ideia', 'Protótipo', 'Apresentado', 'Orçamento enviado', 'Versão final', 'Em teste', 'Entregue', 'Perdido']);
     await userEvent.setup().selectOptions(mover, 'entregue');
     expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({ metodo: 'PUT', caminho: '/projetos/1', corpo: { etapa: 'entregue' } });
     expect(await screen.findByText('Site Ana foi para No ar')).toBeInTheDocument();

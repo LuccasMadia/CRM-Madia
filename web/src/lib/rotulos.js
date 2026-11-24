@@ -4,8 +4,8 @@ export const ROTULO_ETAPA = {
   prototipo: 'Protótipo',
   apresentado: 'Apresentado',
   valor_definido: 'Orçamento enviado',
-  teste: 'Em teste',
   andamento: 'Versão final',
+  teste: 'Em teste',
   entregue: 'Entregue',
   perdido: 'Perdido',
 };
@@ -17,6 +17,7 @@ export const ROTULO_MOTIVO_PERDA = {
 };
 export const ETAPAS_FICTICIO = ['andamento', 'entregue'];
 // "Em andamento" é o que está nas suas mãos: construindo o protótipo ou a versão final.
+// Ordem do fluxo: orçamento enviado e pago → você faz a versão final → o cliente testa → entregue.
 export const ETAPAS_EM_ANDAMENTO = ['prototipo', 'andamento'];
 
 // De quem é a vez em cada etapa: 'voce' (trabalho seu) ou 'cliente' (esperando resposta ou teste do cliente).

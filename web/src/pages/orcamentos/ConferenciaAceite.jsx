@@ -221,7 +221,7 @@ export function ConferenciaAceite({ orcamento, onFechar, onAceito }) {
                     {vinculado && <PreviaVinculo projeto={vinculado} destino={destino} valor={valores[it.id] ?? 0} />}
                     {destino === 'site' && (
                       <>
-                        {!vinculado && <p className="conferencia__vira">Vira um projeto em Sites, na etapa <strong>Orçamento enviado</strong>.</p>}
+                        {!vinculado && <p className="conferencia__vira">Vira um projeto em Sites, na etapa <strong>Versão final</strong>.</p>}
                         {parcelas}
                         {num(it.valor_mensal_centavos) > 0 && mensalidadeDo(it, 'Mensalidade neste projeto, começa a cobrar quando o site for entregue.')}
                         <CaixaModeloTarefas modelo={modeloDo(it)} marcado={criaTarefas(it)} onMudar={(tarefas) => mudar(it.id, { tarefas })} />

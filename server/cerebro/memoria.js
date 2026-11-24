@@ -3,7 +3,7 @@ import { estadoParcela } from '../domain/financeiro.js';
 import { vendasPlacasComoParcelas } from '../repos/placas.js';
 import { tarefaVencida, entregueRelevante } from '../domain/cerebro.js';
 
-const COMERCIAL = ['ideia', 'apresentado', 'valor_definido', 'teste'];
+const COMERCIAL = ['ideia', 'apresentado', 'valor_definido'];
 const ROTULO_ETAPA = {
   ideia: 'Ideia', prototipo: 'Protótipo', apresentado: 'Apresentado', valor_definido: 'Orçamento enviado',
   teste: 'Em teste', andamento: 'Em andamento', entregue: 'Entregue',
@@ -76,7 +76,7 @@ export function montarMemoria(db, hoje) {
   ];
   const emProjetos = [
     ...projetos
-      .filter((p) => p.etapa === 'prototipo' || p.etapa === 'andamento' || (p.etapa === 'entregue' && entregueVivo(p)))
+      .filter((p) => p.etapa === 'prototipo' || p.etapa === 'andamento' || p.etapa === 'teste' || (p.etapa === 'entregue' && entregueVivo(p)))
       .map((p) => pontoProjeto(p)),
     ...projetos.filter((p) => p.etapa === 'entregue' && !entregueVivo(p)).map((p) => pontoProjeto(p, false)),
   ];

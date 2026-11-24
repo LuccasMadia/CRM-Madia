@@ -56,7 +56,7 @@ describe('POST /orcamentos/:id/aceitar', () => {
 
     const [site, google] = projetosDo();
     expect(site).toMatchObject({
-      servico: 'site_sistema', titulo: 'Cardápio / catálogo digital', etapa: 'valor_definido', cliente_id: cliente.id,
+      servico: 'site_sistema', titulo: 'Cardápio / catálogo digital', etapa: 'andamento', cliente_id: cliente.id,
       valor_total_centavos: 81000, orcamento_id: orc.id,
       mensalidade_ativa: 1, mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 10, mensalidade_inicio_modo: 'entrega',
     });
@@ -342,7 +342,7 @@ describe('aceite vinculando a um projeto que já existe', () => {
     }]);
   });
 
-  it('site em protótipo vai para Orçamento enviado com o valor do orçamento, sem perder tarefas, parcelas e dados', async () => {
+  it('site em protótipo vai para Versão final com o valor do orçamento, sem perder tarefas, parcelas e dados', async () => {
     const existente = await cardapioExistente();
     await comParcelas(existente);
     const antes = projeto(existente.id);
@@ -354,10 +354,13 @@ describe('aceite vinculando a um projeto que já existe', () => {
     const depois = projeto(existente.id);
     expect(depois).toEqual({
       ...antes,
-      etapa: 'valor_definido', valor_total_centavos: 81000, orcamento_id: orc.id, orcamento_vinculado: 1,
+      etapa: 'andamento', valor_total_centavos: 81000, orcamento_id: orc.id, orcamento_vinculado: 1,
       mensalidade_ativa: 1, mensalidade_valor_centavos: 15000, mensalidade_dia_vencimento: 10,
       atualizado_em: depois.atualizado_em,
+      // entrar em Versão final marca o início do trabalho
+      data_inicio: depois.data_inicio,
     });
+    expect(depois.data_inicio).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(tarefasDe(existente.id)).toEqual(['Pegar lista de produtos reais']);
     // as parcelas antigas ficam e as do aceite entram além delas
     expect(parcelasDe(existente.id)).toEqual([
@@ -474,7 +477,7 @@ describe('aceite vinculando a um projeto que já existe', () => {
     // o GMN criado sumiu; o vinculado continua, sem orçamento, com etapa, valor e mensalidade do aceite
     expect(ctx.db.prepare('SELECT COUNT(*) AS n FROM projetos WHERE id = ?').get(google.id).n).toBe(0);
     expect(projeto(existente.id)).toMatchObject({
-      orcamento_id: null, orcamento_vinculado: 0, etapa: 'valor_definido', valor_total_centavos: 81000, mensalidade_ativa: 1,
+      orcamento_id: null, orcamento_vinculado: 0, etapa: 'andamento', valor_total_centavos: 81000, mensalidade_ativa: 1,
     });
     expect(tarefasDe(existente.id)).toEqual(['Pegar lista de produtos reais']);
     expect(parcelasDe(existente.id)).toEqual([
