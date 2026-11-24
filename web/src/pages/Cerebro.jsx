@@ -61,16 +61,20 @@ export function Cerebro() {
   const indice = useMemo(() => (dados ? montarIndice(dados) : null), [dados]);
 
   const abrir = useCallback((acao) => { setAberto(acao); setAba('item'); setLista(false); setLegenda(false); }, []);
-  const fechar = useCallback(() => setAberto(null), []);
+  // Fechar (clique fora, Escape ou o X) devolve a câmera ao enquadramento inicial.
+  const fechar = useCallback(() => {
+    if (aberto) grafo.current?.verTudo();
+    setAberto(null);
+  }, [aberto]);
   const voarPara = (id) => { if (id) grafo.current?.voarParaPonto(id); };
   const escolher = (acao, id) => { abrir(acao); setLista(false); voarPara(id); };
   const irPara = (id) => { abrir(indice.acoes.get(id)); voarPara(id); };
 
   useEffect(() => {
-    const teclar = (e) => { if (e.key === 'Escape') { setAberto(null); setLista(false); } };
+    const teclar = (e) => { if (e.key === 'Escape') { fechar(); setLista(false); } };
     window.addEventListener('keydown', teclar);
     return () => window.removeEventListener('keydown', teclar);
-  }, []);
+  }, [fechar]);
 
   const texto = aberto && textoDoItem(aberto);
   const ligados = aberto?.tipo === 'ponto' ? vizinhosVisiveis(aberto.dados.id, indice.vizinhos, indice.rotulos, indice.noMapa) : [];
@@ -95,7 +99,7 @@ export function Cerebro() {
                       <button type="button" aria-pressed={aba === 'conteudo'} onClick={() => setAba('conteudo')}>Conteúdo</button>
                     </div>
                   )}
-                  <PainelItem item={aberto} ligados={ligados} aoIrPara={irPara} aoVoar={idAberto ? () => voarPara(idAberto) : undefined} onFechar={fechar} />
+                  <PainelItem item={aberto} ligados={ligados} aoIrPara={irPara} onFechar={fechar} />
                   {texto && <PainelConteudo item={aberto} />}
                 </div>
               )}

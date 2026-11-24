@@ -59,7 +59,7 @@ function Corpo({ tipo, dados, ligados, aoIrPara }) {
 }
 
 // Cartão do item aberto (à esquerda do palco; no celular é a aba "Item" da folha de baixo).
-export function PainelItem({ item, ligados = [], aoIrPara, aoVoar, onFechar }) {
+export function PainelItem({ item, ligados = [], aoIrPara, onFechar }) {
   const titulo = tituloDoItem(item);
   const { tipo, dados } = item;
   return (
@@ -77,10 +77,11 @@ export function PainelItem({ item, ligados = [], aoIrPara, aoVoar, onFechar }) {
       </header>
       <h2>{titulo}</h2>
       <Corpo tipo={tipo} dados={dados} ligados={ligados} aoIrPara={aoIrPara} />
-      <div className="cerebro-painel__acoes">
-        {tipo === 'ponto' && dados.link && <Link className="btn btn--primario" to={dados.link}>Abrir no CRM</Link>}
-        {aoVoar && <button type="button" className="btn" onClick={aoVoar}>Voar até</button>}
-      </div>
+      {tipo === 'ponto' && dados.link && (
+        <div className="cerebro-painel__acoes">
+          <Link className="btn btn--primario" to={dados.link}>Abrir no CRM</Link>
+        </div>
+      )}
     </aside>
   );
 }

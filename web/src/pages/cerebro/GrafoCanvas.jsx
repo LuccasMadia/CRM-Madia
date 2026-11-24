@@ -151,7 +151,12 @@ export const GrafoCanvas = forwardRef(function GrafoCanvas({ dados, selecionado 
       const acao = id && c.acoes.get(id);
       if (!acao) fechar?.();
       else if (acao.area) voarParaArea(acao.area);
-      else abrir?.(acao);
+      else {
+        // clicar num ponto ou app: a câmera vai até ele e o abre
+        abrir?.(acao);
+        const pos = c.posicao.get(id);
+        if (pos) voar(camParaPonto(pos));
+      }
     }
 
     // ponteiros apertados agora (id → posição); um só arrasta, dois fazem a pinça

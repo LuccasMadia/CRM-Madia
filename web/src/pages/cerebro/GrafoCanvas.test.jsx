@@ -102,6 +102,15 @@ describe('GrafoCanvas', () => {
     expect(aoMudarCamera).toHaveBeenLastCalledWith(true);
   });
 
+  it('clicar num ponto leva a câmera até ele', () => {
+    vi.stubGlobal('matchMedia', (q) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
+    const { aoMudarCamera } = montar();
+    const { x, y } = naTela('cliente:1');
+    fireEvent.pointerDown(tela(), { clientX: x, clientY: y, pointerId: 1 });
+    fireEvent.pointerUp(tela(), { clientX: x, clientY: y, pointerId: 1 });
+    expect(aoMudarCamera).toHaveBeenLastCalledWith(false);
+  });
+
   it('ligação para ponto que não está no mapa não quebra o desenho', () => {
     montar({ selecionado: 'projeto:7' });
     // o desenho com o ponto aceso rodou: os nomes do que está ligado aparecem

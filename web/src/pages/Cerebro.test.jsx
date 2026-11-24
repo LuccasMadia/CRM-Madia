@@ -97,7 +97,7 @@ describe('Cerebro', () => {
     await user.click(screen.getByRole('button', { name: 'Lista' }));
     await user.click(within(screen.getByRole('region', { name: 'Lista do cérebro' })).getByRole('button', { name: 'Fazer logo' }));
     expect(screen.queryByRole('link', { name: 'Abrir no CRM' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Voar até' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Voar até' })).not.toBeInTheDocument();
   });
 
   it('arquivo abre o painel de conteúdo com o texto inteiro', async () => {
