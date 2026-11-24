@@ -41,11 +41,11 @@ const abrirNoAr = () => abrir('/servicos?aba=sites&ver=no_ar');
 describe('SitesSistemas', () => {
   beforeEach(() => localStorage.clear());
 
-  it('abre em "Em andamento" (quadro sem Entregue e Perdido) e lembra a visão No ar', async () => {
+  it('abre em "Funil" (quadro sem Entregue e Perdido) e lembra a visão No ar', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [entregue] });
     const { unmount } = abrir();
     const visao = screen.getByRole('group', { name: 'Visão' });
-    expect(within(visao).getByRole('button', { name: 'Em andamento' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(visao).getByRole('button', { name: 'Funil' })).toHaveAttribute('aria-pressed', 'true');
     expect(await screen.findByRole('region', { name: 'Versão final' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Entregue' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Perdido' })).toBeNull();
@@ -255,5 +255,38 @@ describe('SitesSistemas', () => {
     expect(link('2 em protótipo')).toHaveAttribute('href', '/servicos?aba=sites&ver=andamento');
     expect(link('Site Ana em versão final')).toHaveAttribute('href', '/projetos/1');
     expect(screen.queryByRole('heading', { name: 'A receber' })).toBeNull();
+  });
+
+  it('Pede atenção: projeto parado há 7 dias ou mais na mesma etapa (menos o teste)', async () => {
+    const hoje = hojeISO();
+    mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': [
+        { ...naoEntregue, id: 1, titulo: 'Site Ana', etapa: 'apresentado', etapa_desde: somar(hoje, -12) },
+        { ...naoEntregue, id: 2, titulo: 'Loja Edu', etapa: 'ideia', etapa_desde: somar(hoje, -2) },
+        { ...naoEntregue, id: 3, titulo: 'Site Fabi', etapa: 'teste', etapa_desde: somar(hoje, -30), teste_inicio: hoje },
+      ],
+    });
+    abrir();
+    const faixa = await screen.findByRole('region', { name: 'Pede atenção' });
+    expect(await within(faixa).findByRole('link', { name: 'Site Ana parado há 12 dias em Apresentado' })).toHaveAttribute('href', '/projetos/1');
+    expect(within(faixa).queryByText(/Loja Edu parado/)).toBeNull();
+    expect(within(faixa).queryByText(/Site Fabi parado/)).toBeNull();
+  });
+
+  it('o card mostra de quem é a vez e há quantos dias está na etapa', async () => {
+    const hoje = hojeISO();
+    mockApi({
+      'GET /projetos?servico=site_sistema&ficticio=0': [
+        { ...naoEntregue, id: 1, titulo: 'Site Ana', etapa: 'prototipo', etapa_desde: somar(hoje, -9) },
+        { ...naoEntregue, id: 2, titulo: 'Loja Edu', etapa: 'apresentado', etapa_desde: hoje },
+      ],
+    });
+    abrir();
+    const ana = (await screen.findByText('Site Ana')).closest('article');
+    expect(within(ana).getByText('Sua vez')).toBeInTheDocument();
+    expect(within(ana).getByText('há 9 dias')).toHaveClass('kanban__parado');
+    const edu = screen.getByText('Loja Edu').closest('article');
+    expect(within(edu).getByText('Com o cliente')).toBeInTheDocument();
+    expect(within(edu).getByText('hoje')).not.toHaveClass('kanban__parado');
   });
 });

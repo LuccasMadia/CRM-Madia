@@ -14,6 +14,12 @@ export const ETAPAS_FICTICIO = ['andamento', 'entregue'];
 // "Em andamento" é o que está nas suas mãos: construindo o protótipo ou a versão final.
 export const ETAPAS_EM_ANDAMENTO = ['prototipo', 'andamento'];
 
+// De quem é a vez em cada etapa: 'voce' (trabalho seu) ou 'cliente' (esperando resposta ou teste do cliente).
+export const VEZ_DA_ETAPA = { ideia: 'voce', prototipo: 'voce', apresentado: 'cliente', valor_definido: 'cliente', teste: 'cliente', andamento: 'voce' };
+// Passados estes dias na mesma etapa, o projeto conta como parado (Em teste tem prazo próprio).
+export const DIAS_PARADO = 7;
+export const ETAPAS_SEM_PARADO = ['teste'];
+
 export const ROTULO_ESTADO_CONTEUDO = {
   rascunho: 'Rascunho', pronto: 'Pronto', agendado: 'Agendado', publicando: 'Publicando…',
   publicado: 'Publicado', falhou: 'Falhou', atrasado: 'Atrasado',

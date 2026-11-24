@@ -7,7 +7,7 @@ import { Kanban } from '../../components/Kanban.jsx';
 import { EtiquetasCategorias, temCategoria } from '../../components/CategoriaSite.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, diasDesde } from '../../lib/datas.js';
-import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../../lib/rotulos.js';
+import { DIAS_PARADO, ETAPAS, ETAPAS_FICTICIO, ETAPAS_SEM_PARADO, ROTULO_ETAPA, VEZ_DA_ETAPA } from '../../lib/rotulos.js';
 import { notificar } from '../../lib/notificacoes.js';
 import { DIAS_DE_TESTE } from './atencaoSites.js';
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
@@ -25,6 +25,20 @@ function SeloPagamento({ total, pagas }) {
   if (pagas >= total) return <span className="etiqueta etiqueta--entregue">Pago</span>;
   if (pagas > 0) return <span className="etiqueta etiqueta--proposta">Pago em parte</span>;
   return <span className="etiqueta etiqueta--atrasada">Aguardando pagamento</span>;
+}
+
+// De quem é a vez e há quanto tempo o projeto está na etapa; a partir de DIAS_PARADO fica destacado.
+function VezDaEtapa({ projeto: p }) {
+  const vez = VEZ_DA_ETAPA[p.etapa];
+  if (!vez || !p.etapa_desde) return null;
+  const dias = Math.max(0, diasDesde(p.etapa_desde));
+  const parado = dias >= DIAS_PARADO && !ETAPAS_SEM_PARADO.includes(p.etapa);
+  return (
+    <p className="kanban__extra">
+      <span className={`etiqueta ${vez === 'voce' ? 'etiqueta--voce' : 'etiqueta--aguardando'}`}>{vez === 'voce' ? 'Sua vez' : 'Com o cliente'}</span>
+      <span className={parado ? 'kanban__parado' : undefined}>{dias === 0 ? 'hoje' : `há ${plural(dias, 'dia', 'dias')}`}</span>
+    </p>
+  );
 }
 
 // O que cada etapa precisa mostrar além do título: protótipo pronto, prazo do teste e pagamento.
@@ -115,6 +129,7 @@ export function QuadroFunil({ modo = 'reais', categoriaId = '', layout = 'coluna
               <EtiquetasCategorias categorias={p.categorias} />
               <p className="kanban__meta"><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></p>
               <p className="kanban__meta">{formatarDinheiro(p.valor_total_centavos)} · prazo {formatarData(p.prazo_entrega)}</p>
+              {!ficticio && <VezDaEtapa projeto={p} />}
               <ExtrasDoCard projeto={p} ficticio={ficticio} onMudar={mudar} />
             </>
           )}

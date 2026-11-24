@@ -1001,3 +1001,6 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
   .kanban--linhas .kanban__cartoes::-webkit-scrollbar { display: none; }
   .kanban--linhas .kanban__cartoes > * { scroll-snap-align: start; }
 }
+
+/* Projeto parado há dias demais na etapa */
+.kanban__parado { color: var(--atencao); font-weight: 600; }

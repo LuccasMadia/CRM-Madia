@@ -1,4 +1,5 @@
 import { diasDesde } from '../../lib/datas.js';
+import { DIAS_PARADO, ETAPAS_SEM_PARADO, ROTULO_ETAPA, VEZ_DA_ETAPA } from '../../lib/rotulos.js';
 
 export const DIAS_DE_TESTE = 7;
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
@@ -38,6 +39,17 @@ export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = 
     const faltam = DIAS_DE_TESTE - diasDesde(p.teste_inicio, hoje);
     if (faltam < 0) perigo.push({ texto: `Teste de ${p.titulo} já acabou`, para });
     else if (faltam <= 1) atencao.push({ texto: `Teste de ${p.titulo} termina ${faltam ? 'amanhã' : 'hoje'}`, para });
+  }
+
+  // Projeto parado: muito tempo na mesma etapa (sua ou do cliente). O teste tem prazo próprio, acima.
+  const parados = projetos
+    .filter((p) => VEZ_DA_ETAPA[p.etapa] && !ETAPAS_SEM_PARADO.includes(p.etapa) && p.etapa_desde && diasDesde(p.etapa_desde, hoje) >= DIAS_PARADO)
+    .sort((a, b) => a.etapa_desde.localeCompare(b.etapa_desde));
+  if (parados.length === 1) {
+    const [p] = parados;
+    atencao.push({ texto: `${p.titulo} parado há ${diasDesde(p.etapa_desde, hoje)} dias em ${ROTULO_ETAPA[p.etapa]}`, para: `/projetos/${p.id}` });
+  } else if (parados.length) {
+    atencao.push({ texto: `${parados.length} projetos parados há ${DIAS_PARADO}+ dias`, para: NO_QUADRO });
   }
 
   // O trabalho ativo: um projeto só leva direto a ele; vários levam ao quadro.

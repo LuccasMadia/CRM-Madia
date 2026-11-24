@@ -14,6 +14,16 @@ describe('/api/projetos', () => {
     expect(res.body).toMatchObject({ titulo: 'Site', etapa: 'ideia', valor_total_centavos: 0, cliente_nome: 'Ana' });
   });
 
+  it('guarda desde quando o projeto está na etapa e atualiza só quando a etapa muda', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201)).body;
+    expect(projeto.etapa_desde).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    ctx.db.prepare("UPDATE projetos SET etapa_desde = '2026-01-01' WHERE id = ?").run(projeto.id);
+    const renomeado = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ titulo: 'Site novo' }).expect(200)).body;
+    expect(renomeado.etapa_desde).toBe('2026-01-01');
+    const movido = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'apresentado' }).expect(200)).body;
+    expect(movido.etapa_desde).not.toBe('2026-01-01');
+  });
+
   it('cria junto com um cliente novo', async () => {
     const res = await ctx.http
       .post('/api/projetos')

@@ -133,7 +133,8 @@ function layoutSalvo() {
 }
 
 const CHAVE_VISAO = 'crm.sitesVisao';
-const VISOES = [['andamento', 'Em andamento'], ['no_ar', 'No ar']];
+// O id 'andamento' fica na URL e nas escolhas salvas; o rótulo é "Funil" para não confundir com a etapa "Versão final".
+const VISOES = [['andamento', 'Funil'], ['no_ar', 'No ar']];
 // Links e escolhas salvas antes da divisão por momento: o funil virou "Em andamento" e a lista, "No ar".
 const VISOES_ANTIGAS = { funil: 'andamento', lista: 'no_ar' };
 const MODOS = [['reais', 'Reais'], ['privados', 'Privados'], ['ficticios', 'Fictícios'], ['perdidos', 'Perdidos']];
