@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -10,6 +10,7 @@ function renderizarSidebar() {
 }
 
 describe('Sidebar', () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
     localStorage.clear();
     definirValoresOcultos(false);
@@ -19,8 +20,8 @@ describe('Sidebar', () => {
     renderizarSidebar();
     const nav = screen.getByRole('navigation', { name: 'Principal' });
     expect(nav).toHaveClass('sidebar--recolhida');
+    expect(screen.getByRole('link', { name: 'Início' })).toHaveAttribute('title', 'Início');
     expect(screen.getByRole('link', { name: 'Clientes' })).toHaveAttribute('title', 'Clientes');
-    expect(nav.querySelectorAll('a svg')).toHaveLength(10);
   });
 
   it('começa recolhida mesmo com uma escolha antiga salva', () => {
@@ -36,7 +37,7 @@ describe('Sidebar', () => {
     await usuario.hover(nav);
     expect(nav).not.toHaveClass('sidebar--recolhida');
     expect(nav).toHaveClass('sidebar--flutuante');
-    expect(screen.getByRole('link', { name: 'Clientes' })).not.toHaveAttribute('title');
+    expect(screen.getByRole('link', { name: 'Início' })).not.toHaveAttribute('title');
     await usuario.unhover(nav);
     expect(nav).toHaveClass('sidebar--recolhida');
   });
@@ -55,12 +56,36 @@ describe('Sidebar', () => {
     expect(nav).toHaveClass('sidebar--recolhida');
   });
 
-  it('serviços ficam num item só, sem Projetos, Placas e QR Codes', () => {
+  it('cada serviço é um subitem de Serviços, na ordem dos setores', async () => {
     renderizarSidebar();
     const rotulos = screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'));
-    expect(rotulos).toEqual(['Início', 'Clientes', 'Serviços', 'Orçamentos', 'Conteúdo', 'Tarefas', 'Cérebro', 'Portfólio', 'Financeiro', 'Configurações']);
-    expect(screen.getByRole('link', { name: 'Serviços' })).toHaveAttribute('href', '/servicos');
+    expect(rotulos).toEqual([
+      'Início', 'Clientes', 'Orçamentos', 'Sites e Sistemas', 'Google Meu Negócio', 'Placas NFC',
+      'Tarefas', 'Conteúdo', 'Portfólio', 'Financeiro', 'Cérebro', 'Configurações',
+    ]);
+    expect(screen.queryByRole('link', { name: 'Serviços' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Google Meu Negócio' })).toHaveAttribute('href', '/servicos?aba=gmn');
+    expect(screen.getByRole('link', { name: 'Placas NFC' })).toHaveAttribute('href', '/servicos?aba=placas');
     expect(screen.getByRole('link', { name: 'Orçamentos' })).toHaveAttribute('href', '/orcamentos');
+  });
+
+  it('marca só o serviço da aba aberta (Sites e Sistemas é o padrão)', async () => {
+    const { unmount } = render(<MemoryRouter initialEntries={['/servicos']}><Sidebar /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Sites e Sistemas' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Placas NFC' })).not.toHaveAttribute('aria-current');
+    unmount();
+    render(<MemoryRouter initialEntries={['/servicos?aba=placas']}><Sidebar /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Placas NFC' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Sites e Sistemas' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Clientes' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('no computador os itens ficam em setores com título, todos visíveis', () => {
+    renderizarSidebar();
+    const nav = screen.getByRole('navigation', { name: 'Principal' });
+    const titulos = [...nav.querySelectorAll('.sidebar__setor-titulo')].map((t) => t.textContent);
+    expect(titulos).toEqual(['Comercial', 'Produção', 'Marketing', 'Sistema']);
+    expect(screen.getByRole('link', { name: 'Clientes' })).toBeVisible();
   });
 
   it('botão de olho oculta e mostra os valores e lembra a escolha', async () => {
@@ -74,7 +99,8 @@ describe('Sidebar', () => {
     expect(localStorage.getItem('crm.valoresOcultos')).toBe('0');
   });
 
-  it('"Mais" abre e fecha os itens secundários (usado na barra do celular)', async () => {
+  it('no celular, "Mais" abre e fecha os itens secundários (barra de baixo)', async () => {
+    vi.stubGlobal('matchMedia', (q) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }));
     renderizarSidebar();
     const usuario = userEvent.setup();
     const nav = screen.getByRole('navigation', { name: 'Principal' });

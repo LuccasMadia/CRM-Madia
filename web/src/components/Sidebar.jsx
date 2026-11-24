@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router';
+import { Link, NavLink, useLocation, useSearchParams } from 'react-router';
 import { Icone } from './Icone.jsx';
 import { alternarValoresOcultos, useValoresOcultos } from '../lib/privacidade.js';
 
@@ -19,6 +19,40 @@ const NAVEGACAO = [
 const PRINCIPAIS = NAVEGACAO.filter((item) => item.principal);
 const SECUNDARIOS = NAVEGACAO.filter((item) => !item.principal);
 
+// No computador, Serviços vira um link por serviço; a página escolhe pelo ?aba= (o padrão é sites).
+const servico = (aba, rotulo, icone) => ({ para: `/servicos?aba=${aba}`, aba, rotulo, icone });
+const SERVICOS = [
+  servico('sites', 'Sites e Sistemas', 'site'),
+  servico('gmn', 'Google Meu Negócio', 'gmn'),
+  servico('placas', 'Placas NFC', 'nfc'),
+];
+
+// No computador os itens ficam separados por setor, só como divisões com título.
+// Setor sem rótulo (Início e Financeiro) aparece sem título.
+const itemDe = (para) => NAVEGACAO.find((n) => n.para === para);
+const SETORES = [
+  { id: 'inicio', itens: [itemDe('/')] },
+  { id: 'comercial', rotulo: 'Comercial', itens: [itemDe('/clientes'), itemDe('/orcamentos')] },
+  { id: 'producao', rotulo: 'Produção', itens: [...SERVICOS, itemDe('/tarefas')] },
+  { id: 'marketing', rotulo: 'Marketing', itens: [itemDe('/conteudo'), itemDe('/portfolio')] },
+  { id: 'financeiro', itens: [itemDe('/financeiro')] },
+  { id: 'sistema', rotulo: 'Sistema', itens: [itemDe('/cerebro'), itemDe('/configuracoes')] },
+];
+
+const CONSULTA_CELULAR = '(max-width: 760px)';
+function useCelular() {
+  const [celular, setCelular] = useState(() => window.matchMedia?.(CONSULTA_CELULAR).matches ?? false);
+  useEffect(() => {
+    const consulta = window.matchMedia?.(CONSULTA_CELULAR);
+    if (!consulta) return undefined;
+    const atualizar = () => setCelular(consulta.matches);
+    consulta.addEventListener('change', atualizar);
+    atualizar();
+    return () => consulta.removeEventListener('change', atualizar);
+  }, []);
+  return celular;
+}
+
 // O menu fica recolhido e abre por cima do conteúdo ao passar o mouse (ou focar com o teclado).
 // O botão fixa o menu aberto; a fixação não é lembrada, toda visita começa recolhida.
 // No celular vira uma barra embaixo; "Mais" abre os itens secundários e o ocultar valores.
@@ -32,15 +66,49 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const secundarioAtivo = SECUNDARIOS.some((item) => pathname.startsWith(item.para));
 
+  const celular = useCelular();
+  const [params] = useSearchParams();
+  const abaAtiva = SERVICOS.some((s) => s.aba === params.get('aba')) ? params.get('aba') : 'sites';
+
   useEffect(() => setMaisAberto(false), [pathname]);
 
-  const link = (item) => (
-    <li key={item.para}>
-      <NavLink to={item.para} end={item.para === '/'} title={aberta ? undefined : item.rotulo} aria-label={item.rotulo}>
-        <Icone nome={item.icone} />
-        <span className="sidebar__rotulo">{item.rotulo}</span>
-      </NavLink>
-    </li>
+  const dica = (item) => (aberta ? undefined : item.rotulo);
+  const conteudo = (item) => (
+    <>
+      <Icone nome={item.icone} />
+      <span className="sidebar__rotulo">{item.rotulo}</span>
+    </>
+  );
+  const link = (item) => {
+    // NavLink não enxerga o ?aba=, então o serviço ativo é marcado à mão
+    const ativo = item.aba && pathname.startsWith('/servicos') && abaAtiva === item.aba;
+    return (
+      <li key={item.para}>
+        {item.aba ? (
+          <Link to={item.para} className={ativo ? 'active' : undefined} aria-current={ativo ? 'page' : undefined} title={dica(item)} aria-label={item.rotulo}>
+            {conteudo(item)}
+          </Link>
+        ) : (
+          <NavLink to={item.para} end={item.para === '/'} title={dica(item)} aria-label={item.rotulo}>
+            {conteudo(item)}
+          </NavLink>
+        )}
+      </li>
+    );
+  };
+
+  const botaoValores = (
+    <button
+      type="button"
+      className={`sidebar__valores${ocultos ? ' sidebar__valores--ativo' : ''}`}
+      aria-pressed={ocultos}
+      aria-label={rotuloValores}
+      title={`${rotuloValores} (Ctrl+Shift+H)`}
+      onClick={alternarValoresOcultos}
+    >
+      <Icone nome={ocultos ? 'olho-fechado' : 'olho'} />
+      <span className="sidebar__rotulo">{rotuloValores}</span>
+    </button>
   );
 
   return (
@@ -66,35 +134,41 @@ export function Sidebar() {
           <Icone nome={fixada ? 'recolher' : 'expandir'} />
         </button>
       </div>
-      <ul className="sidebar__principais">
-        {PRINCIPAIS.map(link)}
-        <li className="sidebar__item-mais">
-          <button
-            type="button"
-            className={`sidebar__mais${secundarioAtivo ? ' active' : ''}`}
-            aria-expanded={maisAberto}
-            aria-controls="sidebar-extras"
-            onClick={() => setMaisAberto((atual) => !atual)}
-          >
-            <Icone nome="mais" />
-            <span className="sidebar__rotulo">Mais</span>
-          </button>
-        </li>
-      </ul>
-      <div className="sidebar__extras" id="sidebar-extras">
-        <ul>{SECUNDARIOS.map(link)}</ul>
-        <button
-          type="button"
-          className={`sidebar__valores${ocultos ? ' sidebar__valores--ativo' : ''}`}
-          aria-pressed={ocultos}
-          aria-label={rotuloValores}
-          title={`${rotuloValores} (Ctrl+Shift+H)`}
-          onClick={alternarValoresOcultos}
-        >
-          <Icone nome={ocultos ? 'olho-fechado' : 'olho'} />
-          <span className="sidebar__rotulo">{rotuloValores}</span>
-        </button>
-      </div>
+      {celular ? (
+        <>
+          <ul className="sidebar__principais">
+            {PRINCIPAIS.map(link)}
+            <li className="sidebar__item-mais">
+              <button
+                type="button"
+                className={`sidebar__mais${secundarioAtivo ? ' active' : ''}`}
+                aria-expanded={maisAberto}
+                aria-controls="sidebar-extras"
+                onClick={() => setMaisAberto((atual) => !atual)}
+              >
+                <Icone nome="mais" />
+                <span className="sidebar__rotulo">Mais</span>
+              </button>
+            </li>
+          </ul>
+          <div className="sidebar__extras" id="sidebar-extras">
+            <ul>{SECUNDARIOS.map(link)}</ul>
+            {botaoValores}
+          </div>
+        </>
+      ) : (
+        <>
+          <ul className="sidebar__setores">
+            {SETORES.map((setor) => (
+              <li key={setor.id} className="sidebar__setor">
+                {setor.rotulo && <p className="sidebar__setor-titulo">{setor.rotulo}</p>}
+                <ul>{setor.itens.map(link)}</ul>
+              </li>
+            ))}
+          </ul>
+          {botaoValores}
+        </>
+      )}
     </nav>
   );
 }
