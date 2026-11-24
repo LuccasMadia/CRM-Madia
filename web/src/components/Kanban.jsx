@@ -1,7 +1,8 @@
 import { useState } from 'react';
 
 // destinosExtras: etapas que não viram coluna, mas para onde o card ainda pode ir pelo menu "Mover".
-export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem, recolhidas = [], destinosExtras = [] }) {
+// layout: 'colunas' (uma coluna por etapa) ou 'linhas' (uma faixa horizontal por etapa).
+export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem, recolhidas = [], destinosExtras = [], layout = 'colunas' }) {
   const [abertas, setAbertas] = useState([]);
   const [alvo, setAlvo] = useState(null);
 
@@ -17,7 +18,7 @@ export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem
     setAbertas((a) => (a.includes(coluna) ? a.filter((c) => c !== coluna) : [...a, coluna]));
 
   return (
-    <div className="kanban">
+    <div className={`kanban${layout === 'linhas' ? ' kanban--linhas' : ''}`}>
       {colunas.map((coluna) => {
         const daColuna = itens.filter((i) => colunaDe(i) === coluna.id);
         const recolhivel = recolhidas.includes(coluna.id);
@@ -41,7 +42,9 @@ export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem
                 </button>
               )}
             </header>
-            {!recolhida && daColuna.map((item) => (
+            {!recolhida && (
+              <div className="kanban__cartoes">
+                {daColuna.map((item) => (
               <article
                 key={item.id}
                 className="kanban__card"
@@ -58,7 +61,9 @@ export function Kanban({ colunas, itens, colunaDe, tituloDe, onMover, renderItem
                   {[...colunas, ...destinosExtras].map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
                 </select>
               </article>
-            ))}
+                ))}
+              </div>
+            )}
           </section>
         );
       })}

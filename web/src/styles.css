@@ -985,3 +985,19 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 .filtro-categorias { margin-bottom: 16px; }
 .pilula--categoria::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--cor); vertical-align: 0; }
 .pilula--categoria[aria-pressed='true'] { color: var(--texto); border-color: var(--cor); background: color-mix(in srgb, var(--cor) 16%, transparent); }
+
+/* Quadro em linhas: cada etapa é uma faixa horizontal, com o nome à esquerda e os cards ao lado */
+.kanban__cartoes { display: contents; }
+.kanban--linhas { grid-auto-flow: row; grid-auto-columns: minmax(0, 1fr); overflow-x: visible; gap: 10px; }
+.kanban--linhas .kanban__coluna { grid-template-columns: 190px minmax(0, 1fr); column-gap: 16px; align-content: start; min-height: 0; box-shadow: none; }
+.kanban--linhas .kanban__topo { flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 4px; }
+.kanban--linhas .kanban__cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; align-items: start; }
+.kanban--linhas .kanban__cartoes:empty::before { content: 'Nada nesta etapa'; padding: 6px 0; font-size: 0.85rem; color: var(--texto-suave); }
+@media (max-width: 760px) {
+  .kanban.kanban--linhas { scroll-snap-type: none; }
+  .kanban--linhas .kanban__coluna { grid-template-columns: minmax(0, 1fr); }
+  .kanban--linhas .kanban__topo { flex-direction: row; align-items: center; padding-top: 0; }
+  .kanban--linhas .kanban__cartoes { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 78%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 2px; }
+  .kanban--linhas .kanban__cartoes::-webkit-scrollbar { display: none; }
+  .kanban--linhas .kanban__cartoes > * { scroll-snap-align: start; }
+}

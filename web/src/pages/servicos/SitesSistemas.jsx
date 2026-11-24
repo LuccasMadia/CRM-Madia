@@ -122,6 +122,16 @@ function ListaNoAr({ modo, filtros: { clienteId, instagram, categoriaId }, hospe
   );
 }
 
+const CHAVE_LAYOUT = 'crm.sitesLayout';
+const LAYOUTS = [['colunas', 'Colunas'], ['linhas', 'Linhas']];
+function layoutSalvo() {
+  try {
+    return localStorage.getItem(CHAVE_LAYOUT) === 'linhas' ? 'linhas' : 'colunas';
+  } catch {
+    return 'colunas';
+  }
+}
+
 const CHAVE_VISAO = 'crm.sitesVisao';
 const VISOES = [['andamento', 'Em andamento'], ['no_ar', 'No ar']];
 // Links e escolhas salvas antes da divisão por momento: o funil virou "Em andamento" e a lista, "No ar".
@@ -148,6 +158,15 @@ export function SitesSistemas() {
   const [params, setParams] = useSearchParams();
   const visao = lerVisao(params.get('ver')) ?? visaoSalva();
   const [modo, setModo] = useState('reais');
+  const [layout, setLayout] = useState(layoutSalvo);
+  function trocarLayout(novo) {
+    setLayout(novo);
+    try {
+      localStorage.setItem(CHAVE_LAYOUT, novo);
+    } catch {
+      // sem armazenamento: a escolha vale só nesta visita
+    }
+  }
   const [filtros, setFiltros] = useState({ clienteId: '', instagram: '', categoriaId: '' });
   const [criando, setCriando] = useState(false);
   // "Perdidos" só existe no quadro; na lista No ar volta para Reais
@@ -201,13 +220,20 @@ export function SitesSistemas() {
           <select className="select-compacto" aria-label="Mostrar" value={modoAtual} onChange={(e) => setModo(e.target.value)}>
             {MODOS.filter(([chave]) => visao === 'andamento' || chave !== 'perdidos').map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
           </select>
+          {visao === 'andamento' && (
+            <div className="segmentado" role="group" aria-label="Formato do quadro">
+              {LAYOUTS.map(([chave, rotulo]) => (
+                <button key={chave} type="button" aria-pressed={layout === chave} onClick={() => trocarLayout(chave)}>{rotulo}</button>
+              ))}
+            </div>
+          )}
           {visao !== 'andamento' && <FiltrosNoAr filtros={filtros} onMudar={(mudou) => setFiltros((f) => ({ ...f, ...mudou }))} />}
         </div>
         <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Oportunidade</button>
       </div>
       <FiltroCategorias categorias={categorias.dados} valor={filtros.categoriaId} onMudar={(categoriaId) => setFiltros((f) => ({ ...f, categoriaId }))} />
       {visao === 'andamento'
-        ? <QuadroFunil modo={modoAtual} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />
+        ? <QuadroFunil layout={layout} modo={modoAtual} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />
         : <ListaNoAr modo={modoAtual} filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
       {criando && (
         <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>

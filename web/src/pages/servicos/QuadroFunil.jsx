@@ -77,7 +77,7 @@ const MODOS = {
 // Visão em quadro dos sites e sistemas: cada coluna é uma etapa, e o card muda de etapa pelo menu.
 // modo: 'reais' (o trabalho em andamento), 'ficticios' (cases do portfólio), 'privados' (uso interno) ou 'perdidos'.
 const FILTRO_DO_MODO = { reais: 'ficticio=0', ficticios: 'ficticio=1&privado=0', privados: 'privado=1', perdidos: 'ficticio=0' };
-export function QuadroFunil({ modo = 'reais', categoriaId = '', onMudou }) {
+export function QuadroFunil({ modo = 'reais', categoriaId = '', layout = 'colunas', onMudou }) {
   const ficticio = modo === 'ficticios' || modo === 'privados';
   const { dados: projetos, erro, recarregar } = useCarregar(
     () => api(`/projetos?servico=site_sistema&${FILTRO_DO_MODO[modo] ?? FILTRO_DO_MODO.reais}`),
@@ -103,6 +103,7 @@ export function QuadroFunil({ modo = 'reais', categoriaId = '', onMudou }) {
       {projetos && (
         <Kanban
           colunas={colunas}
+          layout={layout}
           itens={projetos.filter((p) => temCategoria(p, categoriaId))}
           colunaDe={(p) => p.etapa}
           tituloDe={(p) => p.titulo}

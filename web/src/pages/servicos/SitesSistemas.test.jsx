@@ -100,6 +100,21 @@ describe('SitesSistemas', () => {
     expect(screen.queryByRole('row', { name: /Cérebro interno/ })).toBeNull();
   });
 
+  it('o quadro troca entre colunas e linhas e lembra a escolha', async () => {
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [naoEntregue] });
+    const { unmount } = abrir();
+    const formato = screen.getByRole('group', { name: 'Formato do quadro' });
+    expect(await screen.findByRole('region', { name: 'Versão final' })).toBeInTheDocument();
+    expect(document.querySelector('.kanban')).not.toHaveClass('kanban--linhas');
+    await userEvent.setup().click(within(formato).getByRole('button', { name: 'Linhas' }));
+    expect(document.querySelector('.kanban')).toHaveClass('kanban--linhas');
+    expect(localStorage.getItem('crm.sitesLayout')).toBe('linhas');
+    unmount();
+    abrir();
+    expect(await screen.findByRole('region', { name: 'Versão final' })).toBeInTheDocument();
+    expect(document.querySelector('.kanban')).toHaveClass('kanban--linhas');
+  });
+
   it('+ Oportunidade fica nas duas visões', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /categorias': [], 'GET /nichos': [] });
     abrirNoAr();
