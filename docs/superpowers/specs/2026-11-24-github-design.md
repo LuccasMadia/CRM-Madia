@@ -20,15 +20,16 @@ O Lucca quer que o GitHub e o CRM andem juntos: saber quais repositórios já t�
 - Criar repositório para projetos fictícios, privados internos, GMN e placas.
 
 ## Anti-objetivos (seria falha mesmo funcionando)
-- Criar qualquer repositório público.
+- Criar qualquer repositório público (o CRM cria sempre privado; o Lucca o torna público no GitHub quando a Vercel precisar, e isso não alerta antes da entrega).
 - Mostrar ou devolver o token pela API, ou deixá-lo nas exportações de backup.
 - Criar repositório duplicado a cada vez que o projeto é salvo, ou depois de falha de rede.
 - Perder o cadastro do projeto no CRM porque o GitHub falhou.
 
 ## Regras de "fora do conforme"
-1. Repositório **público** ligado a projeto **real** ou **privado interno**: alerta de perigo.
+1. Repositório **público** ligado a projeto **real já Entregue**, ou a projeto **privado interno** em qualquer etapa: alerta de perigo. Para projeto real **antes de entregue**, público é aceito: a Vercel precisa dele assim (decisão do Lucca em 2026-11-24). Ao entregar, o repositório precisa estar privado, e o alerta cobra isso.
 2. Repositório sem projeto no CRM: alerta (pode ser projeto esquecido).
 3. Projeto real em Versão final, Em teste ou Entregue sem repositório: alerta.
+   Projeto real que sai de Entregue de volta para uma etapa anterior deixa de contar como entregue para a regra 1.
 4. Repositório público de projeto **fictício** (vitrine) é normal e não alerta.
 Repositórios arquivados ou forks são listados, mas não geram alerta de órfão.
 
