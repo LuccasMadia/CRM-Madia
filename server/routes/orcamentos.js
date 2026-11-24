@@ -306,7 +306,15 @@ export function rotasOrcamentos({ db, hoje }) {
     if (dados.situacao === 'aceito' && orcamento.situacao !== 'aceito' && !temGerados(orcamento.id)) {
       throw new ErroHttp(409, 'Para aceitar, confira antes o que o orçamento vai criar.');
     }
-    res.json(montar(orcamentos.atualizar(orcamento.id, dados)));
+    const atualizado = orcamentos.atualizar(orcamento.id, dados);
+    // Orçamento recusado: se o cliente tem um único site esperando resposta (Orçamento enviado, sem orçamento aceito
+    // ligado), ele foi perdido. Com mais de um não dá para saber qual, então nada muda.
+    if (dados.situacao === 'recusado' && orcamento.situacao !== 'recusado') {
+      const esperando = projetos.listarComCliente({ cliente_id: orcamento.cliente_id, servico: 'site_sistema', etapa: 'valor_definido' })
+        .filter((p) => !p.orcamento_id && !p.ficticio);
+      if (esperando.length === 1) projetos.atualizar(esperando[0].id, { etapa: 'perdido' });
+    }
+    res.json(montar(atualizado));
   });
 
   // Valida as escolhas da conferência e devolve o plano; não grava nada.

@@ -36,6 +36,25 @@ describe('/api/orcamentos', () => {
     await ctx.http.get('/api/orcamentos/999').expect(404);
   });
 
+  it('recusar o orçamento perde o único site em Orçamento enviado do cliente', async () => {
+    const cliente = await novoCliente();
+    const site = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site', etapa: 'valor_definido' }).expect(201)).body;
+    const outro = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Em teste', etapa: 'teste' }).expect(201)).body;
+    const orc = await novoOrcamento(cliente);
+    await ctx.http.put(`/api/orcamentos/${orc.id}`).send({ situacao: 'recusado' }).expect(200);
+    expect((await ctx.http.get(`/api/projetos/${site.id}`)).body.etapa).toBe('perdido');
+    expect((await ctx.http.get(`/api/projetos/${outro.id}`)).body.etapa).toBe('teste');
+  });
+
+  it('recusar não mexe em nada quando há dois sites esperando (não dá para saber qual)', async () => {
+    const cliente = await novoCliente();
+    const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A', etapa: 'valor_definido' }).expect(201)).body;
+    const b = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B', etapa: 'valor_definido' }).expect(201)).body;
+    const orc = await novoOrcamento(cliente);
+    await ctx.http.put(`/api/orcamentos/${orc.id}`).send({ situacao: 'recusado' }).expect(200);
+    for (const p of [a, b]) expect((await ctx.http.get(`/api/projetos/${p.id}`)).body.etapa).toBe('valor_definido');
+  });
+
   it('atualiza dados do orçamento com validação e exclui', async () => {
     const orc = await novoOrcamento();
     const res = (await ctx.http.put(`/api/orcamentos/${orc.id}`)

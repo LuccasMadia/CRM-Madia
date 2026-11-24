@@ -33,6 +33,15 @@ describe('/api/projetos', () => {
     expect(de_volta.motivo_perda).toBeNull();
   });
 
+  it('entrar em Em teste preenche o início do teste com hoje, sem sobrescrever o que já foi definido', async () => {
+    const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201)).body;
+    const teste = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'teste' }).expect(200)).body;
+    expect(teste.teste_inicio).toBe('2026-09-23');
+    const outro = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Outro' }).expect(201)).body;
+    const definido = (await ctx.http.put(`/api/projetos/${outro.id}`).send({ etapa: 'teste', teste_inicio: '2026-09-20' }).expect(200)).body;
+    expect(definido.teste_inicio).toBe('2026-09-20');
+  });
+
   it('voltar de Entregue apaga a data de entrega', async () => {
     const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201)).body;
     const entregue = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'entregue' }).expect(200)).body;
