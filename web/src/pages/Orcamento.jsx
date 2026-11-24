@@ -272,6 +272,8 @@ export function Orcamento() {
       <Aviso erro={erroTabela} />
       <Aviso erro={erroEnvio} />
 
+      <div className="orcamento__layout">
+      <div className="orcamento__principal">
       <div className="cartao">
         <h2>Itens</h2>
         {tabela && <Adicionar tabela={tabela} enviando={ocupado} onItem={adicionarItem} onPacote={(corpo) => aplicar(`/orcamentos/${id}/pacote`, { method: 'POST', body: corpo })} />}
@@ -293,8 +295,6 @@ export function Orcamento() {
         </ul>
       </div>
 
-      <Totais orcamento={orcamento} ocupado={ocupado} descontoPadrao={tabela?.desconto_combo_pct ?? 10} onSalvar={salvar} />
-
       <div className="cartao">
         <h2>Condições</h2>
         <div className="orcamento__campos">
@@ -305,6 +305,9 @@ export function Orcamento() {
           {ehParcelado(orcamento.pagamento) && <p className="vazio orcamento__aviso-parcelado">{`${AVISO_PARCELADO} Esse aviso sai no PDF.`}</p>}
           <CampoAoSair key={`observacao-${orcamento.observacao}`} {...campo('observacao')} rotulo="Observação" texto={orcamento.observacao} multilinha rows={3} />
         </div>
+      </div>
+      </div>
+      <Totais orcamento={orcamento} ocupado={ocupado} descontoPadrao={tabela?.desconto_combo_pct ?? 10} onSalvar={salvar} />
       </div>
       {conferindo && (
         <ConferenciaAceite
