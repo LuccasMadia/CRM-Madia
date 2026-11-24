@@ -4,6 +4,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Kanban } from '../../components/Kanban.jsx';
+import { EtiquetasCategorias, temCategoria } from '../../components/CategoriaSite.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
 import { formatarData, diasDesde } from '../../lib/datas.js';
 import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA } from '../../lib/rotulos.js';
@@ -74,7 +75,7 @@ const MODOS = {
 
 // Visão em quadro dos sites e sistemas: cada coluna é uma etapa, e o card muda de etapa pelo menu.
 // modo: 'reais' (o trabalho em andamento), 'ficticios' (cases do portfólio) ou 'perdidos'.
-export function QuadroFunil({ modo = 'reais', onMudou }) {
+export function QuadroFunil({ modo = 'reais', categoriaId = '', onMudou }) {
   const ficticio = modo === 'ficticios';
   const { dados: projetos, erro, recarregar } = useCarregar(
     () => api(`/projetos?servico=site_sistema&ficticio=${ficticio ? 1 : 0}`),
@@ -100,7 +101,7 @@ export function QuadroFunil({ modo = 'reais', onMudou }) {
       {projetos && (
         <Kanban
           colunas={colunas}
-          itens={projetos}
+          itens={projetos.filter((p) => temCategoria(p, categoriaId))}
           colunaDe={(p) => p.etapa}
           tituloDe={(p) => p.titulo}
           destinosExtras={destinos}
@@ -108,6 +109,7 @@ export function QuadroFunil({ modo = 'reais', onMudou }) {
           renderItem={(p) => (
             <>
               <Link to={`/projetos/${p.id}`} className="kanban__titulo">{p.titulo}</Link>
+              <EtiquetasCategorias categorias={p.categorias} />
               <p className="kanban__meta"><Link to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link></p>
               <p className="kanban__meta">{formatarDinheiro(p.valor_total_centavos)} · prazo {formatarData(p.prazo_entrega)}</p>
               <ExtrasDoCard projeto={p} ficticio={ficticio} onMudar={mudar} />

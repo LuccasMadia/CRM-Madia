@@ -59,7 +59,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.click(await screen.findByRole('button', { name: '+ Oportunidade' }));
     await user.type(screen.getByLabelText('Título'), 'Site');
     await user.type(screen.getByLabelText('Valor (R$)'), '12,3,4');
-    await user.click(await screen.findByRole('button', { name: 'Site' }));
+    await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Valor inválido')).toBeInTheDocument();
     expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false);
@@ -76,7 +76,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.selectOptions(screen.getByLabelText('Cliente'), 'novo');
     await user.type(screen.getByLabelText('Nome do novo cliente'), 'Diego');
     await user.type(screen.getByLabelText('Valor (R$)'), '1.500,50');
-    await user.click(await screen.findByRole('button', { name: 'Site' }));
+    await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
@@ -126,7 +126,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.selectOptions(screen.getByLabelText('Cliente'), 'novo');
     await user.type(screen.getByLabelText('Nome do novo cliente'), 'Case');
     await user.type(screen.getByLabelText('Valor (R$)'), '0,00');
-    await user.click(await screen.findByRole('button', { name: 'Site' }));
+    await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Site' }));
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({
@@ -159,7 +159,7 @@ describe('Sites e Sistemas — visão Em andamento', () => {
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Escolha pelo menos uma categoria')).toBeInTheDocument();
     expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false);
-    await user.click(await screen.findByRole('button', { name: 'SaaS' }));
+    await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'SaaS' }));
     await user.selectOptions(screen.getByLabelText('Nicho'), '7');
     await user.click(screen.getByRole('button', { name: 'Criar oportunidade' }));
     expect(await screen.findByText('Outra página')).toBeInTheDocument();

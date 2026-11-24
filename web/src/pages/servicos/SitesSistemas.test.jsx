@@ -67,6 +67,21 @@ describe('SitesSistemas', () => {
     expect(await screen.findByRole('region', { name: 'Ideia' })).toBeInTheDocument();
   });
 
+  it('filtra o quadro pela categoria e mostra a categoria em cada card', async () => {
+    const landing = { ...naoEntregue, id: 5, titulo: 'Landing Dani', etapa: 'prototipo', categorias: [{ id: 2, nome: 'Landing page' }] };
+    const site = { ...naoEntregue, id: 6, titulo: 'Site Edu', etapa: 'prototipo', categorias: [{ id: 1, nome: 'Site' }] };
+    mockApi({ 'GET /projetos?servico=site_sistema&ficticio=0': [landing, site], 'GET /categorias': [{ id: 1, nome: 'Site' }, { id: 2, nome: 'Landing page' }] });
+    abrir();
+    expect(await screen.findByText('Landing Dani')).toBeInTheDocument();
+    expect(screen.getByText('Site Edu')).toBeInTheDocument();
+    const filtro = screen.getByRole('group', { name: 'Categoria' });
+    await userEvent.setup().click(within(filtro).getByRole('button', { name: 'Landing page' }));
+    expect(screen.getByText('Landing Dani')).toBeInTheDocument();
+    expect(screen.queryByText('Site Edu')).toBeNull();
+    await userEvent.setup().click(within(filtro).getByRole('button', { name: 'Todas' }));
+    expect(screen.getByText('Site Edu')).toBeInTheDocument();
+  });
+
   it('+ Oportunidade fica nas duas visões', async () => {
     mockApi({ 'GET /projetos?servico=site_sistema': [], 'GET /categorias': [], 'GET /nichos': [] });
     abrirNoAr();

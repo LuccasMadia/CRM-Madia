@@ -5,6 +5,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { Aviso } from '../../components/Aviso.jsx';
 import { Icone } from '../../components/Icone.jsx';
 import { Modal } from '../../components/Modal.jsx';
+import { EtiquetasCategorias, FiltroCategorias, temCategoria } from '../../components/CategoriaSite.jsx';
 import { PedeAtencao } from '../../components/PedeAtencao.jsx';
 import { FormOportunidade } from '../../components/FormOportunidade.jsx';
 import { formatarDinheiro } from '../../lib/dinheiro.js';
@@ -51,7 +52,7 @@ function FiltrosNoAr({ filtros: { clienteId, instagram }, onMudar }) {
   );
 }
 
-function ListaNoAr({ filtros: { clienteId, instagram }, hospedagens, mensalidades }) {
+function ListaNoAr({ filtros: { clienteId, instagram, categoriaId }, hospedagens, mensalidades }) {
   const navegar = useNavigate();
   const consulta = new URLSearchParams(
     Object.entries({ servico: 'site_sistema', cliente_id: clienteId, postou_instagram: instagram }).filter(([, v]) => v),
@@ -61,7 +62,7 @@ function ListaNoAr({ filtros: { clienteId, instagram }, hospedagens, mensalidade
   const mensalidadeDe = (id) => (mensalidades ?? []).find((m) => m.projeto_id === id);
 
   const lista = (projetos ?? [])
-    .filter((p) => estaNoAr(p, hospedagemDe(p.id)))
+    .filter((p) => estaNoAr(p, hospedagemDe(p.id)) && temCategoria(p, categoriaId))
     .sort((a, b) => (b.data_entrega ?? '9999').localeCompare(a.data_entrega ?? '9999') || b.atualizado_em.localeCompare(a.atualizado_em));
 
   // A linha toda abre o projeto; cliques em links (título, cliente) seguem o próprio link.
@@ -85,6 +86,7 @@ function ListaNoAr({ filtros: { clienteId, instagram }, hospedagens, mensalidade
                 <tr key={p.id} className="tabela__linha--clicavel" onClick={(e) => abrirLinha(e, p.id)}>
                   <td>
                     <Link className="tabela__titulo" to={`/projetos/${p.id}`}>{p.titulo}</Link>
+                    <EtiquetasCategorias categorias={p.categorias} />
                     <Link className="tabela__sub" to={`/clientes/${p.cliente_id}`}>{p.cliente_nome}</Link>
                     {p.etapa !== 'entregue' && <span className={`etapa etapa--${p.etapa}`}>{`Ainda em ${ROTULO_ETAPA[p.etapa].toLowerCase()}`}</span>}
                   </td>
@@ -138,10 +140,11 @@ export function SitesSistemas() {
   const [params, setParams] = useSearchParams();
   const visao = lerVisao(params.get('ver')) ?? visaoSalva();
   const [modo, setModo] = useState('reais');
-  const [filtros, setFiltros] = useState({ clienteId: '', instagram: '' });
+  const [filtros, setFiltros] = useState({ clienteId: '', instagram: '', categoriaId: '' });
   const [criando, setCriando] = useState(false);
   const ficticio = visao === 'andamento' && modo === 'ficticios';
 
+  const categorias = useCarregar(() => api('/categorias'), []);
   const projetos = useCarregar(() => api('/projetos?servico=site_sistema&ficticio=0'), []);
   const parcelas = useCarregar(() => api('/parcelas?servico=site_sistema'), []);
   const hospedagens = useCarregar(() => api('/hospedagem/status'), []);
@@ -192,8 +195,9 @@ export function SitesSistemas() {
         </div>
         <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Oportunidade</button>
       </div>
+      <FiltroCategorias categorias={categorias.dados} valor={filtros.categoriaId} onMudar={(categoriaId) => setFiltros((f) => ({ ...f, categoriaId }))} />
       {visao === 'andamento'
-        ? <QuadroFunil modo={modo} onMudou={projetos.recarregar} />
+        ? <QuadroFunil modo={modo} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />
         : <ListaNoAr filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
       {criando && (
         <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>
