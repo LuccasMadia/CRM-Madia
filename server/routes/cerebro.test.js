@@ -122,6 +122,7 @@ describe('GET /api/cerebro', () => {
     writeFileSync(path.join(dir, 'apps.json'), JSON.stringify([
       { id: 'vercel', nome: 'Vercel', para_que: 'Hospedagem', conexao: 'crm:vercel_token' },
       { id: 'figma', nome: 'Figma', para_que: 'Telas', conexao: 'manual' },
+      { id: 'github', nome: 'GitHub', para_que: 'Código', conexao: 'crm:github_token' },
     ]));
     return dir;
   };
@@ -170,6 +171,16 @@ describe('GET /api/cerebro', () => {
     expect(res.centro).toEqual({ texto: '# Madia' });
     expect(res.apps.find((a) => a.id === 'vercel').conectado).toBe(true);
     expect(res.apps.find((a) => a.id === 'figma').conectado).toBe(false);
+  });
+
+  it('o GitHub aparece conectado só depois de o token ser salvo no CRM', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    definirConfig(ctx.db, 'cerebro_path', pastaCerebro());
+    const antes = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(antes.apps.find((a) => a.id === 'github').conectado).toBe(false);
+    definirConfig(ctx.db, 'github_token', 'ghp_x');
+    const depois = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(depois.apps.find((a) => a.id === 'github').conectado).toBe(true);
   });
 
   it('pede_atencao usa singular/plural e o link certo', async () => {
