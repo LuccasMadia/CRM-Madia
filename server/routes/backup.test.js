@@ -39,6 +39,22 @@ describe('copiarBanco', () => {
     expect(db.prepare("SELECT valor FROM config WHERE chave = 'vercel_token'").get().valor).toBe('vcl-segredo');
   });
 
+  it('a cópia do backup não leva o token do GitHub', () => {
+    const { db } = criarContexto();
+    definirConfig(db, 'github_token', 'ghp-segredo');
+    definirConfig(db, 'corte_prazo_dias', '7');
+    const copia = copiarBanco(db);
+    try {
+      const lida = new DatabaseSync(copia, { readOnly: true });
+      const chaves = lida.prepare('SELECT chave FROM config').all().map((r) => r.chave);
+      lida.close();
+      expect(chaves).not.toContain('github_token');
+      expect(chaves).toContain('corte_prazo_dias');
+    } finally {
+      rmSync(copia, { force: true });
+    }
+  });
+
   it('a cópia do backup não leva o token do Instagram', () => {
     const { db } = criarContexto();
     definirConfig(db, 'instagram_token', 'segredo-123');

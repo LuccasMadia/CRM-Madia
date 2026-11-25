@@ -46,6 +46,10 @@ function normalizar(valor, regra) {
       return Array.isArray(valor) && valor.every((v) => typeof v === 'string')
         ? { valor: JSON.stringify(valor.map((v) => v.trim()).filter(Boolean)) }
         : { erro: 'Deve ser uma lista de textos' };
+    case 'repositorio':
+      return typeof valor === 'string' && /^[\w.-]+\/[\w.-]+$/.test(valor.trim())
+        ? { valor: valor.trim() }
+        : { erro: 'Use o formato dono/nome' };
     case 'slug':
       return typeof valor === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(valor)
         ? { valor }
