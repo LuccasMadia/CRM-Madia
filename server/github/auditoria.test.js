@@ -70,6 +70,25 @@ describe('montarAuditoria', () => {
   });
 });
 
+describe('sem commit há muito tempo', () => {
+  it('projeto real ligado e não entregue, sem commit há 30 dias ou mais, alerta sem_commit', () => {
+    const r = montarAuditoria({
+      hoje: '2026-11-25',
+      repositorios: [
+        repo('a', { ultimo_commit_em: '2026-10-20T10:00:00Z' }), repo('b', { ultimo_commit_em: '2026-11-20T10:00:00Z' }),
+        repo('c', { ultimo_commit_em: '2026-09-01T00:00:00Z' }), repo('d', { ultimo_commit_em: null }), repo('e', { ultimo_commit_em: '2026-09-01T00:00:00Z' }),
+      ],
+      projetos: [
+        projeto(1, { github_repo: 'lucas/a', etapa: 'andamento' }), projeto(2, { github_repo: 'lucas/b' }),
+        projeto(3, { github_repo: 'lucas/c', etapa: 'entregue' }), projeto(4, { github_repo: 'lucas/d' }),
+        projeto(5, { github_repo: 'lucas/e', ficticio: 1 }),
+      ],
+    });
+    expect(r.alertas.filter((a) => a.codigo === 'sem_commit')).toEqual([{ codigo: 'sem_commit', texto: 'Projeto 1 sem commit há 36 dias', link: '/projetos/1' }]);
+    expect(r.itens.find((i) => i.repo.nome_completo === 'lucas/a').alertas).toEqual(['sem_commit']);
+  });
+});
+
 describe('nomeDoRepositorio', () => {
   it('usa minúsculas, sem acento, com hífens', () => {
     expect(nomeDoRepositorio('Cardápio da Dri', new Set())).toBe('cardapio-da-dri');

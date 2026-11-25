@@ -7,7 +7,7 @@ import { criarCache } from './cache.js';
 const DEZ_MINUTOS = 10 * 60 * 1000;
 
 // Tudo que o CRM faz no GitHub passa por aqui (rotas, criação automática). Nunca altera visibilidade.
-export function criarServicoGithub({ db, fetch }) {
+export function criarServicoGithub({ db, fetch, hoje = () => new Date().toISOString().slice(0, 10) }) {
   const projetos = repoProjetos(db);
   const cache = criarCache(DEZ_MINUTOS);
   const emCriacao = new Set();
@@ -20,7 +20,7 @@ export function criarServicoGithub({ db, fetch }) {
 
   async function auditoria({ forcar = false } = {}) {
     const lista = await repositorios({ forcar });
-    return montarAuditoria({ repositorios: lista, projetos: projetos.listar() });
+    return montarAuditoria({ repositorios: lista, projetos: projetos.listar(), hoje: hoje() });
   }
 
   // Formato que a página do projeto usa. Repositório apagado no GitHub vira encontrado:false, não erro.

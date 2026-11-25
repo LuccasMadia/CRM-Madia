@@ -1,3 +1,6 @@
+const DIAS_SEM_COMMIT = 30;
+const diasEntre = (de, ate) => Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86400000);
+
 // Cruza os repositórios do GitHub com os projetos do CRM. Funções puras, sem I/O.
 const ETAPAS_COM_REPO = ['andamento', 'teste', 'entregue'];
 const LINK_VISAO = '/servicos?aba=sites&ver=github';
@@ -13,7 +16,7 @@ export function nomeDoRepositorio(titulo, usados) {
   return nome;
 }
 
-export function montarAuditoria({ repositorios, projetos }) {
+export function montarAuditoria({ repositorios, projetos, hoje = new Date().toISOString().slice(0, 10) }) {
   const porRepo = new Map(projetos.filter((p) => p.github_repo).map((p) => [p.github_repo.toLowerCase(), p]));
   const livres = projetos.filter((p) => !p.github_repo && p.servico === 'site_sistema');
   const alertas = [];
@@ -29,6 +32,13 @@ export function montarAuditoria({ repositorios, projetos }) {
       } else if (!ligado.ficticio && ligado.etapa === 'entregue') {
         codigos.push('publico_entregue');
         alertas.push({ codigo: 'publico_entregue', texto: `${ligado.titulo} já foi entregue e o repositório ${repo.nome_completo} está público`, link: `/projetos/${ligado.id}` });
+      }
+    }
+    if (ligado && !ligado.ficticio && !ligado.privado && !['entregue', 'perdido'].includes(ligado.etapa) && repo.ultimo_commit_em) {
+      const dias = diasEntre(repo.ultimo_commit_em.slice(0, 10), hoje);
+      if (dias >= DIAS_SEM_COMMIT) {
+        codigos.push('sem_commit');
+        alertas.push({ codigo: 'sem_commit', texto: `${ligado.titulo} sem commit há ${dias} dias`, link: `/projetos/${ligado.id}` });
       }
     }
     if (!ligado && !repo.arquivado && !repo.fork) {

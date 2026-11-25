@@ -9,7 +9,7 @@ const NO_AR = '/servicos?aba=sites&ver=no_ar';
 
 // Itens da faixa "Pede atenção" de Sites e Sistemas, do mais urgente para o trabalho do dia a dia.
 // projetos: só os reais; cada lista pode faltar (erro ao carregar) e então não gera aviso.
-export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = [], mensalidades = [], hoje }) {
+export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = [], mensalidades = [], githubAlertas = [], hoje }) {
   const perigo = [];
   const atencao = [];
   const trabalho = [];
@@ -56,6 +56,11 @@ export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = 
   const semPagamento = projetos.filter((p) => p.etapa === 'andamento' && !p.parcelas_pagas);
   if (semPagamento.length === 1) atencao.push({ texto: `${semPagamento[0].titulo} em versão final sem nenhuma parcela paga`, para: `/projetos/${semPagamento[0].id}` });
   else if (semPagamento.length) atencao.push({ texto: `${semPagamento.length} projetos em versão final sem nenhuma parcela paga`, para: NO_QUADRO });
+
+  // Auditoria do GitHub: repositório público depois da entrega é perigo; o resto pede atenção.
+  for (const a of githubAlertas) {
+    (['publico_entregue', 'publico_interno'].includes(a.codigo) ? perigo : atencao).push({ texto: a.texto, para: a.link });
+  }
 
   // O trabalho ativo: um projeto só leva direto a ele; vários levam ao quadro.
   for (const [etapa, rotulo] of [['prototipo', 'em protótipo'], ['andamento', 'em versão final']]) {

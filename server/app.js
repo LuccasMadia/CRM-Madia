@@ -35,7 +35,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   const sincronizarInstagram = criarExecutorUnico(() => sincronizar({ db, dataDir, fetch }));
   publicador ??= criarPublicador({ db, fetch, urlPublica: URL_PUBLICA, sincronizar: () => sincronizarInstagram.reiniciar() });
   const monitorSites = criarMonitor({ db, fetch });
-  const github = criarServicoGithub({ db, fetch });
+  const github = criarServicoGithub({ db, fetch, hoje });
   const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github };
   app.locals.monitorSites = monitorSites;
   app.locals.sincronizarInstagram = sincronizarInstagram;

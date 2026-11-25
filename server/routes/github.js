@@ -52,6 +52,16 @@ export function rotasGithub({ db, fetch, github }) {
     }
   });
 
+  // Leve e à prova de falha: alimenta a faixa "Pede atenção", que não deve mostrar erro do GitHub.
+  r.get('/github/atencao', async (req, res) => {
+    if (!github.estado().conectado) return res.json({ alertas: [] });
+    try {
+      res.json({ alertas: (await github.auditoria()).alertas });
+    } catch {
+      res.json({ alertas: [] });
+    }
+  });
+
   r.get('/projetos/:id/github', async (req, res) => {
     const projeto = obterProjeto(req.params.id);
     exigirConexao();

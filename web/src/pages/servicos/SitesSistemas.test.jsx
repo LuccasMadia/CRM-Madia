@@ -286,6 +286,29 @@ describe('SitesSistemas', () => {
     expect(within(faixa).queryByText(/Loja Edu em versão final sem/)).toBeNull();
   });
 
+  it('a visão GitHub abre pelo endereço ?ver=github', async () => {
+    mockApi({ 'GET /github': { conectado: false, usuario: null } });
+    abrir('/servicos?aba=sites&ver=github');
+    expect(await screen.findByRole('link', { name: 'Conectar o GitHub' })).toBeInTheDocument();
+    const visao = screen.getByRole('group', { name: 'Visão' });
+    expect(within(visao).getByRole('button', { name: 'GitHub' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('Pede atenção: alertas do GitHub entram na faixa, com perigo para repositório público entregue', async () => {
+    mockApi({
+      'GET /github/atencao': { alertas: [
+        { codigo: 'publico_entregue', texto: 'Site Ana já foi entregue e o repositório lucas/site-ana está público', link: '/projetos/1' },
+        { codigo: 'sem_commit', texto: 'Loja Edu sem commit há 35 dias', link: '/projetos/2' },
+      ] },
+    });
+    abrir();
+    const faixa = await screen.findByRole('region', { name: 'Pede atenção' });
+    const perigo = await within(faixa).findByRole('link', { name: 'Site Ana já foi entregue e o repositório lucas/site-ana está público' });
+    expect(perigo).toHaveClass('pede-atencao__item--perigo');
+    expect(perigo).toHaveAttribute('href', '/projetos/1');
+    expect(within(faixa).getByRole('link', { name: 'Loja Edu sem commit há 35 dias' })).toHaveClass('pede-atencao__item--atencao');
+  });
+
   it('o card mostra de quem é a vez e há quantos dias está na etapa', async () => {
     const hoje = hojeISO();
     mockApi({

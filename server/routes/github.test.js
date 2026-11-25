@@ -111,6 +111,25 @@ describe('criação automática ao criar o projeto', () => {
   });
 });
 
+describe('atenção', () => {
+  it('sem conexão devolve lista vazia, sem erro', async () => {
+    expect((await ctx.http.get('/api/github/atencao').expect(200)).body).toEqual({ alertas: [] });
+  });
+
+  it('conectado devolve os alertas da auditoria', async () => {
+    await montar({ [LISTA]: [bruto('solto')] });
+    await conectar();
+    const res = (await ctx.http.get('/api/github/atencao').expect(200)).body;
+    expect(res.alertas).toEqual([{ codigo: 'sem_projeto', texto: 'Repositório lucas/solto não tem projeto no CRM', link: '/servicos?aba=sites&ver=github' }]);
+  });
+
+  it('falha do GitHub não derruba a faixa: devolve lista vazia', async () => {
+    await montar({ [LISTA]: { status: 500, corpo: {} } });
+    await conectar();
+    expect((await ctx.http.get('/api/github/atencao').expect(200)).body).toEqual({ alertas: [] });
+  });
+});
+
 describe('repositório do projeto', () => {
   it('POST cria o repositório privado, liga ao projeto e devolve visibilidade', async () => {
     const criados = [];

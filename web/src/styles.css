@@ -1024,3 +1024,10 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 .commits__barra { fill: var(--primaria); }
 .commits__barra--vazia { fill: var(--borda); }
 .commits__aviso { margin: 0; color: var(--texto-suave); font-size: 0.9rem; }
+
+/* Visão GitHub de Serviços */
+.github-auditoria { display: grid; gap: 16px; }
+.github-auditoria__resumo { margin: 0; color: var(--texto-suave); font-size: 0.9rem; }
+.github-auditoria__sugestao { display: inline-flex; align-items: center; gap: 8px; color: var(--texto-suave); }
+
+.tabela-rolavel { overflow-x: auto; }
