@@ -101,7 +101,7 @@ function validarServicos(servicosBrutos, { modelosRepo, db, clienteId = null, pr
   });
 }
 
-export function rotasProjetos({ db, hoje }) {
+export function rotasProjetos({ db, hoje, github }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
   const projetosServicos = repoProjetosServicos(db);
@@ -339,6 +339,7 @@ export function rotasProjetos({ db, hoje }) {
         const cliente = clientes.criar(dadosCliente);
         return criarProjetoCompleto({ ...dados, cliente_id: cliente.id });
       });
+      github.agendarRepositorio(criado.id);
       return res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
     }
     const dados = prepararDados(aplicarRegrasProjeto(null, validar(corpo, REGRAS_PROJETO), hoje()));
@@ -346,6 +347,7 @@ export function rotasProjetos({ db, hoje }) {
     exigirLojaDoCliente(db, dados.loja_id, dados.cliente_id);
     exigirRepoLivre(dados.github_repo, null);
     const criado = emTransacao(db, () => criarProjetoCompleto(dados));
+    github.agendarRepositorio(criado.id);
     res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
   });
 

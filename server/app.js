@@ -40,6 +40,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.locals.monitorSites = monitorSites;
   app.locals.sincronizarInstagram = sincronizarInstagram;
   app.locals.publicador = publicador;
+  app.locals.github = github;
   // Única rota sem proteção de host (Cloudflare Access libera /publico/*): precisa vir antes do protegerLocal.
   app.use('/publico', rotasPublico(ctx));
   app.use(protegerLocal);

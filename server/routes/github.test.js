@@ -60,6 +60,57 @@ describe('auditoria', () => {
   });
 });
 
+describe('criação automática ao criar o projeto', () => {
+  async function conectado() {
+    const criados = [];
+    await montar({
+      [LISTA]: () => criados,
+      [`POST ${BASE}/user/repos`]: ({ corpo }) => { criados.push(bruto(corpo.name)); return { status: 201, corpo: bruto(corpo.name) }; },
+    });
+    await conectar();
+  }
+  const repoDe = async (id) => (await ctx.http.get(`/api/projetos/${id}`)).body.github_repo;
+  const aguardar = () => ctx.app.locals.github.aguardarPendencias();
+
+  it('projeto real de site ganha repositório privado e a resposta do POST não espera o GitHub', async () => {
+    await conectado();
+    const projeto = await novoProjeto();
+    expect(projeto.github_repo ?? null).toBeNull();
+    await aguardar();
+    expect(await repoDe(projeto.id)).toBe('lucas/site-ana');
+    expect(github.requisicoes.find((r) => r.metodo === 'POST').corpo.private).toBe(true);
+    // salvar de novo não cria segundo repositório
+    await ctx.http.put(`/api/projetos/${projeto.id}`).send({ titulo: 'Site Ana 2' }).expect(200);
+    await aguardar();
+    expect(chamadasA('POST', '/user/repos')).toBe(1);
+  });
+
+  it('fictício, privado interno e GMN não criam repositório', async () => {
+    await conectado();
+    await novoProjeto({ titulo: 'Vitrine', ficticio: true });
+    await novoProjeto({ titulo: 'Interno', ficticio: true, privado: true });
+    await novoProjeto({ titulo: 'Google', servico: 'google_meu_negocio' });
+    await aguardar();
+    expect(chamadasA('POST', '/user/repos')).toBe(0);
+  });
+
+  it('sem token não chama o GitHub', async () => {
+    await montar();
+    await novoProjeto();
+    await aguardar();
+    expect(github.requisicoes).toEqual([]);
+  });
+
+  it('falha do GitHub não impede o projeto: ele fica criado, sem repositório', async () => {
+    await montar({ [`POST ${BASE}/user/repos`]: { status: 403, corpo: {} } });
+    await conectar();
+    const projeto = await novoProjeto();
+    await aguardar();
+    expect(await repoDe(projeto.id)).toBeNull();
+    expect((await ctx.http.get(`/api/projetos/${projeto.id}`).expect(200)).body.titulo).toBe('Site Ana');
+  });
+});
+
 describe('repositório do projeto', () => {
   it('POST cria o repositório privado, liga ao projeto e devolve visibilidade', async () => {
     const criados = [];
@@ -88,8 +139,8 @@ describe('repositório do projeto', () => {
     });
     await conectar();
     const projeto = await novoProjeto();
-    const res = (await ctx.http.post(`/api/projetos/${projeto.id}/github`).expect(200)).body;
-    expect(res.repo).toBe('lucas/site-ana-2');
+    await ctx.app.locals.github.aguardarPendencias();
+    expect((await ctx.http.get(`/api/projetos/${projeto.id}`)).body.github_repo).toBe('lucas/site-ana-2');
   });
 
   it('falha do GitHub ao criar vira 502 com a mensagem e o projeto fica sem repositório', async () => {

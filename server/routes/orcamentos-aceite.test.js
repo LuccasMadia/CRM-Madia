@@ -39,6 +39,36 @@ async function orcamentoCompleto() {
   return orc;
 }
 
+describe('criação automática do repositório no aceite', () => {
+  it('o site criado pelo aceite ganha repositório privado no GitHub', async () => {
+    const { githubFalso } = await import('../test/githubFalso.js');
+    const base = 'https://api.github.com';
+    const criados = [];
+    const github = githubFalso({
+      [`${base}/user`]: { login: 'lucas' },
+      [`${base}/user/repos?per_page=100&affiliation=owner`]: () => criados,
+      [`POST ${base}/user/repos`]: ({ corpo }) => {
+        const repo = { full_name: `lucas/${corpo.name}`, private: true, archived: false, fork: false, pushed_at: null, html_url: 'x' };
+        criados.push(repo);
+        return { status: 201, corpo: repo };
+      },
+    });
+    ctx = criarContexto({ hoje: '2026-10-21', fetch: github.fetch });
+    cliente = (await ctx.http.post('/api/clientes').send({ nome: 'Filinto' }).expect(201)).body;
+    await ctx.http.put('/api/github/conexao').send({ token: 'ghp_x' }).expect(200);
+    let orc = await novoOrcamento();
+    orc = await addItem(orc, { servico_id: (await porNome('Cardápio / catálogo digital')).id });
+    await aceitar(orc, [
+      { item_id: itemDe(orc, 'Cardápio / catálogo digital').id, destino: 'site', parcelas: { modo: 'entrada_entrega', primeira: '2026-10-25' } },
+      { item_id: itemDe(orc, 'Hospedagem e suporte').id, destino: 'mensal_site', dia_vencimento: 10 },
+    ]).expect(200);
+    await ctx.app.locals.github.aguardarPendencias();
+    const [site] = projetosDo();
+    expect(site.github_repo).toBe('lucas/cardapio-catalogo-digital');
+    expect(github.requisicoes.find((r) => r.metodo === 'POST').corpo.private).toBe(true);
+  });
+});
+
 describe('POST /orcamentos/:id/aceitar', () => {
   it('cria site, mensalidades, GMN e venda de placa com o desconto dividido e marca aceito', async () => {
     const orc = await orcamentoCompleto();
