@@ -27,13 +27,16 @@ import { rotasFerramentas } from './routes/ferramentas.js';
 import { rotasTabelaPrecos } from './routes/tabelaPrecos.js';
 import { rotasOrcamentos } from './routes/orcamentos.js';
 import { rotasAgenda } from './routes/agenda.js';
+import { rotasGithub } from './routes/github.js';
+import { criarServicoGithub } from './github/servico.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
   const app = express();
   const sincronizarInstagram = criarExecutorUnico(() => sincronizar({ db, dataDir, fetch }));
   publicador ??= criarPublicador({ db, fetch, urlPublica: URL_PUBLICA, sincronizar: () => sincronizarInstagram.reiniciar() });
   const monitorSites = criarMonitor({ db, fetch });
-  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador };
+  const github = criarServicoGithub({ db, fetch });
+  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github };
   app.locals.monitorSites = monitorSites;
   app.locals.sincronizarInstagram = sincronizarInstagram;
   app.locals.publicador = publicador;
@@ -61,6 +64,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasInstagram(ctx));
   app.use('/api', rotasHospedagem(ctx));
   app.use('/api', rotasAgenda(ctx));
+  app.use('/api', rotasGithub(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));
