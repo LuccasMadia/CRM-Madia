@@ -54,6 +54,14 @@ const DESENHOS = {
     </>
   ),
   vercel: <path d="M12 4 22 20H2z" />,
+  github: (
+    <>
+      <circle cx="6" cy="6" r="2.25" />
+      <circle cx="6" cy="18" r="2.25" />
+      <circle cx="18" cy="9" r="2.25" />
+      <path d="M6 8.25v7.5M18 11.25c0 3-4 3-10.5 5.5" />
+    </>
+  ),
   portfolio: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />
