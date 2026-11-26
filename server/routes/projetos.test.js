@@ -42,6 +42,26 @@ describe('/api/projetos', () => {
     expect(definido.teste_inicio).toBe('2026-09-20');
   });
 
+  it('figma_url grava o código do arquivo, rejeita link inválido e repetido, e vazio libera', async () => {
+    const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' }).expect(201)).body;
+    const b = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' }).expect(201)).body;
+    const ok = (await ctx.http.put(`/api/projetos/${a.id}`).send({ figma_url: 'https://www.figma.com/design/AbC123/Site?node-id=1-2' }).expect(200)).body;
+    expect(ok.figma_arquivo).toBe('AbC123');
+    const ruim = await ctx.http.put(`/api/projetos/${b.id}`).send({ figma_url: 'https://example.com/x' }).expect(400);
+    expect(ruim.body.erros[0]).toMatchObject({ campo: 'figma_url', mensagem: 'Cole o link de um arquivo do Figma' });
+    const repetido = await ctx.http.put(`/api/projetos/${b.id}`).send({ figma_url: 'https://figma.com/file/AbC123/Outro' }).expect(400);
+    expect(repetido.body.erros[0]).toMatchObject({ campo: 'figma_url', mensagem: 'Esse arquivo já está ligado a outro projeto' });
+    const limpo = (await ctx.http.put(`/api/projetos/${a.id}`).send({ figma_url: '' }).expect(200)).body;
+    expect(limpo.figma_arquivo).toBeNull();
+    const livre = (await ctx.http.put(`/api/projetos/${b.id}`).send({ figma_url: 'https://figma.com/file/AbC123/Outro' }).expect(200)).body;
+    expect(livre.figma_arquivo).toBe('AbC123');
+  });
+
+  it('POST aceita figma_url já na criação', async () => {
+    const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Com Figma', figma_url: 'https://figma.com/design/Nv1/x' }).expect(201)).body;
+    expect(criado.figma_arquivo).toBe('Nv1');
+  });
+
   it('github_repo aceita dono/nome, rejeita formato inválido e repetido', async () => {
     const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' }).expect(201)).body;
     const b = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' }).expect(201)).body;

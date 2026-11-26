@@ -39,6 +39,22 @@ describe('copiarBanco', () => {
     expect(db.prepare("SELECT valor FROM config WHERE chave = 'vercel_token'").get().valor).toBe('vcl-segredo');
   });
 
+  it('a cópia do backup não leva o token do Figma', () => {
+    const { db } = criarContexto();
+    definirConfig(db, 'figma_token', 'figd-segredo');
+    definirConfig(db, 'figma_usuario', 'lucas');
+    const copia = copiarBanco(db);
+    try {
+      const lida = new DatabaseSync(copia, { readOnly: true });
+      const chaves = lida.prepare('SELECT chave FROM config').all().map((r) => r.chave);
+      lida.close();
+      expect(chaves).not.toContain('figma_token');
+      expect(chaves).not.toContain('figma_usuario');
+    } finally {
+      rmSync(copia, { force: true });
+    }
+  });
+
   it('a cópia do backup não leva o token do GitHub', () => {
     const { db } = criarContexto();
     definirConfig(db, 'github_token', 'ghp-segredo');
