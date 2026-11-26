@@ -47,6 +47,7 @@ const REGRAS_PROJETO = {
   loja_id: { tipo: 'inteiro', min: 1 },
   github_repo: { tipo: 'repositorio' },
   figma_arquivo: { tipo: 'texto' },
+  supabase_ref: { tipo: 'texto' },
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
@@ -148,6 +149,21 @@ export function rotasProjetos({ db, hoje, github }) {
     const codigo = codigoDoLinkFigma(link);
     if (!codigo) throw new ErroValidacao([{ campo: 'figma_url', mensagem: 'Cole o link de um arquivo do Figma' }]);
     return { ...resto, figma_arquivo: codigo };
+  }
+
+  // Vazio limpa a ligação; o código do projeto do Supabase tem 20 letras minúsculas/números.
+  function normalizarSupabase(corpo) {
+    if (corpo.supabase_ref === undefined) return corpo;
+    const ref = String(corpo.supabase_ref ?? '').trim();
+    if (!ref) return { ...corpo, supabase_ref: null };
+    if (!/^[a-z0-9]{20}$/.test(ref)) throw new ErroValidacao([{ campo: 'supabase_ref', mensagem: 'Código de projeto do Supabase inválido' }]);
+    return { ...corpo, supabase_ref: ref };
+  }
+
+  function exigirSupabaseLivre(ref, idAtual) {
+    if (!ref) return;
+    const outro = db.prepare('SELECT id FROM projetos WHERE supabase_ref = ? AND id IS NOT ?').get(ref, idAtual ?? null);
+    if (outro) throw new ErroValidacao([{ campo: 'supabase_ref', mensagem: 'Esse projeto do Supabase já está ligado a outro projeto' }]);
   }
 
   function exigirFigmaLivre(codigo, idAtual) {
@@ -295,7 +311,7 @@ export function rotasProjetos({ db, hoje, github }) {
   });
 
   r.post('/', (req, res) => {
-    const corpo = traduzirFigma(req.body ?? {});
+    const corpo = normalizarSupabase(traduzirFigma(req.body ?? {}));
     const temServicos = corpo.servicos !== undefined;
     const clienteDaOportunidade = corpo.novo_cliente ? null : (Number(corpo.cliente_id) || null);
     const servicosValidados = temServicos
@@ -365,6 +381,7 @@ export function rotasProjetos({ db, hoje, github }) {
     exigirLojaDoCliente(db, dados.loja_id, dados.cliente_id);
     exigirRepoLivre(dados.github_repo, null);
     exigirFigmaLivre(dados.figma_arquivo, null);
+    exigirSupabaseLivre(dados.supabase_ref, null);
     const criado = emTransacao(db, () => criarProjetoCompleto(dados));
     github.agendarRepositorio(criado.id);
     res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
@@ -380,7 +397,7 @@ export function rotasProjetos({ db, hoje, github }) {
     const id = lerId(req.params.id);
     const atual = projetos.obter(id);
     if (!atual) throw naoEncontrado('Projeto');
-    const corpo = traduzirFigma(req.body ?? {});
+    const corpo = normalizarSupabase(traduzirFigma(req.body ?? {}));
     const temServicos = corpo.servicos !== undefined;
     const servicosValidados = temServicos
       ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: Number(corpo.cliente_id) || atual.cliente_id, projetoId: id })
@@ -390,6 +407,7 @@ export function rotasProjetos({ db, hoje, github }) {
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
     exigirRepoLivre(dadosBase.github_repo, atual.id);
     exigirFigmaLivre(dadosBase.figma_arquivo, atual.id);
+    exigirSupabaseLivre(dadosBase.supabase_ref, atual.id);
     // o motivo só vale enquanto o projeto está perdido
     if (dadosBase.etapa !== undefined && dadosBase.etapa !== 'perdido') dadosBase.motivo_perda = null;
     if (dadosBase.privado) dadosBase.ficticio = 1;
