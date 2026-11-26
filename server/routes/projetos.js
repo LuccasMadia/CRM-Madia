@@ -15,6 +15,7 @@ import { calcularCustoUnitarioModelo } from '../domain/placas.js';
 import { repoCategorias, repoNichos, repoProjetosCategorias } from '../repos/categorias.js';
 import { MODOS_INICIO_MENSALIDADE, planejarMensalidadesAbertas } from '../domain/mensalidade.js';
 import { REGRAS_CLIENTE } from './clientes.js';
+import { codigoDoLinkFigma } from '../figma/link.js';
 import { repoModelosTarefas, aplicarModelo } from '../repos/tarefas.js';
 import { exigirLojaDoCliente } from '../repos/lojas.js';
 
@@ -45,6 +46,7 @@ const REGRAS_PROJETO = {
   teste_inicio: { tipo: 'data' },
   loja_id: { tipo: 'inteiro', min: 1 },
   github_repo: { tipo: 'repositorio' },
+  figma_arquivo: { tipo: 'texto' },
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
@@ -136,6 +138,22 @@ export function rotasProjetos({ db, hoje, github }) {
       if (passo.acao === 'remover') parcelas.remover(passo.id);
       else parcelas.atualizar(passo.id, { valor_centavos: passo.valor_centavos, vencimento: passo.vencimento });
     }
+  }
+
+  // O formulário manda o link colado (figma_url); o banco guarda só o código do arquivo.
+  function traduzirFigma(corpo) {
+    if (corpo.figma_url === undefined) return corpo;
+    const { figma_url: link, ...resto } = corpo;
+    if (!String(link ?? '').trim()) return { ...resto, figma_arquivo: null };
+    const codigo = codigoDoLinkFigma(link);
+    if (!codigo) throw new ErroValidacao([{ campo: 'figma_url', mensagem: 'Cole o link de um arquivo do Figma' }]);
+    return { ...resto, figma_arquivo: codigo };
+  }
+
+  function exigirFigmaLivre(codigo, idAtual) {
+    if (!codigo) return;
+    const outro = db.prepare('SELECT id FROM projetos WHERE figma_arquivo = ? AND id IS NOT ?').get(codigo, idAtual ?? null);
+    if (outro) throw new ErroValidacao([{ campo: 'figma_url', mensagem: 'Esse arquivo já está ligado a outro projeto' }]);
   }
 
   function exigirRepoLivre(repo, idAtual) {
@@ -277,7 +295,7 @@ export function rotasProjetos({ db, hoje, github }) {
   });
 
   r.post('/', (req, res) => {
-    const corpo = req.body ?? {};
+    const corpo = traduzirFigma(req.body ?? {});
     const temServicos = corpo.servicos !== undefined;
     const clienteDaOportunidade = corpo.novo_cliente ? null : (Number(corpo.cliente_id) || null);
     const servicosValidados = temServicos
@@ -346,6 +364,7 @@ export function rotasProjetos({ db, hoje, github }) {
     exigirCliente(dados.cliente_id);
     exigirLojaDoCliente(db, dados.loja_id, dados.cliente_id);
     exigirRepoLivre(dados.github_repo, null);
+    exigirFigmaLivre(dados.figma_arquivo, null);
     const criado = emTransacao(db, () => criarProjetoCompleto(dados));
     github.agendarRepositorio(criado.id);
     res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
@@ -361,7 +380,7 @@ export function rotasProjetos({ db, hoje, github }) {
     const id = lerId(req.params.id);
     const atual = projetos.obter(id);
     if (!atual) throw naoEncontrado('Projeto');
-    const corpo = req.body ?? {};
+    const corpo = traduzirFigma(req.body ?? {});
     const temServicos = corpo.servicos !== undefined;
     const servicosValidados = temServicos
       ? validarServicos(corpo.servicos, { modelosRepo: modelos, db, clienteId: Number(corpo.cliente_id) || atual.cliente_id, projetoId: id })
@@ -370,6 +389,7 @@ export function rotasProjetos({ db, hoje, github }) {
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
     exigirRepoLivre(dadosBase.github_repo, atual.id);
+    exigirFigmaLivre(dadosBase.figma_arquivo, atual.id);
     // o motivo só vale enquanto o projeto está perdido
     if (dadosBase.etapa !== undefined && dadosBase.etapa !== 'perdido') dadosBase.motivo_perda = null;
     if (dadosBase.privado) dadosBase.ficticio = 1;
