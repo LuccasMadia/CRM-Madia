@@ -330,6 +330,19 @@ describe('SitesSistemas', () => {
     expect(await screen.findByRole('region', { name: 'Pede atenção' })).toBeInTheDocument();
   });
 
+  it('Pede atenção: token que parou de funcionar ou vence entra na faixa, e falha da chamada é ignorada', async () => {
+    mockApi({
+      'GET /conexoes/atencao': { alertas: [
+        { codigo: 'token_falhou', tom: 'perigo', texto: 'Token do GitHub parou de funcionar', para: '/configuracoes' },
+        { codigo: 'token_vence', tom: 'atencao', texto: 'Token do Figma vence em 5 dias', para: '/configuracoes' },
+      ] },
+    });
+    abrir();
+    const faixa = await screen.findByRole('region', { name: 'Pede atenção' });
+    expect(await within(faixa).findByRole('link', { name: 'Token do GitHub parou de funcionar' })).toHaveClass('pede-atencao__item--perigo');
+    expect(within(faixa).getByRole('link', { name: 'Token do Figma vence em 5 dias' })).toHaveClass('pede-atencao__item--atencao');
+  });
+
   it('o card mostra de quem é a vez e há quantos dias está na etapa', async () => {
     const hoje = hojeISO();
     mockApi({

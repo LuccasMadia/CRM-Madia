@@ -43,6 +43,17 @@ const GRAFICOS = {
 const cartao = (rotulo) => screen.getByText(rotulo).closest('a');
 
 describe('Inicio', () => {
+  it('avisa de token que parou de funcionar ou vai vencer', async () => {
+    mockApi({
+      ...AVISOS,
+      'GET /painel': PAINEL,
+      'GET /painel/graficos': GRAFICOS,
+      'GET /conexoes/atencao': { alertas: [{ codigo: 'token_vence', tom: 'atencao', texto: 'Token do Figma vence em 5 dias', para: '/configuracoes' }] },
+    });
+    renderizar(<Inicio />);
+    expect(await screen.findByRole('link', { name: 'Token do Figma vence em 5 dias' })).toHaveAttribute('href', '/configuracoes');
+  });
+
   it('mostra Mission Control e os cinco números com links', async () => {
     mockApi({ ...AVISOS, 'GET /painel': PAINEL, 'GET /painel/graficos': GRAFICOS });
     renderizar(<Inicio />);

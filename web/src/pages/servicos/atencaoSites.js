@@ -9,7 +9,7 @@ const NO_AR = '/servicos?aba=sites&ver=no_ar';
 
 // Itens da faixa "Pede atenção" de Sites e Sistemas, do mais urgente para o trabalho do dia a dia.
 // projetos: só os reais; cada lista pode faltar (erro ao carregar) e então não gera aviso.
-export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = [], mensalidades = [], githubAlertas = [], supabaseAlertas = [], hoje }) {
+export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = [], mensalidades = [], githubAlertas = [], supabaseAlertas = [], conexoesAlertas = [], hoje }) {
   const perigo = [];
   const atencao = [];
   const trabalho = [];
@@ -60,6 +60,11 @@ export function itensAtencaoSites({ projetos = [], parcelas = [], hospedagens = 
   // Auditoria do GitHub: repositório público depois da entrega é perigo; o resto pede atenção.
   for (const a of githubAlertas) {
     (['publico_entregue', 'publico_interno'].includes(a.codigo) ? perigo : atencao).push({ texto: a.texto, para: a.link });
+  }
+
+  // Tokens das integrações: parou de funcionar ou vencido é perigo; perto de vencer pede atenção.
+  for (const a of conexoesAlertas) {
+    (a.tom === 'perigo' ? perigo : atencao).push({ texto: a.texto, para: a.para });
   }
 
   // Supabase pausado: se o projeto já foi entregue, o cliente está sem sistema (perigo).
