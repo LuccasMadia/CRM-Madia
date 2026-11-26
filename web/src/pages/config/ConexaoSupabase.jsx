@@ -5,6 +5,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { ValidadeToken } from './ValidadeToken.jsx';
 
 // O CRM só lê o Supabase: nome, região e se o projeto está no ar ou pausado. Um token por conta.
 export function ConexaoSupabase() {
@@ -33,9 +34,12 @@ export function ConexaoSupabase() {
       {atual?.contas?.length > 0 && (
         <ul className="contas">
           {atual.contas.map((conta) => (
-            <li key={conta.id} className="form--linha">
-              <span>{conta.email}</span>
-              <button type="button" className="btn" aria-label={`Remover ${conta.email}`} disabled={enviando} onClick={() => remover(conta)}>Remover</button>
+            <li key={conta.id}>
+              <div className="form--linha">
+                <span>{conta.email}</span>
+                <button type="button" className="btn" aria-label={`Remover ${conta.email}`} disabled={enviando} onClick={() => remover(conta)}>Remover</button>
+              </div>
+              <ValidadeToken servico="supabase" contaId={conta.id} />
             </li>
           ))}
         </ul>

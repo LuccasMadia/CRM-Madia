@@ -1037,3 +1037,8 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 
 .contas { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
 .contas li { justify-content: space-between; }
+
+.validade { margin: 8px 0 16px; display: grid; gap: 8px; }
+.validade__situacao { margin: 0; font-size: 0.9rem; color: var(--texto-suave); }
+.validade__situacao--atencao { color: var(--tag-ambar); }
+.validade__situacao--erro { color: var(--tag-vermelho); }
