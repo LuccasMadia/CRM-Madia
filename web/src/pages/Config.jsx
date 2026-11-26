@@ -10,6 +10,7 @@ import { CadastroLista } from './config/CadastroLista.jsx';
 import { ConexaoInstagram } from './config/ConexaoInstagram.jsx';
 import { ConexaoVercel } from './config/ConexaoVercel.jsx';
 import { ConexaoGithub } from './config/ConexaoGithub.jsx';
+import { ConexaoFigma } from './config/ConexaoFigma.jsx';
 import { ConexaoAgenda } from './config/ConexaoAgenda.jsx';
 import { ModelosTarefas } from './config/ModelosTarefas.jsx';
 
@@ -22,6 +23,7 @@ export function Config() {
       <ConexaoInstagram />
       <ConexaoVercel />
       <ConexaoGithub />
+      <ConexaoFigma />
       <ConexaoAgenda />
       {config && <Repositorio inicial={config} />}
       {config && <PastaCerebro inicial={config} />}

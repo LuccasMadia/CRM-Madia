@@ -14,6 +14,7 @@ import { ETAPAS, ETAPAS_FICTICIO, ROTULO_ETAPA, ROTULO_MOTIVO_PERDA } from '../.
 import { CobrancaMensal, comDiaSugerido } from './CobrancaMensal.jsx';
 import { PreviaSite } from './PreviaSite.jsx';
 import { CartaoGithub } from './CartaoGithub.jsx';
+import { CartaoFigma } from './CartaoFigma.jsx';
 
 function valoresIniciais(projeto) {
   return {
@@ -159,6 +160,7 @@ export function AbaGeral({ projeto, onSalvo }) {
       <aside className="visao-geral__lado">
         <PreviaSite projeto={projeto} />
         <CartaoGithub projeto={projeto} />
+        <CartaoFigma projeto={projeto} />
         <section className="cartao">
           {/* a etapa também muda aqui, para desfazer algo (ex.: voltar de Entregue); o Salvar grava */}
           <Campo rotulo="Etapa" nome="etapa" erros={erros}>

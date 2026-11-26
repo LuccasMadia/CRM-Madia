@@ -54,6 +54,12 @@ const DESENHOS = {
     </>
   ),
   vercel: <path d="M12 4 22 20H2z" />,
+  figma: (
+    <>
+      <path d="M8.5 2H12v7H8.5a3.5 3.5 0 0 1 0-7ZM12 2h3.5a3.5 3.5 0 0 1 0 7H12ZM8.5 9H12v7H8.5a3.5 3.5 0 0 1 0-7ZM8.5 16H12v3.5A3.5 3.5 0 1 1 8.5 16Z" />
+      <circle cx="15.5" cy="12.5" r="3.5" />
+    </>
+  ),
   github: (
     <>
       <circle cx="6" cy="6" r="2.25" />

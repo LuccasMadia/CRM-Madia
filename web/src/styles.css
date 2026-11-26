@@ -1031,3 +1031,6 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 .github-auditoria__sugestao { display: inline-flex; align-items: center; gap: 8px; color: var(--texto-suave); }
 
 .tabela-rolavel { overflow-x: auto; }
+
+.figma__nome { margin: 0; font-weight: 600; }
+.figma__edicao { margin: 0 0 12px; color: var(--texto-suave); font-size: 0.9rem; }
