@@ -31,6 +31,8 @@ import { rotasGithub } from './routes/github.js';
 import { criarServicoGithub } from './github/servico.js';
 import { rotasFigma } from './routes/figma.js';
 import { criarServicoFigma } from './figma/servico.js';
+import { rotasSupabase } from './routes/supabase.js';
+import { criarServicoSupabase } from './supabase/servico.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
   const app = express();
@@ -39,7 +41,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   const monitorSites = criarMonitor({ db, fetch });
   const github = criarServicoGithub({ db, fetch, hoje });
   const figma = criarServicoFigma({ db, fetch });
-  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github, figma };
+  const supabase = criarServicoSupabase({ db, fetch });
+  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github, figma, supabase };
   app.locals.monitorSites = monitorSites;
   app.locals.sincronizarInstagram = sincronizarInstagram;
   app.locals.publicador = publicador;
@@ -70,6 +73,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasAgenda(ctx));
   app.use('/api', rotasGithub(ctx));
   app.use('/api', rotasFigma(ctx));
+  app.use('/api', rotasSupabase(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));
