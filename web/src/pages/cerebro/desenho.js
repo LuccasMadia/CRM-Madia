@@ -6,9 +6,21 @@ const FOLGA_TELA = 20; // px além da borda que ainda são desenhados
 const MEIO_MEMORIA = (R.memoriaDe + R.memoriaAte) / 2;
 
 // Quais acesos ganham nome: poucos, todos; muitos (hub), só o ativo e projetos/clientes.
-const ICONE_GITHUB = typeof Path2D === 'undefined' ? null : new Path2D(
-  'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z',
-);
+// Logos dos apps, desenhados no hexágono. lado = tamanho da grade do desenho; preenchido ou só contorno.
+const LOGOS = typeof Path2D === 'undefined' ? {} : {
+  github: { lado: 16, preencher: true, caminho: new Path2D('M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z') },
+  vercel: { lado: 24, preencher: true, caminho: new Path2D('M12 3 22 20H2Z') },
+  supabase: { lado: 24, preencher: true, caminho: new Path2D('M13.5 2 4 14h7l-.5 8L20 10h-7Z') },
+  instagram: {
+    lado: 24,
+    caminho: new Path2D('M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4ZM16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM17.5 6.5h.01'),
+  },
+  figma: {
+    lado: 24,
+    caminho: new Path2D('M8.5 2H12v7H8.5a3.5 3.5 0 0 1 0-7ZM12 2h3.5a3.5 3.5 0 0 1 0 7H12ZM8.5 9H12v7H8.5a3.5 3.5 0 0 1 0-7ZM19 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0ZM8.5 16H12v3.5A3.5 3.5 0 1 1 8.5 16Z'),
+  },
+  gmail: { lado: 24, caminho: new Path2D('M3 6h18v12H3ZM3 6l9 7 9-7') },
+};
 
 export function idsComNome(acesos, ativo) {
   const todos = acesos.size <= 12;
@@ -237,12 +249,20 @@ export function desenhar(ctx, { tamanho, dpr, cam, cena, cores, ativo, ligados, 
     ctx.lineWidth = 1.25;
     ctx.stroke();
     ctx.fillStyle = item.conectado ? cores.primaria : cores.textoSuave;
-    if (item.id === 'github' && typeof Path2D !== 'undefined') {
-      // logo do GitHub (Octicons, 16x16) reduzido para caber no hexágono
+    const logo = LOGOS[item.id];
+    if (logo) {
       ctx.save();
       ctx.translate(x - 7, y - 7);
-      ctx.scale(14 / 16, 14 / 16);
-      ctx.fill(ICONE_GITHUB);
+      ctx.scale(14 / logo.lado, 14 / logo.lado);
+      if (logo.preencher) {
+        ctx.fill(logo.caminho);
+      } else {
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke(logo.caminho);
+      }
       ctx.restore();
     } else {
       ctx.fillText(item.nome.slice(0, 1).toUpperCase(), x, y);
