@@ -1017,3 +1017,17 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 
 /* Entregar direto do card em teste: o menu Mover fica escondido para quem usa mouse */
 .kanban__entregar { margin-top: 4px; }
+
+/* GitHub no projeto: nome do repositório com selo e gráfico de commits */
+.github__repo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font-weight: 600; overflow-wrap: anywhere; }
+.commits { display: block; height: 56px; }
+.commits__barra { fill: var(--primaria); }
+.commits__barra--vazia { fill: var(--borda); }
+.commits__aviso { margin: 0; color: var(--texto-suave); font-size: 0.9rem; }
+
+/* Visão GitHub de Serviços */
+.github-auditoria { display: grid; gap: 16px; }
+.github-auditoria__resumo { margin: 0; color: var(--texto-suave); font-size: 0.9rem; }
+.github-auditoria__sugestao { display: inline-flex; align-items: center; gap: 8px; color: var(--texto-suave); }
+
+.tabela-rolavel { overflow-x: auto; }

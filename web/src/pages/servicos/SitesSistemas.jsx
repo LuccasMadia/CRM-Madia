@@ -13,6 +13,7 @@ import { hojeISO } from '../../lib/datas.js';
 import { ROTULO_ETAPA } from '../../lib/rotulos.js';
 import { BolinhaStatus, textoStatus } from '../../lib/hospedagem.js';
 import { QuadroFunil } from './QuadroFunil.jsx';
+import { VisaoGithub } from './VisaoGithub.jsx';
 import { itensAtencaoSites } from './atencaoSites.js';
 import { notificar } from '../../lib/notificacoes.js';
 
@@ -134,7 +135,7 @@ function layoutSalvo() {
 
 const CHAVE_VISAO = 'crm.sitesVisao';
 // O id 'andamento' fica na URL e nas escolhas salvas; o rótulo é "Funil" para não confundir com a etapa "Versão final".
-const VISOES = [['andamento', 'Funil'], ['no_ar', 'No ar']];
+const VISOES = [['andamento', 'Funil'], ['no_ar', 'No ar'], ['github', 'GitHub']];
 // Links e escolhas salvas antes da divisão por momento: o funil virou "Em andamento" e a lista, "No ar".
 const VISOES_ANTIGAS = { funil: 'andamento', lista: 'no_ar' };
 const MODOS = [['reais', 'Reais'], ['privados', 'Privados'], ['ficticios', 'Fictícios'], ['perdidos', 'Perdidos']];
@@ -180,6 +181,8 @@ export function SitesSistemas() {
   const parcelas = useCarregar(() => api('/parcelas?servico=site_sistema'), []);
   const hospedagens = useCarregar(() => api('/hospedagem/status'), []);
   const mensalidades = useCarregar(() => api('/financeiro/mensalidades'), []);
+  // Fora de `fontes`: erro do GitHub não pode aparecer na faixa nem atrasá-la.
+  const github = useCarregar(() => api('/github/atencao').catch(() => ({ alertas: [] })), []);
   const fontes = [projetos, parcelas, hospedagens, mensalidades];
   // Uma fonte que falhou só deixa de gerar aviso; a faixa espera as outras terminarem.
   const atencao = fontes.every((f) => f.dados || f.erro)
@@ -189,6 +192,7 @@ export function SitesSistemas() {
       hospedagens: hospedagens.dados ?? [],
       mensalidades: mensalidades.dados?.itens ?? [],
       hoje: hojeISO(),
+      githubAlertas: github.dados?.alertas ?? [],
     })
     : null;
 
@@ -218,9 +222,11 @@ export function SitesSistemas() {
           ))}
         </div>
         <div className="barra-visao__filtros">
-          <select className="select-compacto" aria-label="Mostrar" value={modoAtual} onChange={(e) => setModo(e.target.value)}>
-            {MODOS.filter(([chave]) => visao === 'andamento' || chave !== 'perdidos').map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
-          </select>
+          {visao !== 'github' && (
+            <select className="select-compacto" aria-label="Mostrar" value={modoAtual} onChange={(e) => setModo(e.target.value)}>
+              {MODOS.filter(([chave]) => visao === 'andamento' || chave !== 'perdidos').map(([chave, rotulo]) => <option key={chave} value={chave}>{rotulo}</option>)}
+            </select>
+          )}
           {visao === 'andamento' && (
             <div className="segmentado" role="group" aria-label="Formato do quadro">
               {LAYOUTS.map(([chave, rotulo]) => (
@@ -228,14 +234,14 @@ export function SitesSistemas() {
               ))}
             </div>
           )}
-          {visao !== 'andamento' && <FiltrosNoAr filtros={filtros} onMudar={(mudou) => setFiltros((f) => ({ ...f, ...mudou }))} />}
+          {visao === 'no_ar' && <FiltrosNoAr filtros={filtros} onMudar={(mudou) => setFiltros((f) => ({ ...f, ...mudou }))} />}
         </div>
         <button type="button" className="btn btn--primario barra-visao__acao" onClick={() => setCriando(true)}>+ Oportunidade</button>
       </div>
-      <FiltroCategorias categorias={categorias.dados} valor={filtros.categoriaId} onMudar={(categoriaId) => setFiltros((f) => ({ ...f, categoriaId }))} />
-      {visao === 'andamento'
-        ? <QuadroFunil layout={layout} modo={modoAtual} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />
-        : <ListaNoAr modo={modoAtual} filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
+      {visao !== 'github' && <FiltroCategorias categorias={categorias.dados} valor={filtros.categoriaId} onMudar={(categoriaId) => setFiltros((f) => ({ ...f, categoriaId }))} />}
+      {visao === 'github' && <VisaoGithub />}
+      {visao === 'andamento' && <QuadroFunil layout={layout} modo={modoAtual} categoriaId={filtros.categoriaId} onMudou={projetos.recarregar} />}
+      {visao === 'no_ar' && <ListaNoAr modo={modoAtual} filtros={filtros} hospedagens={hospedagens.dados} mensalidades={mensalidades.dados?.itens} />}
       {criando && (
         <Modal titulo="Nova oportunidade" onFechar={() => setCriando(false)}>
           <FormOportunidade onSalvar={criar} ficticioFixo={ficticio} privadoFixo={privado} />

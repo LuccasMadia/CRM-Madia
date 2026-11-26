@@ -81,7 +81,7 @@ const SITUACOES_SEM_ACEITE = ['rascunho', 'enviado', 'recusado'];
 const invalido = (campo, mensagem) => new ErroValidacao([{ campo, mensagem }]);
 const num = (v) => Number(v) || 0;
 
-export function rotasOrcamentos({ db, hoje }) {
+export function rotasOrcamentos({ db, hoje, github }) {
   const r = Router();
   const clientes = repoClientes(db);
   const orcamentos = repoOrcamentos(db);
@@ -446,6 +446,7 @@ export function rotasOrcamentos({ db, hoje }) {
           servico: 'site_sistema', titulo: e.item.nome, descricao: e.item.frase || null,
           etapa: ETAPA_DO_DESTINO.site, valor_total_centavos: valor,
         }, e.parcelas);
+        github.agendarRepositorio(projeto.id);
         const categoria = categoriaDo(e.item.nome);
         if (categoria) projetosCategorias.substituir(projeto.id, [categoria]);
         if (num(e.item.valor_mensal_centavos) > 0) ligarMensalidade(projeto, e.item.valor_mensal_centavos, e.dia_vencimento);

@@ -42,6 +42,19 @@ describe('/api/projetos', () => {
     expect(definido.teste_inicio).toBe('2026-09-20');
   });
 
+  it('github_repo aceita dono/nome, rejeita formato inválido e repetido', async () => {
+    const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' }).expect(201)).body;
+    const b = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' }).expect(201)).body;
+    const ok = (await ctx.http.put(`/api/projetos/${a.id}`).send({ github_repo: 'lucas/site-ana' }).expect(200)).body;
+    expect(ok.github_repo).toBe('lucas/site-ana');
+    const ruim = await ctx.http.put(`/api/projetos/${b.id}`).send({ github_repo: 'sem-barra' }).expect(400);
+    expect(ruim.body.erros[0].campo).toBe('github_repo');
+    const repetido = await ctx.http.put(`/api/projetos/${b.id}`).send({ github_repo: 'lucas/site-ana' }).expect(400);
+    expect(repetido.body.erros[0]).toMatchObject({ campo: 'github_repo', mensagem: 'Esse repositório já está ligado a outro projeto' });
+    const limpo = (await ctx.http.put(`/api/projetos/${a.id}`).send({ github_repo: '' }).expect(200)).body;
+    expect(limpo.github_repo).toBeNull();
+  });
+
   it('voltar de Entregue apaga a data de entrega', async () => {
     const projeto = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Site' }).expect(201)).body;
     const entregue = (await ctx.http.put(`/api/projetos/${projeto.id}`).send({ etapa: 'entregue' }).expect(200)).body;

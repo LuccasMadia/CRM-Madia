@@ -44,6 +44,7 @@ const REGRAS_PROJETO = {
   prototipo_pronto: { tipo: 'bool', padrao: 0 },
   teste_inicio: { tipo: 'data' },
   loja_id: { tipo: 'inteiro', min: 1 },
+  github_repo: { tipo: 'repositorio' },
 };
 
 const REGRA_VENCIMENTO = { vencimento: { tipo: 'data' } };
@@ -100,7 +101,7 @@ function validarServicos(servicosBrutos, { modelosRepo, db, clienteId = null, pr
   });
 }
 
-export function rotasProjetos({ db, hoje }) {
+export function rotasProjetos({ db, hoje, github }) {
   const clientes = repoClientes(db);
   const projetos = repoProjetos(db);
   const projetosServicos = repoProjetosServicos(db);
@@ -135,6 +136,12 @@ export function rotasProjetos({ db, hoje }) {
       if (passo.acao === 'remover') parcelas.remover(passo.id);
       else parcelas.atualizar(passo.id, { valor_centavos: passo.valor_centavos, vencimento: passo.vencimento });
     }
+  }
+
+  function exigirRepoLivre(repo, idAtual) {
+    if (!repo) return;
+    const outro = db.prepare('SELECT id FROM projetos WHERE github_repo = ? AND id IS NOT ?').get(repo, idAtual ?? null);
+    if (outro) throw new ErroValidacao([{ campo: 'github_repo', mensagem: 'Esse repositório já está ligado a outro projeto' }]);
   }
 
   function exigirCliente(clienteId) {
@@ -332,12 +339,15 @@ export function rotasProjetos({ db, hoje }) {
         const cliente = clientes.criar(dadosCliente);
         return criarProjetoCompleto({ ...dados, cliente_id: cliente.id });
       });
+      github.agendarRepositorio(criado.id);
       return res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
     }
     const dados = prepararDados(aplicarRegrasProjeto(null, validar(corpo, REGRAS_PROJETO), hoje()));
     exigirCliente(dados.cliente_id);
     exigirLojaDoCliente(db, dados.loja_id, dados.cliente_id);
+    exigirRepoLivre(dados.github_repo, null);
     const criado = emTransacao(db, () => criarProjetoCompleto(dados));
+    github.agendarRepositorio(criado.id);
     res.status(201).json(comServicos(projetos.obterComCliente(criado.id)));
   });
 
@@ -359,6 +369,7 @@ export function rotasProjetos({ db, hoje }) {
 
     const dadosBase = aplicarRegrasProjeto(atual, validar(corpo, REGRAS_PROJETO, { parcial: true }), hoje());
     const { vencimento } = validar(corpo, REGRA_VENCIMENTO, { parcial: true });
+    exigirRepoLivre(dadosBase.github_repo, atual.id);
     // o motivo só vale enquanto o projeto está perdido
     if (dadosBase.etapa !== undefined && dadosBase.etapa !== 'perdido') dadosBase.motivo_perda = null;
     if (dadosBase.privado) dadosBase.ficticio = 1;

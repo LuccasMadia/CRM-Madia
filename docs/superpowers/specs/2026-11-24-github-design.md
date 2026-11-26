@@ -36,7 +36,7 @@ Repositórios arquivados ou forks são listados, mas não geram alerta de órfã
 ## Restrições
 - Sem dependência nova: `fetch` para `https://api.github.com`, injetável nos testes, como o cliente do Vercel.
 - O token fica em `config.github_token` e entra na limpeza do backup (`server/routes/backup.js`), junto de `vercel_token` e `instagram_token`.
-- Token sugerido: fine-grained ou clássico só com acesso a repositórios; o aviso na tela diz que ele dá acesso aos privados e que deve ser exclusivo do CRM.
+- Token: clássico com o acesso `repo` (token fine-grained não cria repositórios em conta pessoal); o aviso na tela diz que ele dá acesso aos privados e que deve ser exclusivo do CRM.
 - Respeitar o limite de chamadas: cache em memória por 10 minutos para listas e commits, botão Atualizar para forçar.
 - Interface em português, tema escuro, responsivo.
 
