@@ -6,42 +6,48 @@ import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
 
-// O CRM só lê o Supabase: nome, região e se o projeto está no ar ou pausado.
+// O CRM só lê o Supabase: nome, região e se o projeto está no ar ou pausado. Um token por conta.
 export function ConexaoSupabase() {
   const carregado = useCarregar(() => api('/supabase'), []);
   const [estado, setEstado] = useState(null);
+  const [nome, setNome] = useState('');
   const [token, setToken] = useState('');
   const { erros, erro, enviando, executar } = useEnvio();
   const atual = estado ?? carregado.dados;
 
-  function conectar(e) {
+  function adicionar(e) {
     e.preventDefault();
     executar(async () => {
-      setEstado(await api('/supabase/conexao', { method: 'PUT', body: { token } }));
+      setEstado(await api('/supabase/contas', { method: 'POST', body: { nome, token } }));
+      setNome('');
       setToken('');
     });
   }
 
-  function desconectar() {
-    executar(async () => setEstado(await api('/supabase/conexao', { method: 'DELETE' })));
-  }
+  const remover = (conta) => executar(async () => setEstado(await api(`/supabase/contas/${conta.id}`, { method: 'DELETE' })));
 
   return (
     <section className="cartao">
       <h2 className="conexao__titulo"><Icone nome="supabase" tamanho={22} /> Supabase</h2>
       <Aviso erro={carregado.erro} />
-      {atual?.conectado && (
-        <div className="form--linha">
-          <p>Supabase conectado</p>
-          <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
-        </div>
+      {atual?.contas?.length > 0 && (
+        <ul className="contas">
+          {atual.contas.map((conta) => (
+            <li key={conta.id} className="form--linha">
+              <span>{conta.nome}</span>
+              <button type="button" className="btn" aria-label={`Remover ${conta.nome}`} disabled={enviando} onClick={() => remover(conta)}>Remover</button>
+            </li>
+          ))}
+        </ul>
       )}
-      {atual && !atual.conectado && (
-        <form className="form" onSubmit={conectar} noValidate>
+      {atual && (
+        <form className="form" onSubmit={adicionar} noValidate>
           <p>
-            O CRM só lê a lista dos seus projetos (nome, região e se estão no ar ou pausados) e nunca mexe nos dados.
-            O token fica salvo neste computador, no banco de dados do CRM, e não vai para o backup.
+            O plano gratuito do Supabase limita os projetos por conta, então adicione uma conta para cada token. O CRM só lê a
+            lista dos projetos (nome, região e se estão no ar ou pausados) e nunca mexe nos dados. Os tokens ficam salvos neste
+            computador, no banco de dados do CRM, e não vão para o backup.
           </p>
+          <Campo rotulo="Nome da conta" nome="nome" erros={erros} value={nome} onChange={(e) => setNome(e.target.value)} />
           <Campo
             rotulo="Token do Supabase"
             nome="token"
@@ -52,7 +58,7 @@ export function ConexaoSupabase() {
             onChange={(e) => setToken(e.target.value)}
           />
           <div className="form--linha">
-            <button className="btn btn--primario" disabled={enviando || !token.trim()}>Conectar</button>
+            <button className="btn btn--primario" disabled={enviando || !nome.trim() || !token.trim()}>Adicionar conta</button>
           </div>
         </form>
       )}
@@ -60,9 +66,10 @@ export function ConexaoSupabase() {
       <details>
         <summary>Como gerar o token</summary>
         <ol>
-          <li>Entre em supabase.com/dashboard/account/tokens.</li>
+          <li>Entre na conta do Supabase e abra supabase.com/dashboard/account/tokens.</li>
           <li>Clique em Generate new token e dê um nome (por exemplo, CRM).</li>
-          <li>Copie o token (começa com <code>sbp_</code>), cole aqui e clique em Conectar.</li>
+          <li>Copie o token (começa com <code>sbp_</code>), dê um nome à conta aqui, cole o token e clique em Adicionar conta.</li>
+          <li>Repita com cada uma das suas contas do Supabase: um token por conta.</li>
         </ol>
       </details>
     </section>

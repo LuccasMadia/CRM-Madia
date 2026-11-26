@@ -49,15 +49,16 @@ function Conteudo({ projeto }) {
       <h2 className="cartao__titulo">Supabase</h2>
       <Aviso erro={estado.erro} />
       {estado.dados && !conectado && (
-        <p>Conecte o Supabase para ver se o projeto está no ar ou pausado. <Link to="/configuracoes">Conectar o Supabase</Link></p>
+        <p>Adicione uma conta do Supabase para ver se o projeto está no ar ou pausado. <Link to="/configuracoes">Conectar o Supabase</Link></p>
       )}
       {conectado && !mostrandoProjeto && (
         <form className="form" onSubmit={salvar} noValidate>
           <Aviso erro={lista.erro} />
+          {(lista.dados?.erros ?? []).map((e) => <Aviso key={e.conta_id} erro={{ message: `Conta ${e.conta}: ${e.erro}` }} />)}
           <Campo rotulo="Projeto do Supabase" nome="supabase_ref" erros={erros}>
             <select value={escolhido} onChange={(e) => setEscolhido(e.target.value)}>
               <option value="">Escolha um projeto</option>
-              {(lista.dados ?? []).map((p) => <option key={p.ref} value={p.ref}>{`${p.nome} (${p.regiao})`}</option>)}
+              {(lista.dados?.projetos ?? []).map((p) => <option key={p.ref} value={p.ref}>{`${p.nome} (${p.regiao}) · ${p.conta}`}</option>)}
             </select>
           </Campo>
           <div className="form--linha">
@@ -71,10 +72,10 @@ function Conteudo({ projeto }) {
           {dados?.encontrado && (
             <>
               <p className="figma__nome">{dados.nome}</p>
-              <p className="figma__edicao"><span>{dados.regiao}</span> <Selo estado={dados.estado} /></p>
+              <p className="figma__edicao"><span>{`${dados.regiao} · ${dados.conta}`}</span> <Selo estado={dados.estado} /></p>
             </>
           )}
-          {conectado && dados && !dados.encontrado && <p className="commits__aviso">Projeto não encontrado na sua conta do Supabase</p>}
+          {conectado && dados && !dados.encontrado && <p className="commits__aviso">Projeto não encontrado nas suas contas do Supabase</p>}
           <Aviso erro={detalhe.erro} />
           <div className="form--linha">
             <a className="btn btn--primario" href={dados?.link ?? `https://supabase.com/dashboard/project/${ref}`} target="_blank" rel="noopener noreferrer">Abrir no Supabase</a>
