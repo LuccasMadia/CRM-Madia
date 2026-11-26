@@ -54,6 +54,7 @@ const DESENHOS = {
     </>
   ),
   vercel: <path d="M12 4 22 20H2z" />,
+  supabase: <path d="M13.5 2 4 14h7l-.5 8L20 10h-7Z" />,
   figma: (
     <>
       <path d="M8.5 2H12v7H8.5a3.5 3.5 0 0 1 0-7ZM12 2h3.5a3.5 3.5 0 0 1 0 7H12ZM8.5 9H12v7H8.5a3.5 3.5 0 0 1 0-7ZM8.5 16H12v3.5A3.5 3.5 0 1 1 8.5 16Z" />
