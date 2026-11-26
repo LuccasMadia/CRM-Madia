@@ -11,7 +11,7 @@ export function criarServicoSupabase({ db, fetch }) {
   const cache = criarCache(CINCO_MINUTOS);
   const estado = () => {
     const contas = lerContas(db);
-    return { conectado: contas.length > 0, contas: contas.map(({ id, nome }) => ({ id, nome })) };
+    return { conectado: contas.length > 0, contas: contas.map(({ id, email }) => ({ id, email })) };
   };
 
   // Uma conta com erro vai para `erros`; as outras continuam listando.
@@ -21,10 +21,10 @@ export function criarServicoSupabase({ db, fetch }) {
     for (const conta of lerContas(db)) {
       try {
         const deConta = await cache.obter(`projetos:${conta.id}`, () => criarClienteSupabase({ token: conta.token, fetch }).listarProjetos(), { forcar });
-        lista.push(...deConta.map((p) => ({ ...p, conta: conta.nome, conta_id: conta.id })));
+        lista.push(...deConta.map((p) => ({ ...p, conta: conta.email, conta_id: conta.id })));
       } catch (erro) {
         if (!(erro instanceof ErroSupabase)) throw erro;
-        erros.push({ conta_id: conta.id, conta: conta.nome, erro: erro.message });
+        erros.push({ conta_id: conta.id, conta: conta.email, erro: erro.message });
       }
     }
     return { projetos: lista, erros };

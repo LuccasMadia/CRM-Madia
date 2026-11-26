@@ -7,16 +7,17 @@ export function salvarContas(db, contas) {
   else definirConfig(db, CHAVE, JSON.stringify(contas));
 }
 
-// Contas do Supabase: [{ id, nome, token }]. O token único da versão anterior vira a conta "Principal".
+// Contas do Supabase: [{ id, email, token }]. O token único da versão anterior vira a conta "Principal" (sem e-mail conhecido).
 export function lerContas(db) {
   const antigo = obterConfig(db, 'supabase_token');
   if (antigo && !obterConfig(db, CHAVE)) {
-    salvarContas(db, [{ id: 1, nome: 'Principal', token: antigo }]);
+    salvarContas(db, [{ id: 1, email: 'Principal', token: antigo }]);
   }
   if (antigo) db.prepare("DELETE FROM config WHERE chave = 'supabase_token'").run();
   try {
     const lista = JSON.parse(obterConfig(db, CHAVE) ?? '[]');
-    return Array.isArray(lista) ? lista : [];
+    // contas salvas antes de existir o e-mail tinham `nome`
+    return Array.isArray(lista) ? lista.map(({ nome, ...conta }) => ({ ...conta, email: conta.email ?? nome })) : [];
   } catch {
     return [];
   }

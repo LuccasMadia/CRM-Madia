@@ -10,7 +10,7 @@ import { Aviso } from '../../components/Aviso.jsx';
 export function ConexaoSupabase() {
   const carregado = useCarregar(() => api('/supabase'), []);
   const [estado, setEstado] = useState(null);
-  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const { erros, erro, enviando, executar } = useEnvio();
   const atual = estado ?? carregado.dados;
@@ -18,8 +18,8 @@ export function ConexaoSupabase() {
   function adicionar(e) {
     e.preventDefault();
     executar(async () => {
-      setEstado(await api('/supabase/contas', { method: 'POST', body: { nome, token } }));
-      setNome('');
+      setEstado(await api('/supabase/contas', { method: 'POST', body: { email, token } }));
+      setEmail('');
       setToken('');
     });
   }
@@ -34,8 +34,8 @@ export function ConexaoSupabase() {
         <ul className="contas">
           {atual.contas.map((conta) => (
             <li key={conta.id} className="form--linha">
-              <span>{conta.nome}</span>
-              <button type="button" className="btn" aria-label={`Remover ${conta.nome}`} disabled={enviando} onClick={() => remover(conta)}>Remover</button>
+              <span>{conta.email}</span>
+              <button type="button" className="btn" aria-label={`Remover ${conta.email}`} disabled={enviando} onClick={() => remover(conta)}>Remover</button>
             </li>
           ))}
         </ul>
@@ -47,7 +47,7 @@ export function ConexaoSupabase() {
             lista dos projetos (nome, região e se estão no ar ou pausados) e nunca mexe nos dados. Os tokens ficam salvos neste
             computador, no banco de dados do CRM, e não vão para o backup.
           </p>
-          <Campo rotulo="Nome da conta" nome="nome" erros={erros} value={nome} onChange={(e) => setNome(e.target.value)} />
+          <Campo rotulo="E-mail da conta" nome="email" type="email" erros={erros} value={email} onChange={(e) => setEmail(e.target.value)} />
           <Campo
             rotulo="Token do Supabase"
             nome="token"
@@ -58,7 +58,7 @@ export function ConexaoSupabase() {
             onChange={(e) => setToken(e.target.value)}
           />
           <div className="form--linha">
-            <button className="btn btn--primario" disabled={enviando || !nome.trim() || !token.trim()}>Adicionar conta</button>
+            <button className="btn btn--primario" disabled={enviando || !email.trim() || !token.trim()}>Adicionar conta</button>
           </div>
         </form>
       )}
@@ -68,7 +68,7 @@ export function ConexaoSupabase() {
         <ol>
           <li>Entre na conta do Supabase e abra supabase.com/dashboard/account/tokens.</li>
           <li>Clique em Generate new token e dê um nome (por exemplo, CRM).</li>
-          <li>Copie o token (começa com <code>sbp_</code>), dê um nome à conta aqui, cole o token e clique em Adicionar conta.</li>
+          <li>Copie o token (começa com <code>sbp_</code>), digite aqui o e-mail dessa conta, cole o token e clique em Adicionar conta.</li>
           <li>Repita com cada uma das suas contas do Supabase: um token por conta.</li>
         </ol>
       </details>

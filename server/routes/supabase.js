@@ -15,10 +15,12 @@ export function rotasSupabase({ db, fetch, supabase }) {
   r.get('/supabase', (req, res) => res.json(supabase.estado()));
 
   r.post('/supabase/contas', async (req, res) => {
-    const { nome, token } = validar(req.body, { nome: { tipo: 'texto', obrigatorio: true }, token: { tipo: 'texto', obrigatorio: true } });
+    const { email: informado, token } = validar(req.body, { email: { tipo: 'texto', obrigatorio: true }, token: { tipo: 'texto', obrigatorio: true } });
+    const email = informado.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ErroValidacao([{ campo: 'email', mensagem: 'Informe um e-mail válido' }]);
     const contas = lerContas(db);
-    if (contas.some((c) => c.nome.toLowerCase() === nome.trim().toLowerCase())) {
-      throw new ErroValidacao([{ campo: 'nome', mensagem: 'Já existe uma conta com esse nome' }]);
+    if (contas.some((c) => c.email.toLowerCase() === email.toLowerCase())) {
+      throw new ErroValidacao([{ campo: 'email', mensagem: 'Já existe uma conta com esse e-mail' }]);
     }
     try {
       await criarClienteSupabase({ token, fetch }).listarProjetos();
@@ -27,7 +29,7 @@ export function rotasSupabase({ db, fetch, supabase }) {
       throw falha(erro);
     }
     const id = contas.reduce((maior, c) => Math.max(maior, c.id), 0) + 1;
-    salvarContas(db, [...contas, { id, nome: nome.trim(), token }]);
+    salvarContas(db, [...contas, { id, email, token }]);
     supabase.limparCache();
     res.status(201).json(supabase.estado());
   });
