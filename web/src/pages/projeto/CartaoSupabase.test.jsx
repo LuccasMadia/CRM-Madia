@@ -36,7 +36,8 @@ describe('CartaoSupabase', () => {
     });
     renderizar(<CartaoSupabase projeto={projeto({ ficticio: 1 })} />);
     const user = userEvent.setup();
-    await user.selectOptions(await screen.findByLabelText('Projeto do Supabase'), REF);
+    await screen.findByRole('option', { name: /Sistema Ana/ });
+    await user.selectOptions(screen.getByLabelText('Projeto do Supabase'), REF);
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByText('Sistema Ana')).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ supabase_ref: REF });

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SitesSistemas } from './SitesSistemas.jsx';
-import { mockApi as mockApiBase } from '../../test/mockApi.js';
+import { mockApi as mockApiBase, resposta } from '../../test/mockApi.js';
 import { renderizar } from '../../test/renderizar.jsx';
 import { hojeISO } from '../../lib/datas.js';
 
@@ -307,6 +307,27 @@ describe('SitesSistemas', () => {
     expect(perigo).toHaveClass('pede-atencao__item--perigo');
     expect(perigo).toHaveAttribute('href', '/projetos/1');
     expect(within(faixa).getByRole('link', { name: 'Loja Edu sem commit há 35 dias' })).toHaveClass('pede-atencao__item--atencao');
+  });
+
+  it('Pede atenção: Supabase pausado entra na faixa, com perigo quando o projeto já foi entregue', async () => {
+    mockApi({
+      'GET /supabase/atencao': { alertas: [
+        { codigo: 'supabase_pausado_entregue', texto: 'Loja Bia já foi entregue e o Supabase está pausado', link: '/projetos/3' },
+        { codigo: 'supabase_pausado', texto: 'Sistema Ana está pausado no Supabase', link: '/projetos/1' },
+      ] },
+    });
+    abrir();
+    const faixa = await screen.findByRole('region', { name: 'Pede atenção' });
+    const perigo = await within(faixa).findByRole('link', { name: 'Loja Bia já foi entregue e o Supabase está pausado' });
+    expect(perigo).toHaveClass('pede-atencao__item--perigo');
+    expect(perigo).toHaveAttribute('href', '/projetos/3');
+    expect(within(faixa).getByRole('link', { name: 'Sistema Ana está pausado no Supabase' })).toHaveClass('pede-atencao__item--atencao');
+  });
+
+  it('Supabase fora do ar não derruba a faixa nem a tela', async () => {
+    mockApi({ 'GET /supabase/atencao': resposta(500, { erro: 'falhou' }) });
+    abrir();
+    expect(await screen.findByRole('region', { name: 'Pede atenção' })).toBeInTheDocument();
   });
 
   it('o card mostra de quem é a vez e há quantos dias está na etapa', async () => {
