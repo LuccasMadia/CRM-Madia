@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { definirConfig } from '../repos/config.js';
 import { repoProjetos } from '../repos/projetos.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { criarClienteSupabase, ErroSupabase } from '../supabase/cliente.js';
+import { lerContas, salvarContas } from '../supabase/contas.js';
 
 export function rotasSupabase({ db, fetch, supabase }) {
   const projetos = repoProjetos(db);
@@ -14,21 +14,29 @@ export function rotasSupabase({ db, fetch, supabase }) {
 
   r.get('/supabase', (req, res) => res.json(supabase.estado()));
 
-  r.put('/supabase/conexao', async (req, res) => {
-    const { token } = validar(req.body, { token: { tipo: 'texto', obrigatorio: true } });
+  r.post('/supabase/contas', async (req, res) => {
+    const { nome, token } = validar(req.body, { nome: { tipo: 'texto', obrigatorio: true }, token: { tipo: 'texto', obrigatorio: true } });
+    const contas = lerContas(db);
+    if (contas.some((c) => c.nome.toLowerCase() === nome.trim().toLowerCase())) {
+      throw new ErroValidacao([{ campo: 'nome', mensagem: 'Já existe uma conta com esse nome' }]);
+    }
     try {
       await criarClienteSupabase({ token, fetch }).listarProjetos();
     } catch (erro) {
       if (erro.tokenInvalido) throw new ErroValidacao([{ campo: 'token', mensagem: 'Token inválido ou sem permissão' }]);
       throw falha(erro);
     }
-    definirConfig(db, 'supabase_token', token);
+    const id = contas.reduce((maior, c) => Math.max(maior, c.id), 0) + 1;
+    salvarContas(db, [...contas, { id, nome: nome.trim(), token }]);
     supabase.limparCache();
-    res.json(supabase.estado());
+    res.status(201).json(supabase.estado());
   });
 
-  r.delete('/supabase/conexao', (req, res) => {
-    db.prepare("DELETE FROM config WHERE chave = 'supabase_token'").run();
+  r.delete('/supabase/contas/:id', (req, res) => {
+    const id = lerId(req.params.id);
+    const contas = lerContas(db);
+    if (!contas.some((c) => c.id === id)) throw naoEncontrado('Conta');
+    salvarContas(db, contas.filter((c) => c.id !== id));
     supabase.limparCache();
     res.json(supabase.estado());
   });

@@ -1,29 +1,48 @@
-import { obterConfig } from '../repos/config.js';
 import { repoProjetos } from '../repos/projetos.js';
-import { criarClienteSupabase } from './cliente.js';
+import { criarClienteSupabase, ErroSupabase } from './cliente.js';
 import { criarCache } from '../github/cache.js';
+import { lerContas } from './contas.js';
 
 const CINCO_MINUTOS = 5 * 60 * 1000;
 
-// Tudo que o CRM lê do Supabase passa por aqui. Só leitura: nada é pausado, restaurado ou criado.
+// Tudo que o CRM lê do Supabase passa por aqui, conta por conta. Só leitura: nada é pausado, restaurado ou criado.
 export function criarServicoSupabase({ db, fetch }) {
   const projetosDoCrm = repoProjetos(db);
   const cache = criarCache(CINCO_MINUTOS);
-  const token = () => obterConfig(db, 'supabase_token');
-  const estado = () => ({ conectado: Boolean(token()) });
-  const projetos = ({ forcar = false } = {}) => cache.obter('projetos', () => criarClienteSupabase({ token: token(), fetch }).listarProjetos(), { forcar });
+  const estado = () => {
+    const contas = lerContas(db);
+    return { conectado: contas.length > 0, contas: contas.map(({ id, nome }) => ({ id, nome })) };
+  };
 
-  // Projeto que sumiu da conta vira encontrado:false, não erro.
-  async function detalheProjeto(projeto, { forcar = false } = {}) {
-    if (!projeto.supabase_ref) return { encontrado: false };
-    const achado = (await projetos({ forcar })).find((p) => p.ref === projeto.supabase_ref);
-    if (!achado) return { encontrado: false };
-    return { encontrado: true, nome: achado.nome, regiao: achado.regiao, estado: achado.estado, link: achado.link };
+  // Uma conta com erro vai para `erros`; as outras continuam listando.
+  async function projetos({ forcar = false } = {}) {
+    const lista = [];
+    const erros = [];
+    for (const conta of lerContas(db)) {
+      try {
+        const deConta = await cache.obter(`projetos:${conta.id}`, () => criarClienteSupabase({ token: conta.token, fetch }).listarProjetos(), { forcar });
+        lista.push(...deConta.map((p) => ({ ...p, conta: conta.nome, conta_id: conta.id })));
+      } catch (erro) {
+        if (!(erro instanceof ErroSupabase)) throw erro;
+        erros.push({ conta_id: conta.id, conta: conta.nome, erro: erro.message });
+      }
+    }
+    return { projetos: lista, erros };
   }
 
-  // Projetos reais (não fictícios, não perdidos) ligados a um projeto pausado no Supabase.
+  // Projeto que sumiu vira encontrado:false; mas se alguma conta falhou não dá para afirmar isso, então o erro sobe.
+  async function detalheProjeto(projeto, { forcar = false } = {}) {
+    if (!projeto.supabase_ref) return { encontrado: false };
+    const { projetos: lista, erros } = await projetos({ forcar });
+    const achado = lista.find((p) => p.ref === projeto.supabase_ref);
+    if (achado) return { encontrado: true, nome: achado.nome, regiao: achado.regiao, estado: achado.estado, link: achado.link, conta: achado.conta };
+    if (erros.length) throw new ErroSupabase(`Conta ${erros[0].conta}: ${erros[0].erro}`);
+    return { encontrado: false };
+  }
+
+  // Projetos reais (não fictícios, não perdidos) ligados a um projeto pausado em qualquer conta.
   async function alertas() {
-    const pausados = new Set((await projetos()).filter((p) => p.estado === 'pausado').map((p) => p.ref));
+    const pausados = new Set((await projetos()).projetos.filter((p) => p.estado === 'pausado').map((p) => p.ref));
     return projetosDoCrm.listar()
       .filter((p) => p.supabase_ref && pausados.has(p.supabase_ref) && !p.ficticio && p.etapa !== 'perdido')
       .map((p) => (p.etapa === 'entregue'

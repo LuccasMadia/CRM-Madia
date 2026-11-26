@@ -123,7 +123,7 @@ describe('GET /api/cerebro', () => {
       { id: 'vercel', nome: 'Vercel', para_que: 'Hospedagem', conexao: 'crm:vercel_token' },
       { id: 'figma', nome: 'Figma', para_que: 'Telas', conexao: 'crm:figma_token' },
       { id: 'github', nome: 'GitHub', para_que: 'Código', conexao: 'crm:github_token' },
-      { id: 'supabase', nome: 'Supabase', para_que: 'Banco', conexao: 'crm:supabase_token' },
+      { id: 'supabase', nome: 'Supabase', para_que: 'Banco', conexao: 'crm:supabase_contas' },
     ]));
     return dir;
   };
@@ -184,12 +184,12 @@ describe('GET /api/cerebro', () => {
     expect(depois.apps.find((a) => a.id === 'figma').conectado).toBe(true);
   });
 
-  it('o Supabase aparece conectado só depois de o token ser salvo no CRM', async () => {
+  it('o Supabase aparece conectado só depois de uma conta ser salva no CRM', async () => {
     const ctx = criarContexto({ hoje: '2026-09-23' });
     definirConfig(ctx.db, 'cerebro_path', pastaCerebro());
     const antes = (await ctx.http.get('/api/cerebro').expect(200)).body;
     expect(antes.apps.find((a) => a.id === 'supabase').conectado).toBe(false);
-    definirConfig(ctx.db, 'supabase_token', 'sbp_x');
+    definirConfig(ctx.db, 'supabase_contas', '[{"id":1,"nome":"Principal","token":"sbp_x"}]');
     const depois = (await ctx.http.get('/api/cerebro').expect(200)).body;
     expect(depois.apps.find((a) => a.id === 'supabase').conectado).toBe(true);
   });

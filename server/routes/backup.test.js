@@ -42,12 +42,14 @@ describe('copiarBanco', () => {
   it('a cópia do backup não leva o token do Supabase', () => {
     const { db } = criarContexto();
     definirConfig(db, 'supabase_token', 'sbp-segredo');
+    definirConfig(db, 'supabase_contas', '[{"id":1,"nome":"Principal","token":"sbp-segredo"}]');
     const copia = copiarBanco(db);
     try {
       const lida = new DatabaseSync(copia, { readOnly: true });
       const chaves = lida.prepare('SELECT chave FROM config').all().map((r) => r.chave);
       lida.close();
       expect(chaves).not.toContain('supabase_token');
+      expect(chaves).not.toContain('supabase_contas');
     } finally {
       rmSync(copia, { force: true });
     }

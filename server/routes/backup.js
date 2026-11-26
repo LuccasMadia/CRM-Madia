@@ -12,7 +12,7 @@ export function copiarBanco(db) {
   const copia = path.join(os.tmpdir(), `crm-backup-${Date.now()}.db`);
   db.exec(`VACUUM INTO '${copia.replaceAll("'", "''")}'`);
   const banco = new DatabaseSync(copia);
-  banco.exec("DELETE FROM config WHERE chave IN ('instagram_token', 'instagram_token_expira_em', 'vercel_token', 'github_token', 'github_usuario', 'figma_token', 'figma_usuario', 'supabase_token'); VACUUM;");
+  banco.exec("DELETE FROM config WHERE chave IN ('instagram_token', 'instagram_token_expira_em', 'vercel_token', 'github_token', 'github_usuario', 'figma_token', 'figma_usuario', 'supabase_token', 'supabase_contas'); VACUUM;");
   banco.close();
   return copia;
 }
