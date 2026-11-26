@@ -6,6 +6,10 @@ const FOLGA_TELA = 20; // px além da borda que ainda são desenhados
 const MEIO_MEMORIA = (R.memoriaDe + R.memoriaAte) / 2;
 
 // Quais acesos ganham nome: poucos, todos; muitos (hub), só o ativo e projetos/clientes.
+const ICONE_GITHUB = typeof Path2D === 'undefined' ? null : new Path2D(
+  'M8.25 6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM8.25 18a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM20.25 9a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM6 8.25v7.5M18 11.25c0 3-4 3-10.5 5.5',
+);
+
 export function idsComNome(acesos, ativo) {
   const todos = acesos.size <= 12;
   return [...acesos].filter((id) => id === ativo || todos || id.startsWith('projeto:') || id.startsWith('cliente:'));
@@ -233,7 +237,19 @@ export function desenhar(ctx, { tamanho, dpr, cam, cena, cores, ativo, ligados, 
     ctx.lineWidth = 1.25;
     ctx.stroke();
     ctx.fillStyle = item.conectado ? cores.primaria : cores.textoSuave;
-    ctx.fillText(item.nome.slice(0, 1).toUpperCase(), x, y);
+    if (item.id === 'github' && typeof Path2D !== 'undefined') {
+      // mesmo desenho do ícone de GitHub do CRM (ramificação), em 24x24 reduzido para caber no hexágono
+      ctx.save();
+      ctx.translate(x - 7, y - 7);
+      ctx.scale(14 / 24, 14 / 24);
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.stroke(ICONE_GITHUB);
+      ctx.restore();
+    } else {
+      ctx.fillText(item.nome.slice(0, 1).toUpperCase(), x, y);
+    }
   }
 
   // pontos da memória, já ordenados: histórico, vivo, pede ação (o urgente fica por cima)
