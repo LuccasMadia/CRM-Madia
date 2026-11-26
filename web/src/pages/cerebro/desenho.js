@@ -7,7 +7,7 @@ const MEIO_MEMORIA = (R.memoriaDe + R.memoriaAte) / 2;
 
 // Quais acesos ganham nome: poucos, todos; muitos (hub), só o ativo e projetos/clientes.
 const ICONE_GITHUB = typeof Path2D === 'undefined' ? null : new Path2D(
-  'M8.25 6a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM8.25 18a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM20.25 9a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0ZM6 8.25v7.5M18 11.25c0 3-4 3-10.5 5.5',
+  'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z',
 );
 
 export function idsComNome(acesos, ativo) {
@@ -238,14 +238,11 @@ export function desenhar(ctx, { tamanho, dpr, cam, cena, cores, ativo, ligados, 
     ctx.stroke();
     ctx.fillStyle = item.conectado ? cores.primaria : cores.textoSuave;
     if (item.id === 'github' && typeof Path2D !== 'undefined') {
-      // mesmo desenho do ícone de GitHub do CRM (ramificação), em 24x24 reduzido para caber no hexágono
+      // logo do GitHub (Octicons, 16x16) reduzido para caber no hexágono
       ctx.save();
       ctx.translate(x - 7, y - 7);
-      ctx.scale(14 / 24, 14 / 24);
-      ctx.strokeStyle = ctx.fillStyle;
-      ctx.lineWidth = 2.2;
-      ctx.lineCap = 'round';
-      ctx.stroke(ICONE_GITHUB);
+      ctx.scale(14 / 16, 14 / 16);
+      ctx.fill(ICONE_GITHUB);
       ctx.restore();
     } else {
       ctx.fillText(item.nome.slice(0, 1).toUpperCase(), x, y);
