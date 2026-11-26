@@ -61,7 +61,7 @@ export function ConexaoFigma() {
         <summary>Como gerar o token</summary>
         <ol>
           <li>Abra o Figma, clique no seu nome e vá em Settings → Security → Personal access tokens.</li>
-          <li>Generate new token, dê um nome (por exemplo, CRM) e marque só a leitura de arquivos (File content: Read-only).</li>
+          <li>Generate new token, dê um nome (por exemplo, CRM) e marque só os escopos <code>current_user:read</code> e <code>file_content:read</code>.</li>
           <li>Copie o token, cole aqui e clique em Conectar.</li>
         </ol>
       </details>
