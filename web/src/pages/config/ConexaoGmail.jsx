@@ -49,7 +49,7 @@ export function ConexaoGmail() {
             <Campo rotulo="Client Secret" nome="client_secret" erros={erros} type="password" autoComplete="off" value={segredo} onChange={(e) => setSegredo(e.target.value)} />
             <div className="form--linha">
               <button className="btn" disabled={enviando || !clientId.trim() || !segredo.trim()}>Salvar</button>
-              {atual.configurado && <a className="btn btn--primario" href="/api/gmail/autorizar">Conectar com o Google</a>}
+              {atual.configurado && <a className="btn btn--primario" href={`/api/gmail/autorizar?retorno=${encodeURIComponent(window.location.origin)}`}>Conectar com o Google</a>}
             </div>
           </form>
         </>

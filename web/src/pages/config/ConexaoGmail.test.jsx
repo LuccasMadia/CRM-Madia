@@ -19,7 +19,7 @@ describe('ConexaoGmail', () => {
     await user.type(screen.getByLabelText('Client Secret'), 'meu-segredo');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     const conectar = await screen.findByRole('link', { name: 'Conectar com o Google' });
-    expect(conectar).toHaveAttribute('href', '/api/gmail/autorizar');
+    expect(conectar).toHaveAttribute('href', `/api/gmail/autorizar?retorno=${encodeURIComponent(window.location.origin)}`);
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ client_id: 'meu-id', client_secret: 'meu-segredo' });
     expect(screen.getByLabelText('Client ID')).toHaveValue('');
   });

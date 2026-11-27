@@ -13,7 +13,7 @@ const CHAVES = ['gmail_client_id', 'gmail_client_secret', 'gmail_refresh_token',
 export function criarServicoGmail({ db, fetch }) {
   const cache = criarCache(CINCO_MINUTOS);
   const google = criarClienteGoogle({ fetch });
-  const estados = new Map(); // state → expira em (ms)
+  const estados = new Map(); // state → { expira (ms), retorno }
   let accessToken = null;
 
   const cfg = (chave) => obterConfig(db, chave);
@@ -32,19 +32,22 @@ export function criarServicoGmail({ db, fetch }) {
     cache.limpar();
   }
 
-  function iniciar() {
+  // Só volta para o próprio computador (em desenvolvimento a tela fica em outra porta que a da API).
+  const retornoLocal = (retorno) => (/^http:\/\/(127\.0\.0\.1|localhost):\d{1,5}$/.test(retorno ?? '') ? retorno : '');
+
+  function iniciar({ retorno } = {}) {
     if (!estado().configurado) throw new ErroHttp(409, 'Informe o Client ID e o Client Secret primeiro.');
     const agora = Date.now();
-    for (const [state, expira] of estados) if (expira <= agora) estados.delete(state);
+    for (const [state, pedido] of estados) if (pedido.expira <= agora) estados.delete(state);
     const state = randomUUID();
-    estados.set(state, agora + DEZ_MINUTOS);
+    estados.set(state, { expira: agora + DEZ_MINUTOS, retorno: retornoLocal(retorno) });
     return google.urlDeAutorizacao({ clientId: cfg('gmail_client_id'), redirectUri: REDIRECT_URI, state });
   }
 
   async function concluir({ codigo, state }) {
-    const expira = estados.get(state);
+    const pedido = estados.get(state);
     estados.delete(state);
-    if (!codigo || !expira || expira <= Date.now()) throw new ErroHttp(400, 'Pedido de conexão inválido ou expirado. Conecte de novo em Configurações → Gmail.');
+    if (!codigo || !pedido || pedido.expira <= Date.now()) throw new ErroHttp(400, 'Pedido de conexão inválido ou expirado. Conecte de novo em Configurações → Gmail.');
     const dados = await google.trocarCodigo({ clientId: cfg('gmail_client_id'), clientSecret: cfg('gmail_client_secret'), redirectUri: REDIRECT_URI, codigo });
     if (!dados.refresh_token) throw new ErroHttp(502, 'O Google não devolveu a autorização. Remova o acesso em myaccount.google.com/permissions e conecte de novo.');
     const usuario = await criarClienteGmail({ accessToken: dados.access_token, fetch }).usuario();
@@ -52,6 +55,7 @@ export function criarServicoGmail({ db, fetch }) {
     definirConfig(db, 'gmail_usuario', usuario);
     accessToken = dados.access_token;
     cache.limpar();
+    return pedido.retorno;
   }
 
   async function desconectar() {

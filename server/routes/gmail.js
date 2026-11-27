@@ -15,15 +15,16 @@ export function rotasGmail({ db, gmail }) {
     res.json(gmail.estado());
   });
 
-  r.get('/gmail/autorizar', (req, res) => res.redirect(gmail.iniciar()));
+  r.get('/gmail/autorizar', (req, res) => res.redirect(gmail.iniciar({ retorno: String(req.query.retorno ?? '') })));
 
   r.get('/gmail/callback', async (req, res) => {
+    let retorno;
     try {
-      await gmail.concluir({ codigo: String(req.query.code ?? ''), state: String(req.query.state ?? '') });
+      retorno = await gmail.concluir({ codigo: String(req.query.code ?? ''), state: String(req.query.state ?? '') });
     } catch (erro) {
       throw falha(erro);
     }
-    res.redirect('/configuracoes');
+    res.redirect(`${retorno}/configuracoes`);
   });
 
   r.delete('/gmail/conexao', async (req, res) => {

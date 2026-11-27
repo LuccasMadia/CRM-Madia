@@ -78,6 +78,21 @@ describe('conexão com o Gmail', () => {
     expect(JSON.stringify((await ctx.http.get('/api/gmail')).body)).not.toContain('refresh-segredo');
   });
 
+  it('depois de conectar volta para o endereço de onde o pedido partiu (só local)', async () => {
+    await credenciais();
+    const volta = async (retorno) => {
+      const state = new URL((await ctx.http.get(`/api/gmail/autorizar?retorno=${encodeURIComponent(retorno)}`)).headers.location).searchParams.get('state');
+      const res = await ctx.http.get(`/api/gmail/callback?code=cod&state=${state}`).expect(302);
+      await ctx.http.delete('/api/gmail/conexao');
+      await credenciais();
+      return res.headers.location;
+    };
+    expect(await volta('http://127.0.0.1:5173')).toBe('http://127.0.0.1:5173/configuracoes');
+    expect(await volta('http://localhost:5173')).toBe('http://localhost:5173/configuracoes');
+    expect(await volta('https://mal.exemplo.com')).toBe('/configuracoes');
+    expect(await volta('http://127.0.0.1:5173/../x')).toBe('/configuracoes');
+  });
+
   it('state desconhecido, repetido ou expirado é recusado e nada é salvo', async () => {
     await credenciais();
     await ctx.http.get('/api/gmail/callback?code=cod&state=inventado').expect(400);
