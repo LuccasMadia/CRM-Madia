@@ -34,6 +34,8 @@ import { criarServicoFigma } from './figma/servico.js';
 import { rotasSupabase } from './routes/supabase.js';
 import { criarServicoSupabase } from './supabase/servico.js';
 import { rotasConexoes } from './routes/conexoes.js';
+import { rotasGmail } from './routes/gmail.js';
+import { criarServicoGmail } from './gmail/servico.js';
 import { criarServicoConexoes } from './conexoes/servico.js';
 
 export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = globalThis.fetch, distDir, publicador }) {
@@ -45,7 +47,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   const figma = criarServicoFigma({ db, fetch });
   const supabase = criarServicoSupabase({ db, fetch });
   const conexoes = criarServicoConexoes({ db, fetch, hoje });
-  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github, figma, supabase, conexoes };
+  const gmail = criarServicoGmail({ db, fetch });
+  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github, figma, supabase, conexoes, gmail };
   app.locals.monitorSites = monitorSites;
   app.locals.sincronizarInstagram = sincronizarInstagram;
   app.locals.publicador = publicador;
@@ -78,6 +81,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasFigma(ctx));
   app.use('/api', rotasSupabase(ctx));
   app.use('/api', rotasConexoes(ctx));
+  app.use('/api', rotasGmail(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));

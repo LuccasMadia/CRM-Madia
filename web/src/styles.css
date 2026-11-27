@@ -1042,3 +1042,7 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 .validade__situacao { margin: 0; font-size: 0.9rem; color: var(--texto-suave); }
 .validade__situacao--atencao { color: var(--tag-ambar); }
 .validade__situacao--erro { color: var(--tag-vermelho); }
+
+.emails { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.emails__item { display: grid; gap: 4px; }
+.emails__item p { margin: 0; }
