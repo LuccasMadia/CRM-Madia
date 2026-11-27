@@ -125,6 +125,7 @@ describe('GET /api/cerebro', () => {
       { id: 'github', nome: 'GitHub', para_que: 'Código', conexao: 'crm:github_token' },
       { id: 'supabase', nome: 'Supabase', para_que: 'Banco', conexao: 'crm:supabase_contas' },
       { id: 'gmail', nome: 'Gmail', para_que: 'E-mails', conexao: 'crm:gmail_refresh_token' },
+      { id: 'apple', nome: 'Apple Agenda', para_que: 'Calendário de eventos', conexao: 'crm:apple_senha' },
     ]));
     return dir;
   };
@@ -193,6 +194,17 @@ describe('GET /api/cerebro', () => {
     definirConfig(ctx.db, 'supabase_contas', '[{"id":1,"nome":"Principal","token":"sbp_x"}]');
     const depois = (await ctx.http.get('/api/cerebro').expect(200)).body;
     expect(depois.apps.find((a) => a.id === 'supabase').conectado).toBe(true);
+  });
+
+  it('o Apple Agenda aparece conectado só depois de a senha de app ser salva no CRM', async () => {
+    const ctx = criarContexto({ hoje: '2026-09-23' });
+    definirConfig(ctx.db, 'cerebro_path', pastaCerebro());
+    definirConfig(ctx.db, 'apple_usuario', 'eu@icloud.com');
+    const antes = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(antes.apps.find((a) => a.id === 'apple').conectado).toBe(false);
+    definirConfig(ctx.db, 'apple_senha', 'abcd-efgh-ijkl-mnop');
+    const depois = (await ctx.http.get('/api/cerebro').expect(200)).body;
+    expect(depois.apps.find((a) => a.id === 'apple').conectado).toBe(true);
   });
 
   it('o Gmail aparece conectado só depois de o refresh token ser salvo no CRM', async () => {
