@@ -11,6 +11,7 @@ const NAVEGACAO = [
   { para: '/orcamentos', rotulo: 'Orçamentos', icone: 'orcamentos', principal: true },
   { para: '/conteudo', rotulo: 'Conteúdo', icone: 'conteudo', principal: true },
   { para: '/tarefas', rotulo: 'Tarefas', icone: 'tarefas' },
+  { para: '/calendario', rotulo: 'Calendário', icone: 'calendario' },
   { para: '/cerebro', rotulo: 'Cérebro', icone: 'cerebro' },
   { para: '/portfolio', rotulo: 'Portfólio', icone: 'portfolio' },
   { para: '/financeiro', rotulo: 'Financeiro', icone: 'financeiro' },
@@ -33,7 +34,7 @@ const itemDe = (para) => NAVEGACAO.find((n) => n.para === para);
 const SETORES = [
   { id: 'inicio', itens: [itemDe('/')] },
   { id: 'comercial', rotulo: 'Comercial', itens: [itemDe('/clientes'), itemDe('/orcamentos')] },
-  { id: 'producao', rotulo: 'Produção', itens: [...SERVICOS, itemDe('/tarefas')] },
+  { id: 'producao', rotulo: 'Produção', itens: [...SERVICOS, itemDe('/tarefas'), itemDe('/calendario')] },
   { id: 'marketing', rotulo: 'Marketing', itens: [itemDe('/conteudo'), itemDe('/portfolio')] },
   { id: 'financeiro', itens: [itemDe('/financeiro')] },
   { id: 'sistema', rotulo: 'Sistema', itens: [itemDe('/cerebro'), itemDe('/configuracoes')] },

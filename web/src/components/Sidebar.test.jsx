@@ -61,7 +61,7 @@ describe('Sidebar', () => {
     const rotulos = screen.getAllByRole('link').map((l) => l.getAttribute('aria-label'));
     expect(rotulos).toEqual([
       'Início', 'Clientes', 'Orçamentos', 'Sites e Sistemas', 'Google Meu Negócio', 'Placas NFC',
-      'Tarefas', 'Conteúdo', 'Portfólio', 'Financeiro', 'Cérebro', 'Configurações',
+      'Tarefas', 'Calendário', 'Conteúdo', 'Portfólio', 'Financeiro', 'Cérebro', 'Configurações',
     ]);
     expect(screen.queryByRole('link', { name: 'Serviços' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Google Meu Negócio' })).toHaveAttribute('href', '/servicos?aba=gmn');

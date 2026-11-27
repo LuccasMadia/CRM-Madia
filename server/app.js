@@ -35,6 +35,9 @@ import { rotasSupabase } from './routes/supabase.js';
 import { criarServicoSupabase } from './supabase/servico.js';
 import { rotasConexoes } from './routes/conexoes.js';
 import { rotasGmail } from './routes/gmail.js';
+import { rotasEventos } from './routes/eventos.js';
+import { rotasCalendario } from './routes/calendario.js';
+import { criarServicoCalendario } from './calendario/servico.js';
 import { criarServicoGmail } from './gmail/servico.js';
 import { criarServicoConexoes } from './conexoes/servico.js';
 
@@ -48,11 +51,13 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   const supabase = criarServicoSupabase({ db, fetch });
   const conexoes = criarServicoConexoes({ db, fetch, hoje });
   const gmail = criarServicoGmail({ db, fetch });
-  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github, figma, supabase, conexoes, gmail };
+  const calendario = criarServicoCalendario({ db, fetch, hoje });
+  const ctx = { db, dataDir, hoje, fetch, sincronizarInstagram, publicador, github, figma, supabase, conexoes, gmail, calendario };
   app.locals.monitorSites = monitorSites;
   app.locals.sincronizarInstagram = sincronizarInstagram;
   app.locals.publicador = publicador;
   app.locals.github = github;
+  app.locals.calendario = calendario;
   // Única rota sem proteção de host (Cloudflare Access libera /publico/*): precisa vir antes do protegerLocal.
   app.use('/publico', rotasPublico(ctx));
   app.use(protegerLocal);
@@ -82,6 +87,8 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasSupabase(ctx));
   app.use('/api', rotasConexoes(ctx));
   app.use('/api', rotasGmail(ctx));
+  app.use('/api', rotasEventos(ctx));
+  app.use('/api', rotasCalendario(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));

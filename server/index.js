@@ -18,6 +18,9 @@ app.listen(PORTA, '127.0.0.1', () => {
   // Sincroniza o Instagram ao subir e a cada 6 horas, só se estiver conectado.
   iniciarPeriodico(() => obterConfig(db, 'instagram_token') && app.locals.sincronizarInstagram.executar());
 
+  // Apple Calendário: lê o iCloud ao subir e a cada 5 minutos, só se estiver conectado e com calendário escolhido.
+  iniciarPeriodico(() => app.locals.calendario.sincronizarSeConectado(), { intervaloMs: 5 * 60_000, log: (m) => console.error(m.replace('do Instagram', 'do calendário')) });
+
   const { publicador } = app.locals;
   // Não se aguarda retomar(): ela só termina quando as publicações em curso acabam (podem levar minutos).
   try {

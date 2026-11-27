@@ -1046,3 +1046,35 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
 .emails { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .emails__item { display: grid; gap: 4px; }
 .emails__item p { margin: 0; }
+
+/* Calendário (eventos + prazos) */
+.agenda__controles { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.agenda__titulo { margin: 0 0 0 8px; font-size: 1.1rem; text-transform: capitalize; }
+.agenda__numero { font: inherit; font-size: 0.8rem; background: none; border: 0; padding: 0; text-align: left; color: var(--texto-suave); cursor: pointer; }
+.agenda__numero:hover { color: var(--texto); }
+.agenda__chip { display: block; width: 100%; max-width: 100%; font: inherit; font-size: 0.78rem; text-align: left; border: 0; border-radius: 6px; padding: 2px 6px; cursor: pointer; color: var(--texto); background: var(--primaria-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+.agenda__chip--tarefa { background: rgb(251 191 36 / 0.16); }
+.agenda__chip--parcela { background: rgb(52 211 153 / 0.16); }
+.agenda__chip--pendente { border: 1px dashed var(--atencao); }
+.agenda__chip--recorrente { font-style: italic; }
+.agenda__semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.agenda__coluna { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-controle); padding: 8px; min-height: 160px; display: grid; align-content: start; gap: 4px; min-width: 0; }
+.agenda__coluna--hoje { border-color: var(--primaria); }
+.agenda__lista { display: grid; gap: 16px; }
+.agenda__dia h3 { margin: 0 0 6px; font-size: 0.95rem; text-transform: capitalize; }
+.agenda__dia--hoje h3 { color: var(--primaria); }
+.agenda__dia ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.agenda__linha { font: inherit; width: 100%; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; text-align: left; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-controle); padding: 8px 10px; color: var(--texto); cursor: pointer; }
+.agenda__hora { color: var(--texto-suave); font-variant-numeric: tabular-nums; min-width: 4.5rem; }
+.agenda__ligacao { font-size: 0.8rem; margin-left: 10px; }
+.selo { font-size: 0.7rem; padding: 1px 8px; border-radius: 999px; border: 1px dashed var(--atencao); color: var(--atencao); }
+.campo--marcar { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--texto-suave); }
+@media (max-width: 760px) {
+  .agenda__semana { grid-template-columns: minmax(0, 1fr); }
+  .agenda__coluna { min-height: 0; }
+}
+.agenda__ponto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.agenda__filtros { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 12px; }
+.agenda__filtros .campo--marcar { align-items: center; }
+.agenda__calendarios { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.agenda__chip--calendario { border-left: 3px solid var(--cor); border-radius: 3px 6px 6px 3px; }
