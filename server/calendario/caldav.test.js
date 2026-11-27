@@ -20,7 +20,10 @@ describe('descoberta', () => {
 
   it('lista só os calendários de eventos', async () => {
     const { cliente } = montar();
-    expect(await cliente.listarCalendarios()).toEqual([{ href: 'https://p01-caldav.icloud.com/123/calendars/trabalho/', nome: 'Trabalho' }]);
+    expect(await cliente.listarCalendarios()).toEqual([
+      { href: 'https://p01-caldav.icloud.com/123/calendars/trabalho/', nome: 'Trabalho' },
+      { href: 'https://p01-caldav.icloud.com/123/calendars/pessoal/', nome: 'Pessoal' },
+    ]);
   });
 
   it('cria um calendário novo com MKCALENDAR e devolve o endereço', async () => {

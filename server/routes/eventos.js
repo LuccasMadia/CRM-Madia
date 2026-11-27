@@ -6,6 +6,7 @@ import { repoProjetos } from '../repos/projetos.js';
 import { validar, lerId } from '../http/validar.js';
 import { ErroHttp, ErroValidacao, naoEncontrado } from '../http/erros.js';
 import { dataValida } from '../domain/datas.js';
+import { lerCalendarios } from '../calendario/calendarios.js';
 
 const REGRAS = {
   titulo: { tipo: 'texto', obrigatorio: true },
@@ -14,6 +15,7 @@ const REGRAS = {
   notas: { tipo: 'texto' },
   cliente_id: { tipo: 'inteiro', min: 1 },
   projeto_id: { tipo: 'inteiro', min: 1 },
+  calendario_href: { tipo: 'texto' },
 };
 
 const invalido = (campo, mensagem) => new ErroValidacao([{ campo, mensagem }]);
@@ -76,6 +78,8 @@ export function rotasEventos({ db, calendario }) {
     }
     if (dados.cliente_id && !clientes.obter(dados.cliente_id)) throw invalido('cliente_id', 'Cliente não encontrado');
     if (dados.projeto_id && !projetos.obter(dados.projeto_id)) throw invalido('projeto_id', 'Projeto não encontrado');
+    if (atual) delete dados.calendario_href; // o evento fica no calendário onde nasceu
+    else if (dados.calendario_href && !lerCalendarios(db).some((c) => c.href === dados.calendario_href)) throw invalido('calendario_href', 'Calendário não encontrado');
     return dados;
   }
 

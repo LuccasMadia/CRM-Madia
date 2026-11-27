@@ -2,6 +2,7 @@ import { obterConfig, definirConfig } from '../repos/config.js';
 import { repoEventos } from '../repos/eventos.js';
 import { criarClienteCaldav, ErroCaldav } from './caldav.js';
 import { eventoParaIcs, icsParaEventos } from './ics-evento.js';
+import { calendarioPadrao, lerCalendarios, salvarCalendarios } from './calendarios.js';
 
 const DIA = 24 * 60 * 60 * 1000;
 const somarDias = (dia, n) => new Date(Date.parse(`${dia}T00:00:00Z`) + n * DIA).toISOString().slice(0, 10);
@@ -15,13 +16,12 @@ export function criarSync({ db, fetch, hoje }) {
   function conexao() {
     const usuario = cfg('apple_usuario');
     const senha = cfg('apple_senha');
-    const calendario = cfg('apple_calendario_href');
-    if (!usuario || !senha || !calendario) return null;
-    return { calendario, cliente: criarClienteCaldav({ usuario, senha, fetch }) };
+    if (!usuario || !senha) return null;
+    return { cliente: criarClienteCaldav({ usuario, senha, fetch }) };
   }
   const janelaPadrao = () => ({ de: somarDias(hoje(), -30), ate: somarDias(hoje(), 180) });
 
-  // 'ok' | 'conflito' | 'rede'; qualquer outro erro (senha, 5xx) sobe.
+  // 'ok' | 'conflito' | 'rede' (| 'sem_calendario' no envio); qualquer outro erro (senha, 5xx) sobe.
   async function tentar(operacao) {
     try {
       await operacao();
@@ -34,12 +34,25 @@ export function criarSync({ db, fetch, hoje }) {
     }
   }
 
-  async function enviar({ cliente, calendario }, evento) {
+  async function enviar({ cliente }, evento) {
+    if (!evento.calendario_href && !calendarioPadrao(db)) {
+      // Ainda não conhecemos os calendários da conta (primeiro evento depois de conectar).
+      const lista = await tentar(async () => salvarCalendarios(db, await cliente.listarCalendarios()));
+      if (lista === 'rede') {
+        eventos.atualizar(evento.id, { pendente: 1 });
+        return 'rede';
+      }
+    }
+    const calendario = evento.calendario_href ?? calendarioPadrao(db)?.href;
+    if (!calendario) {
+      eventos.atualizar(evento.id, { pendente: 1 }); // a conta não tem calendário de eventos: espera um aparecer
+      return 'sem_calendario';
+    }
     let resultado;
     const estado = await tentar(async () => {
       resultado = await cliente.gravar(calendario, evento.uid, eventoParaIcs(evento), { etag: evento.etag, recurso: evento.href });
     });
-    if (estado === 'ok') eventos.atualizar(evento.id, { href: resultado.href, etag: resultado.etag, pendente: 0 });
+    if (estado === 'ok') eventos.atualizar(evento.id, { href: resultado.href, etag: resultado.etag, calendario_href: calendario, pendente: 0 });
     if (estado === 'rede') eventos.atualizar(evento.id, { pendente: 1 });
     if (estado === 'conflito') eventos.atualizar(evento.id, { pendente: 0 });
     return estado;
@@ -61,19 +74,32 @@ export function criarSync({ db, fetch, hoje }) {
     return estado;
   }
 
-  // Lê a janela do iCloud: insere o que é novo, atualiza o que mudou (pela etag) e trata o que sumiu.
-  async function ler({ cliente, calendario }, { de, ate }) {
-    const itens = await cliente.ler(calendario, { de, ate });
+  // Calendário que sumiu do iCloud: o que veio dele sai do CRM; o que foi criado aqui volta a ser pendente para o calendário padrão.
+  function soltarSumidos(calendarios) {
+    if (!calendarios.length) return; // lista vazia é mais provável ser um engano do que a conta sem nenhum calendário
+    const existentes = new Set(calendarios.map((c) => c.href));
+    for (const e of db.prepare('SELECT * FROM eventos WHERE calendario_href IS NOT NULL').all().map((l) => ({ ...l }))) {
+      if (existentes.has(e.calendario_href)) continue;
+      if (e.origem === 'apple' || e.apagado) eventos.apagarDefinitivo(e.id);
+      else eventos.atualizar(e.id, { href: null, etag: null, calendario_href: null, pendente: 1 });
+    }
+  }
+
+  // Lê a janela de todos os calendários: insere o que é novo, atualiza o que mudou (pela etag), acompanha o que
+  // mudou de calendário (o UID é o mesmo) e trata o que sumiu.
+  async function ler({ cliente }, calendarios, { de, ate }) {
     const vistos = new Set();
     let lidos = 0;
-    for (const item of itens) {
-      for (const lido of icsParaEventos(item.ics, { de, ate })) {
-        lidos += 1;
-        vistos.add(lido.uid);
-        const dados = { titulo: lido.titulo, inicio: lido.inicio, fim: lido.fim, dia_inteiro: lido.dia_inteiro, local: lido.local, notas: lido.notas, recorrente: lido.recorrente, href: item.href, etag: item.etag };
-        const existente = eventos.porUid(lido.uid);
-        if (!existente) eventos.criar({ ...dados, uid: lido.uid, origem: 'apple', pendente: 0 });
-        else if (!existente.apagado && (existente.etag !== item.etag || existente.href !== item.href)) eventos.atualizar(existente.id, { ...dados, pendente: 0 });
+    for (const calendario of calendarios) {
+      for (const item of await cliente.ler(calendario.href, { de, ate })) {
+        for (const lido of icsParaEventos(item.ics, { de, ate })) {
+          lidos += 1;
+          vistos.add(lido.uid);
+          const dados = { titulo: lido.titulo, inicio: lido.inicio, fim: lido.fim, dia_inteiro: lido.dia_inteiro, local: lido.local, notas: lido.notas, recorrente: lido.recorrente, href: item.href, etag: item.etag, calendario_href: calendario.href };
+          const existente = eventos.porUid(lido.uid);
+          if (!existente) eventos.criar({ ...dados, uid: lido.uid, origem: 'apple', pendente: 0 });
+          else if (!existente.apagado && (existente.etag !== item.etag || existente.href !== item.href)) eventos.atualizar(existente.id, { ...dados, pendente: 0 });
+        }
       }
     }
     // Só olha o que está inteiro dentro da janela lida: o que está fora não foi pedido ao iCloud.
@@ -93,6 +119,9 @@ export function criarSync({ db, fetch, hoje }) {
     if (!conectado) throw new Error('Apple Calendário não conectado.');
     const janela = de && ate ? { de, ate } : janelaPadrao();
     try {
+      const calendarios = await conectado.cliente.listarCalendarios();
+      salvarCalendarios(db, calendarios);
+      soltarSumidos(calendarios);
       let enviados = 0;
       let conflitos = 0;
       let semRede = false;
@@ -109,7 +138,7 @@ export function criarSync({ db, fetch, hoje }) {
         if (estado === 'conflito') conflitos += 1;
         if (estado === 'rede') semRede = true;
       }
-      const lidos = await ler(conectado, janela); // sem internet, falha aqui com a mensagem certa
+      const lidos = await ler(conectado, calendarios, janela); // sem internet, falha aqui com a mensagem certa
       definirConfig(db, 'apple_ultima_sync', new Date().toISOString());
       db.prepare("DELETE FROM config WHERE chave = 'apple_erro'").run();
       return { lidos, enviados, conflitos };
@@ -127,7 +156,7 @@ export function criarSync({ db, fetch, hoje }) {
     if (!evento || evento.apagado) return { estado: 'ok' };
     if (evento.recorrente) return { estado: 'somente_leitura' };
     const estado = await enviar(conectado, evento);
-    if (estado === 'conflito') await ler(conectado, janelaPadrao());
+    if (estado === 'conflito') await ler(conectado, lerCalendarios(db), janelaPadrao());
     return { estado };
   }
 
@@ -137,7 +166,7 @@ export function criarSync({ db, fetch, hoje }) {
     if (!conectado) return { estado: 'sem_conexao' };
     if (!evento) return { estado: 'ok' };
     const estado = await apagarLa(conectado, evento);
-    if (estado === 'conflito') await ler(conectado, janelaPadrao());
+    if (estado === 'conflito') await ler(conectado, lerCalendarios(db), janelaPadrao());
     return { estado };
   }
 

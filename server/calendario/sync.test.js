@@ -5,6 +5,7 @@ import { repoEventos } from '../repos/eventos.js';
 import { icloudFalso } from '../test/icloudFalso.js';
 import { eventoParaIcs } from './ics-evento.js';
 import { criarSync } from './sync.js';
+import { lerCalendarios } from './calendarios.js';
 
 const ev = (uid, titulo, inicio = '2026-10-05T14:00') => eventoParaIcs({ uid, titulo, inicio, fim: inicio.replace('14:00', '15:00'), dia_inteiro: 0 });
 const semanal = (uid) => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:${uid}\r\nSUMMARY:Semanal\r\nDTSTART:20261005T100000\r\nDTEND:20261005T110000\r\nRRULE:FREQ=WEEKLY\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n`;
@@ -14,7 +15,6 @@ function montar() {
   const db = openDb(':memory:');
   definirConfig(db, 'apple_usuario', icloud.usuario);
   definirConfig(db, 'apple_senha', icloud.senha);
-  definirConfig(db, 'apple_calendario_href', icloud.calendarioTrabalho);
   const eventos = repoEventos(db);
   const sync = criarSync({ db, fetch: icloud.fetch, hoje: () => '2026-10-01' });
   const local = (dados = {}) => eventos.criar({ titulo: 'Local', inicio: '2026-10-08T09:00', fim: '2026-10-08T10:00', uid: `${Math.random().toString(36).slice(2)}@crm-madia`, ...dados });
@@ -89,13 +89,6 @@ describe('sincronizar', () => {
     expect(icloud.chamadas('PUT')).toHaveLength(0);
   });
 
-  it('calendário removido: erro com a mensagem, guardado em apple_erro', async () => {
-    const { icloud, db, sync } = montar();
-    icloud.calendarios.delete(icloud.calendarioTrabalho);
-    await expect(sync.sincronizar()).rejects.toMatchObject({ message: 'O calendário escolhido não existe mais no iCloud.' });
-    expect(obterConfig(db, 'apple_erro')).toBe('O calendário escolhido não existe mais no iCloud.');
-  });
-
   it('senha inválida guarda o erro; sucesso limpa o erro e guarda a hora da sincronização', async () => {
     const { icloud, db, sync } = montar();
     definirConfig(db, 'apple_senha', 'errada');
@@ -113,6 +106,85 @@ describe('sincronizar', () => {
     db.prepare("DELETE FROM config WHERE chave = 'apple_senha'").run();
     await expect(sync.sincronizar()).rejects.toThrow('Apple Calendário não conectado.');
     expect(icloud.requisicoes).toHaveLength(0);
+  });
+});
+
+describe('vários calendários', () => {
+  it('lê todos os calendários de eventos (não o de lembretes) e guarda de qual cada evento veio', async () => {
+    const { icloud, db, eventos, sync } = montar();
+    icloud.criarNoIphone(ev('a1', 'Reunião'), 'trabalho');
+    icloud.criarNoIphone(ev('b1', 'Aniversário', '2026-10-06T14:00'), 'pessoal');
+    icloud.criarNoIphone(ev('l1', 'Lembrete'), 'lembretes');
+    expect(await sync.sincronizar()).toEqual({ lidos: 2, enviados: 0, conflitos: 0 });
+    expect(todos(eventos).map((e) => [e.uid, e.calendario_href])).toEqual([['a1', icloud.calendarioTrabalho], ['b1', icloud.calendarioPessoal]]);
+    expect(lerCalendarios(db)).toEqual([
+      { href: icloud.calendarioTrabalho, nome: 'Trabalho' },
+      { href: icloud.calendarioPessoal, nome: 'Pessoal' },
+    ]);
+  });
+
+  it('evento novo sobe para o calendário padrão: o CRM Madia se existir, senão o primeiro', async () => {
+    const { icloud, eventos, sync, local } = montar();
+    const a = local();
+    await sync.gravarEvento(a.id);
+    expect(eventos.obter(a.id).calendario_href).toBe(icloud.calendarioTrabalho);
+    expect(icloud.eventosDe(icloud.calendarioTrabalho).size).toBe(1);
+
+    await sync.sincronizar(); // grava a lista dos calendários
+    icloud.calendarios.set(`${icloud.CASA}crm/`, { nome: 'CRM Madia', componentes: ['VEVENT'], eventos: new Map() });
+    await sync.sincronizar();
+    const b = local();
+    await sync.gravarEvento(b.id);
+    expect(eventos.obter(b.id).calendario_href).toBe(`${icloud.CASA}crm/`);
+  });
+
+  it('evento criado já apontando para um calendário sobe para ele e a edição continua nele', async () => {
+    const { icloud, eventos, sync, local } = montar();
+    await sync.sincronizar();
+    const meu = local({ calendario_href: icloud.calendarioPessoal });
+    await sync.gravarEvento(meu.id);
+    expect(icloud.eventosDe(icloud.calendarioPessoal).size).toBe(1);
+    expect(icloud.eventosDe(icloud.calendarioTrabalho).size).toBe(0);
+    eventos.atualizar(meu.id, { titulo: 'Editado' });
+    await sync.gravarEvento(meu.id);
+    expect([...icloud.eventosDe(icloud.calendarioPessoal).values()][0].ics).toContain('SUMMARY:Editado');
+  });
+
+  it('evento movido de calendário no iPhone muda de calendário no CRM, sem duplicar nem perder o vínculo', async () => {
+    const { icloud, db, eventos, sync } = montar();
+    const href = icloud.criarNoIphone(ev('a1', 'Reunião'), 'trabalho');
+    await sync.sincronizar();
+    const [salvo] = todos(eventos);
+    db.prepare("INSERT INTO clientes (nome, criado_em, atualizado_em) VALUES ('Ana', 'x', 'x')").run();
+    eventos.atualizar(salvo.id, { cliente_id: 1 });
+    icloud.removerNoIphone(href);
+    icloud.criarNoIphone(ev('a1', 'Reunião'), 'pessoal');
+    await sync.sincronizar();
+    expect(todos(eventos)).toHaveLength(1);
+    expect(eventos.obter(salvo.id)).toMatchObject({ cliente_id: 1, calendario_href: icloud.calendarioPessoal });
+  });
+
+  it('calendário que sumiu do iCloud: sai o que veio dele e o que foi criado aqui sobe de novo para o padrão', async () => {
+    const { icloud, eventos, sync, local } = montar();
+    icloud.criarNoIphone(ev('b1', 'Aniversário'), 'pessoal');
+    const meu = local({ calendario_href: icloud.calendarioPessoal });
+    await sync.sincronizar();
+    await sync.gravarEvento(meu.id);
+    icloud.calendarios.delete(icloud.calendarioPessoal);
+    await sync.sincronizar();
+    expect(todos(eventos).map((e) => e.uid)).toEqual([meu.uid]);
+    expect(eventos.obter(meu.id)).toMatchObject({ calendario_href: icloud.calendarioTrabalho, pendente: 0 });
+    expect(icloud.eventosDe(icloud.calendarioTrabalho).size).toBe(1);
+  });
+
+  it('sem nenhum calendário de eventos na conta o evento fica pendente, sem erro', async () => {
+    const { icloud, eventos, sync, local } = montar();
+    icloud.calendarios.delete(icloud.calendarioTrabalho);
+    icloud.calendarios.delete(icloud.calendarioPessoal);
+    const meu = local();
+    expect(await sync.gravarEvento(meu.id)).toEqual({ estado: 'sem_calendario' });
+    expect(eventos.obter(meu.id).pendente).toBe(1);
+    expect(await sync.sincronizar()).toEqual({ lidos: 0, enviados: 0, conflitos: 0 });
   });
 });
 

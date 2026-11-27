@@ -12,6 +12,7 @@ const uidDe = (ics) => /^UID:(.+)$/m.exec(ics.replace(/\r/g, ''))[1].trim();
 export function icloudFalso({ usuario = 'eu@icloud.com', senha = 'abcd-efgh-ijkl-mnop' } = {}) {
   const calendarios = new Map([
     [`${CASA}trabalho/`, { nome: 'Trabalho', componentes: ['VEVENT'], eventos: new Map() }],
+    [`${CASA}pessoal/`, { nome: 'Pessoal', componentes: ['VEVENT'], eventos: new Map() }],
     [`${CASA}lembretes/`, { nome: 'Lembretes', componentes: ['VTODO'], eventos: new Map() }],
   ]);
   const requisicoes = [];
@@ -81,14 +82,16 @@ export function icloudFalso({ usuario = 'eu@icloud.com', senha = 'abcd-efgh-ijkl
   return {
     fetch, requisicoes, usuario, senha, falha, calendarios, CASA,
     calendarioTrabalho: `${CASA}trabalho/`,
+    calendarioPessoal: `${CASA}pessoal/`,
     // O que um iPhone faria:
     criarNoIphone(ics, calendario = 'trabalho') {
       const href = `${CASA}${calendario}/${uidDe(ics)}.ics`;
       calendarios.get(`${CASA}${calendario}/`).eventos.set(href, { etag: novoEtag(), ics });
       return href;
     },
-    alterarNoIphone(href, ics) { trabalho().set(href, { etag: novoEtag(), ics }); },
-    removerNoIphone(href) { trabalho().delete(href); },
+    alterarNoIphone(href, ics) { calendarioDe(href)[1].eventos.set(href, { etag: novoEtag(), ics }); },
+    removerNoIphone(href) { calendarioDe(href)[1].eventos.delete(href); },
+    eventosDe: (href) => calendarios.get(href).eventos,
     eventos: trabalho,
     chamadas: (metodo) => requisicoes.filter((r) => r.metodo === metodo),
   };

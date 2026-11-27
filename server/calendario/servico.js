@@ -4,10 +4,17 @@ import { criarExecutorUnico } from '../instagram/executor.js';
 import { ErroHttp, ErroValidacao } from '../http/erros.js';
 import { criarClienteCaldav, ErroCaldav } from './caldav.js';
 import { criarSync } from './sync.js';
+import { calendarioPadrao, lerCalendarios, lerOcultos, salvarCalendarios, salvarOcultos } from './calendarios.js';
 
-const CHAVES = ['apple_usuario', 'apple_senha', 'apple_calendario_href', 'apple_calendario_nome', 'apple_ultima_sync', 'apple_erro'];
+// 'apple_calendario_href' e 'apple_calendario_nome' são do tempo do calendário único: só são apagados.
+const CHAVES = [
+  'apple_usuario', 'apple_senha', 'apple_calendarios', 'apple_calendario_padrao', 'apple_calendarios_ocultos',
+  'apple_calendario_href', 'apple_calendario_nome', 'apple_ultima_sync', 'apple_erro',
+];
+const CORES = ['#38bdf8', '#f472b6', '#a3e635', '#fb923c', '#c084fc', '#2dd4bf', '#facc15', '#f87171'];
 
-// Conexão com o iCloud, escolha do calendário e a sincronização (uma por vez). A senha de app nunca sai daqui.
+// Conexão com o iCloud, calendários (todos sincronizam; esconder é só da tela) e a sincronização (uma por vez).
+// A senha de app nunca sai daqui.
 export function criarServicoCalendario({ db, fetch, hoje }) {
   const sync = criarSync({ db, fetch, hoje });
   const eventos = repoEventos(db);
@@ -15,28 +22,31 @@ export function criarServicoCalendario({ db, fetch, hoje }) {
   const cfg = (chave) => obterConfig(db, chave);
 
   const conectado = () => Boolean(cfg('apple_usuario') && cfg('apple_senha'));
-  const escolhido = () => Boolean(cfg('apple_calendario_href'));
   const clienteCaldav = () => criarClienteCaldav({ usuario: cfg('apple_usuario'), senha: cfg('apple_senha'), fetch });
 
   function estado() {
+    const ocultos = new Set(lerOcultos(db));
     return {
       conectado: conectado(),
       usuario: cfg('apple_usuario') ?? null,
-      calendario: escolhido() ? { href: cfg('apple_calendario_href'), nome: cfg('apple_calendario_nome') ?? 'Calendário' } : null,
+      calendarios: lerCalendarios(db).map((c, i) => ({ href: c.href, nome: c.nome, cor: CORES[i % CORES.length], visivel: !ocultos.has(c.href) })),
+      padrao: calendarioPadrao(db)?.href ?? null,
       ultima_sync: cfg('apple_ultima_sync') ?? null,
       erro: cfg('apple_erro') || null,
     };
   }
 
-  // Conta ou calendário novo: os endereços dos eventos de antes não valem mais. O que veio do iPhone sai do CRM
-  // (continua no iCloud) e o que foi criado aqui fica como evento local, pronto para subir de novo.
+  // Conta nova: os endereços dos eventos de antes não valem mais. O que veio do iPhone sai do CRM (continua no
+  // iCloud) e o que foi criado aqui fica como evento local, pronto para subir.
   function soltarEventos() {
     db.prepare("DELETE FROM eventos WHERE origem = 'apple' OR apagado = 1").run();
-    db.prepare("UPDATE eventos SET href = NULL, etag = NULL, pendente = 0 WHERE origem = 'crm'").run();
+    db.prepare("UPDATE eventos SET href = NULL, etag = NULL, calendario_href = NULL, pendente = 0 WHERE origem = 'crm'").run();
   }
+  const apagarChaves = () => db.prepare(`DELETE FROM config WHERE chave IN (${CHAVES.map(() => '?').join(',')})`).run(...CHAVES);
 
   const falha = (erro) => (erro instanceof ErroCaldav ? new ErroHttp(502, erro.message) : erro);
   const salvarErro = (erro) => { if (erro instanceof ErroCaldav) definirConfig(db, 'apple_erro', erro.message); };
+  const sincronizarEmSilencio = () => executor.executar().catch(() => {}); // o erro, se houver, fica em apple_erro
 
   async function conectar({ usuario, senha }) {
     try {
@@ -46,53 +56,49 @@ export function criarServicoCalendario({ db, fetch, hoje }) {
       throw falha(erro);
     }
     soltarEventos();
-    db.prepare(`DELETE FROM config WHERE chave IN (${CHAVES.map(() => '?').join(',')})`).run(...CHAVES);
+    apagarChaves();
     definirConfig(db, 'apple_usuario', usuario);
     definirConfig(db, 'apple_senha', senha);
+    // O que já existia só no CRM sobe para o calendário padrão.
+    db.prepare("UPDATE eventos SET pendente = 1 WHERE origem = 'crm' AND apagado = 0 AND recorrente = 0").run();
+    await sincronizarEmSilencio();
   }
 
   function exigirConexao() {
     if (!conectado()) throw new ErroHttp(409, 'Conecte o Apple Calendário em Configurações.');
   }
 
-  async function calendarios() {
+  function esconder(ocultos) {
     exigirConexao();
-    try {
-      return await clienteCaldav().listarCalendarios();
-    } catch (erro) {
-      throw falha(erro);
-    }
+    if (!Array.isArray(ocultos) || ocultos.some((h) => typeof h !== 'string')) throw new ErroValidacao([{ campo: 'ocultos', mensagem: 'Envie a lista de calendários escondidos' }]);
+    const conhecidos = new Set(lerCalendarios(db).map((c) => c.href));
+    salvarOcultos(db, ocultos.filter((h) => conhecidos.has(h)));
   }
 
-  async function escolher({ href, criar }) {
+  function definirPadrao(href) {
     exigirConexao();
-    let escolhida;
+    if (!lerCalendarios(db).some((c) => c.href === href)) throw new ErroValidacao([{ campo: 'href', mensagem: 'Calendário não encontrado' }]);
+    definirConfig(db, 'apple_calendario_padrao', href);
+  }
+
+  async function criarCalendario({ nome }) {
+    exigirConexao();
     try {
-      if (criar) {
-        escolhida = { href: await clienteCaldav().criarCalendario(criar), nome: criar };
-      } else {
-        escolhida = (await clienteCaldav().listarCalendarios()).find((c) => c.href === href);
-        if (!escolhida) throw new ErroValidacao([{ campo: 'href', mensagem: 'Calendário não encontrado no iCloud' }]);
-      }
+      await clienteCaldav().criarCalendario(nome);
+      salvarCalendarios(db, await clienteCaldav().listarCalendarios());
     } catch (erro) {
       throw falha(erro);
     }
-    if (cfg('apple_calendario_href') && cfg('apple_calendario_href') !== escolhida.href) soltarEventos();
-    definirConfig(db, 'apple_calendario_href', escolhida.href);
-    definirConfig(db, 'apple_calendario_nome', escolhida.nome);
-    // O que já existia só no CRM sobe para o calendário escolhido.
-    db.prepare("UPDATE eventos SET pendente = 1 WHERE origem = 'crm' AND href IS NULL AND apagado = 0 AND recorrente = 0").run();
-    await executor.executar().catch(() => {}); // o erro, se houver, fica em apple_erro
+    await sincronizarEmSilencio(); // o que estava pendente sem calendário sobe agora
   }
 
   function desconectar() {
     soltarEventos();
-    db.prepare(`DELETE FROM config WHERE chave IN (${CHAVES.map(() => '?').join(',')})`).run(...CHAVES);
+    apagarChaves();
   }
 
   async function sincronizar() {
     exigirConexao();
-    if (!escolhido()) throw new ErroHttp(409, 'Escolha o calendário em Configurações.');
     try {
       return await executor.executar();
     } catch (erro) {
@@ -122,8 +128,8 @@ export function criarServicoCalendario({ db, fetch, hoje }) {
   }
 
   return {
-    estado, conectar, calendarios, escolher, desconectar, sincronizar, aposGravar, aposApagar,
-    // Para o agendador de 5 minutos: só roda com tudo configurado e nunca lança.
-    sincronizarSeConectado: () => (conectado() && escolhido() ? executor.executar() : null),
+    estado, conectar, esconder, definirPadrao, criarCalendario, desconectar, sincronizar, aposGravar, aposApagar,
+    // Para o agendador de 5 minutos: só roda conectado e nunca lança.
+    sincronizarSeConectado: () => (conectado() ? executor.executar() : null),
   };
 }

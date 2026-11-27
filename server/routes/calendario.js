@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { validar } from '../http/validar.js';
-import { ErroValidacao } from '../http/erros.js';
 
 export function rotasCalendario({ calendario }) {
   const r = Router();
@@ -17,12 +16,20 @@ export function rotasCalendario({ calendario }) {
     res.json(calendario.estado());
   });
 
-  r.get('/calendario/calendarios', async (req, res) => res.json(await calendario.calendarios()));
+  // Quais calendários aparecem na tela (todos continuam sincronizando).
+  r.put('/calendario/ocultos', (req, res) => {
+    calendario.esconder(req.body?.ocultos);
+    res.json(calendario.estado());
+  });
 
-  r.put('/calendario/calendario', async (req, res) => {
-    const dados = validar(req.body, { href: { tipo: 'texto' }, criar: { tipo: 'texto' } }, { parcial: true });
-    if (!dados.href && !dados.criar) throw new ErroValidacao([{ campo: 'href', mensagem: 'Escolha um calendário ou peça para criar um' }]);
-    await calendario.escolher(dados);
+  // Onde cai o evento novo quando não se escolhe o calendário.
+  r.put('/calendario/padrao', (req, res) => {
+    calendario.definirPadrao(validar(req.body, { href: { tipo: 'texto', obrigatorio: true } }).href);
+    res.json(calendario.estado());
+  });
+
+  r.post('/calendario/calendarios', async (req, res) => {
+    await calendario.criarCalendario(validar(req.body, { nome: { tipo: 'texto', obrigatorio: true } }));
     res.json(calendario.estado());
   });
 

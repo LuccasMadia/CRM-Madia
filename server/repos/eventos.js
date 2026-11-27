@@ -1,6 +1,6 @@
 import { criarRepo, linha } from './crud.js';
 
-const CAMPOS = ['titulo', 'inicio', 'fim', 'dia_inteiro', 'local', 'notas', 'cliente_id', 'projeto_id', 'uid', 'href', 'etag', 'origem', 'recorrente', 'pendente', 'apagado'];
+const CAMPOS = ['titulo', 'inicio', 'fim', 'dia_inteiro', 'local', 'notas', 'cliente_id', 'projeto_id', 'uid', 'href', 'etag', 'calendario_href', 'origem', 'recorrente', 'pendente', 'apagado'];
 
 export function repoEventos(db) {
   const base = criarRepo(db, 'eventos', CAMPOS);
