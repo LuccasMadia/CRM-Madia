@@ -7,7 +7,7 @@ export const CAMPOS_PROJETO = [
   'mensalidade_inicio_modo', 'mensalidade_inicio_data',
   'postou_instagram', 'ficticio', 'privado', 'servico', 'link_perfil', 'nicho_id',
   'motivo_perda', 'prototipo_pronto', 'teste_inicio', 'orcamento_id', 'orcamento_vinculado', 'loja_id',
-  'github_repo', 'figma_arquivo',
+  'github_repo', 'figma_arquivo', 'supabase_ref',
 ];
 
 // Parcelas avulsas (sem mensalidades) dizem se o projeto já foi pago.

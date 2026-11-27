@@ -5,6 +5,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { ValidadeToken } from './ValidadeToken.jsx';
 
 // O CRM só cria repositórios privados e nunca muda visibilidade; o resto é leitura.
 export function ConexaoGithub() {
@@ -36,6 +37,7 @@ export function ConexaoGithub() {
           <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
         </div>
       )}
+      {atual?.conectado && <ValidadeToken servico="github" />}
       {atual && !atual.conectado && (
         <form className="form" onSubmit={conectar} noValidate>
           <p>

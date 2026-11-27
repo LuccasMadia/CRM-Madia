@@ -5,6 +5,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { ValidadeToken } from './ValidadeToken.jsx';
 
 // O CRM só lê o Figma: nome do arquivo e data da última edição.
 export function ConexaoFigma() {
@@ -36,6 +37,7 @@ export function ConexaoFigma() {
           <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
         </div>
       )}
+      {atual?.conectado && <ValidadeToken servico="figma" />}
       {atual && !atual.conectado && (
         <form className="form" onSubmit={conectar} noValidate>
           <p>

@@ -57,6 +57,21 @@ describe('/api/projetos', () => {
     expect(livre.figma_arquivo).toBe('AbC123');
   });
 
+  it('supabase_ref aceita o código do projeto, rejeita formato inválido e repetido, e vazio libera', async () => {
+    const a = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'A' }).expect(201)).body;
+    const b = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'B' }).expect(201)).body;
+    const ok = (await ctx.http.put(`/api/projetos/${a.id}`).send({ supabase_ref: 'abcdefghijklmnopqrst' }).expect(200)).body;
+    expect(ok.supabase_ref).toBe('abcdefghijklmnopqrst');
+    const ruim = await ctx.http.put(`/api/projetos/${b.id}`).send({ supabase_ref: 'Curto!' }).expect(400);
+    expect(ruim.body.erros[0]).toMatchObject({ campo: 'supabase_ref', mensagem: 'Código de projeto do Supabase inválido' });
+    const repetido = await ctx.http.put(`/api/projetos/${b.id}`).send({ supabase_ref: 'abcdefghijklmnopqrst' }).expect(400);
+    expect(repetido.body.erros[0]).toMatchObject({ campo: 'supabase_ref', mensagem: 'Esse projeto do Supabase já está ligado a outro projeto' });
+    const limpo = (await ctx.http.put(`/api/projetos/${a.id}`).send({ supabase_ref: '' }).expect(200)).body;
+    expect(limpo.supabase_ref).toBeNull();
+    const livre = (await ctx.http.put(`/api/projetos/${b.id}`).send({ supabase_ref: 'abcdefghijklmnopqrst' }).expect(200)).body;
+    expect(livre.supabase_ref).toBe('abcdefghijklmnopqrst');
+  });
+
   it('POST aceita figma_url já na criação', async () => {
     const criado = (await ctx.http.post('/api/projetos').send({ cliente_id: cliente.id, titulo: 'Com Figma', figma_url: 'https://figma.com/design/Nv1/x' }).expect(201)).body;
     expect(criado.figma_arquivo).toBe('Nv1');

@@ -5,6 +5,7 @@ import { useCarregar } from '../../hooks/useCarregar.js';
 import { useEnvio } from '../../hooks/useEnvio.js';
 import { Campo } from '../../components/Campo.jsx';
 import { Aviso } from '../../components/Aviso.jsx';
+import { ValidadeToken } from './ValidadeToken.jsx';
 
 export function ConexaoVercel() {
   const carregado = useCarregar(() => api('/vercel/estado'), []);
@@ -51,6 +52,7 @@ export function ConexaoVercel() {
           <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
         </div>
       )}
+      {atual?.conectado && <ValidadeToken servico="vercel" />}
       {atual && !atual.conectado && (
         <form className="form" onSubmit={conectar} noValidate>
           <Campo

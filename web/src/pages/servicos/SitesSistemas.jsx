@@ -183,6 +183,8 @@ export function SitesSistemas() {
   const mensalidades = useCarregar(() => api('/financeiro/mensalidades'), []);
   // Fora de `fontes`: erro do GitHub não pode aparecer na faixa nem atrasá-la.
   const github = useCarregar(() => api('/github/atencao').catch(() => ({ alertas: [] })), []);
+  const supabase = useCarregar(() => api('/supabase/atencao').catch(() => ({ alertas: [] })), []);
+  const conexoes = useCarregar(() => api('/conexoes/atencao').catch(() => ({ alertas: [] })), []);
   const fontes = [projetos, parcelas, hospedagens, mensalidades];
   // Uma fonte que falhou só deixa de gerar aviso; a faixa espera as outras terminarem.
   const atencao = fontes.every((f) => f.dados || f.erro)
@@ -193,6 +195,8 @@ export function SitesSistemas() {
       mensalidades: mensalidades.dados?.itens ?? [],
       hoje: hojeISO(),
       githubAlertas: github.dados?.alertas ?? [],
+      supabaseAlertas: supabase.dados?.alertas ?? [],
+      conexoesAlertas: conexoes.dados?.alertas ?? [],
     })
     : null;
 

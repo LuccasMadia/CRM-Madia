@@ -7,6 +7,7 @@ import { Carregando } from '../components/Carregando.jsx';
 import { AvisosPublicacao } from '../components/AvisosPublicacao.jsx';
 import { AvisosSites } from '../components/AvisosSites.jsx';
 import { PedeAtencao } from '../components/PedeAtencao.jsx';
+import { AvisosConexoes } from '../components/AvisosConexoes.jsx';
 import { Link } from 'react-router';
 import { CartaoGrafico } from '../components/graficos/CartaoGrafico.jsx';
 import { Funil } from '../components/graficos/Funil.jsx';
@@ -77,6 +78,7 @@ export function Inicio() {
       </header>
       <AvisosPublicacao />
       <AvisosSites mostrar="fora_do_ar" />
+      <AvisosConexoes />
       <section className="cartao financa">
         <div className="financa__bloco">
           <Link to="/financeiro" className="financa__item">
