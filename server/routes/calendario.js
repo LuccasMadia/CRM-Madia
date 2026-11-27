@@ -28,11 +28,6 @@ export function rotasCalendario({ calendario }) {
     res.json(calendario.estado());
   });
 
-  r.post('/calendario/calendarios', async (req, res) => {
-    await calendario.criarCalendario(validar(req.body, { nome: { tipo: 'texto', obrigatorio: true } }));
-    res.json(calendario.estado());
-  });
-
   r.post('/calendario/sincronizar', async (req, res) => res.json(await calendario.sincronizar()));
 
   return r;

@@ -123,7 +123,7 @@ describe('vários calendários', () => {
     ]);
   });
 
-  it('evento novo sobe para o calendário padrão: o CRM Madia se existir, senão o primeiro', async () => {
+  it('evento novo sobe para o calendário padrão: o Madia Consultoria se existir, senão o primeiro', async () => {
     const { icloud, eventos, sync, local } = montar();
     const a = local();
     await sync.gravarEvento(a.id);
@@ -131,7 +131,7 @@ describe('vários calendários', () => {
     expect(icloud.eventosDe(icloud.calendarioTrabalho).size).toBe(1);
 
     await sync.sincronizar(); // grava a lista dos calendários
-    icloud.calendarios.set(`${icloud.CASA}crm/`, { nome: 'CRM Madia', componentes: ['VEVENT'], eventos: new Map() });
+    icloud.calendarios.set(`${icloud.CASA}crm/`, { nome: 'Madia Consultoria', componentes: ['VEVENT'], eventos: new Map() });
     await sync.sincronizar();
     const b = local();
     await sync.gravarEvento(b.id);

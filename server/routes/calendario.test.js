@@ -68,12 +68,11 @@ describe('conexão', () => {
   });
 });
 
-describe('calendários: esconder, padrão e criar', () => {
+describe('calendários: esconder e padrão', () => {
   it('sem conexão dá 409', async () => {
     const res = await ctx.http.put('/api/calendario/ocultos').send({ ocultos: [] }).expect(409);
     expect(res.body.erro).toBe('Conecte o Apple Calendário em Configurações.');
     await ctx.http.put('/api/calendario/padrao').send({ href: icloud.calendarioPessoal }).expect(409);
-    await ctx.http.post('/api/calendario/calendarios').send({ nome: 'X' }).expect(409);
   });
 
   it('esconder um calendário só tira da tela: ele continua sincronizando', async () => {
@@ -106,19 +105,6 @@ describe('calendários: esconder, padrão e criar', () => {
     await conectar();
     const res = await ctx.http.put('/api/calendario/padrao').send({ href: 'https://p01-caldav.icloud.com/123/calendars/outro/' }).expect(400);
     expect(res.body.erros[0].campo).toBe('href');
-  });
-
-  it('cria o calendário "CRM Madia", que passa a ser o padrão', async () => {
-    await conectar();
-    const res = await ctx.http.post('/api/calendario/calendarios').send({ nome: 'CRM Madia' }).expect(200);
-    expect(icloud.chamadas('MKCALENDAR')).toHaveLength(1);
-    expect(res.body.calendarios.map((c) => c.nome)).toEqual(['Trabalho', 'Pessoal', 'CRM Madia']);
-    expect(res.body.calendarios[2].href).toBe(res.body.padrao);
-  });
-
-  it('criar calendário exige o nome', async () => {
-    await conectar();
-    await ctx.http.post('/api/calendario/calendarios').send({}).expect(400);
   });
 });
 

@@ -1,5 +1,4 @@
-// Cliente CalDAV mínimo (PROPFIND, REPORT, PUT, DELETE, MKCALENDAR) para o iCloud. Sem biblioteca; XML lido com regex tolerante.
-import { randomUUID } from 'node:crypto';
+// Cliente CalDAV mínimo (PROPFIND, REPORT, PUT, DELETE) para o iCloud. Sem biblioteca; XML lido com regex tolerante.
 
 const RAIZ = 'https://caldav.icloud.com/';
 const DIA = 24 * 60 * 60 * 1000;
@@ -20,7 +19,6 @@ const decodificar = (t) => t
   .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
   .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
-const escapar = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const respostas = (xml) => [...xml.matchAll(new RegExp(`<${PREFIXO}response(?=[\\s>])[^>]*>([\\s\\S]*?)</${PREFIXO}response>`, 'g'))].map((m) => m[1]);
 const conteudo = (xml, nome, aparar = true) => {
   const m = new RegExp(`<${PREFIXO}${nome}(?=[\\s>])[^>]*>([\\s\\S]*?)</${PREFIXO}${nome}>`).exec(xml);
@@ -77,17 +75,6 @@ export function criarClienteCaldav({ usuario, senha, fetch = globalThis.fetch, t
       .map((r) => ({ href: new URL(conteudo(r, 'href'), calendarHome).href, nome: conteudo(r, 'displayname') || 'Sem nome' }));
   }
 
-  async function criarCalendario(nome) {
-    const { calendarHome } = await descobrir();
-    const href = `${calendarHome}${randomUUID().toUpperCase()}/`;
-    await pedir('MKCALENDAR', href, {
-      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
-      corpo: `<?xml version="1.0" encoding="utf-8"?><C:mkcalendar xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><D:set><D:prop><D:displayname>${escapar(nome)}</D:displayname><C:supported-calendar-component-set><C:comp name="VEVENT"/></C:supported-calendar-component-set></D:prop></D:set></C:mkcalendar>`,
-    });
-    return href;
-  }
-
-  // Eventos que tocam [de, ate] (AAAA-MM-DD); a janela pedida ao iCloud tem um dia de folga para cada lado (fuso).
   async function ler(href, { de, ate }) {
     const inicio = basico(Date.parse(`${de}T00:00:00Z`) - DIA);
     const fim = basico(Date.parse(`${ate}T00:00:00Z`) + DIA);
@@ -113,5 +100,5 @@ export function criarClienteCaldav({ usuario, senha, fetch = globalThis.fetch, t
     await pedir('DELETE', href, { headers: etag ? { 'If-Match': etag } : {} });
   }
 
-  return { descobrir, listarCalendarios, criarCalendario, ler, gravar, apagar };
+  return { descobrir, listarCalendarios, ler, gravar, apagar };
 }

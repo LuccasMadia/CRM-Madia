@@ -16,9 +16,9 @@ export const salvarCalendarios = (db, calendarios) => definirConfig(db, 'apple_c
 export const lerOcultos = (db) => lista(db, 'apple_calendarios_ocultos');
 export const salvarOcultos = (db, hrefs) => definirConfig(db, 'apple_calendarios_ocultos', JSON.stringify(hrefs));
 
-// Onde um evento novo vai parar: o escolhido, senão o "CRM Madia", senão o primeiro da lista.
+// Onde um evento novo vai parar: o escolhido, senão o "Madia Consultoria", senão o primeiro da lista.
 export function calendarioPadrao(db) {
   const calendarios = lerCalendarios(db);
   const escolhido = obterConfig(db, 'apple_calendario_padrao');
-  return calendarios.find((c) => c.href === escolhido) ?? calendarios.find((c) => c.nome === 'CRM Madia') ?? calendarios[0] ?? null;
+  return calendarios.find((c) => c.href === escolhido) ?? calendarios.find((c) => c.nome === 'Madia Consultoria') ?? calendarios[0] ?? null;
 }

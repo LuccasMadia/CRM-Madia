@@ -55,22 +55,11 @@ describe('ConexaoApple', () => {
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ href: PESSOAL.href });
   });
 
-  it('pode criar o calendário "CRM Madia", que some do botão depois de existir', async () => {
-    const comCrm = { ...PRONTO, calendarios: [...PRONTO.calendarios, { href: 'https://x/crm/', nome: 'CRM Madia', cor: '#a3e635', visivel: true }], padrao: 'https://x/crm/' };
-    const { chamadas } = mockApi({ 'GET /calendario': PRONTO, 'POST /calendario/calendarios': comCrm });
-    render(<ConexaoApple />);
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Criar o calendário CRM Madia' }));
-    await vi.waitFor(() => expect(screen.getByRole('list', { name: 'Calendários da conta' })).toHaveTextContent('CRM Madia'));
-    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({ nome: 'CRM Madia' });
-    expect(screen.queryByRole('button', { name: 'Criar o calendário CRM Madia' })).toBeNull();
-  });
-
-  it('sem nenhum calendário de eventos na conta, avisa e oferece criar o CRM Madia', async () => {
+  it('sem nenhum calendário de eventos na conta, avisa em vez de mostrar uma lista vazia', async () => {
     mockApi({ 'GET /calendario': { ...PRONTO, calendarios: [], padrao: null } });
     render(<ConexaoApple />);
     expect(await screen.findByText(/Nenhum calendário de eventos encontrado/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Calendário padrão')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Criar o calendário CRM Madia' })).toBeInTheDocument();
   });
 
   it('pronto: mostra a conta e a última sincronização', async () => {

@@ -1,5 +1,5 @@
 // Servidor CalDAV do iCloud falso, em memória, para os testes: descoberta (principal → calendar-home), lista de calendários,
-// REPORT, PUT com If-Match/If-None-Match (412), DELETE e MKCALENDAR. Expõe o que um iPhone faria (criar/alterar/remover).
+// REPORT, PUT com If-Match/If-None-Match (412) e DELETE. Expõe o que um iPhone faria (criar/alterar/remover).
 const RAIZ = 'https://caldav.icloud.com/';
 const PRINCIPAL = 'https://caldav.icloud.com/123/principal/';
 const CASA = 'https://p01-caldav.icloud.com/123/calendars/';
@@ -46,11 +46,6 @@ export function icloudFalso({ usuario = 'eu@icloud.com', senha = 'abcd-efgh-ijkl
         linhas.push(`<D:response><D:href>${new URL(href).pathname}</D:href><D:propstat><D:prop><D:displayname>${xml(c.nome)}</D:displayname><D:resourcetype><D:collection/><calendar xmlns="urn:ietf:params:xml:ns:caldav"/></D:resourcetype><C:supported-calendar-component-set>${comps}</C:supported-calendar-component-set></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`);
       }
       return resposta(207, multistatus(linhas));
-    }
-    if (metodo === 'MKCALENDAR') {
-      const nome = /<(?:\w+:)?displayname>([^<]*)</.exec(corpo)?.[1] ?? 'Novo';
-      calendarios.set(url.href, { nome, componentes: ['VEVENT'], eventos: new Map() });
-      return resposta(201, '');
     }
 
     const encontrado = calendarioDe(url.href);

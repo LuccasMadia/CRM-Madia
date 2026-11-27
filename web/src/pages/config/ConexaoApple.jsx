@@ -29,7 +29,6 @@ export function ConexaoApple() {
   }
 
   const padrao = (href) => executar(async () => setEstado(await api('/calendario/padrao', { method: 'PUT', body: { href } })));
-  const criar = () => executar(async () => setEstado(await api('/calendario/calendarios', { method: 'POST', body: { nome: 'CRM Madia' } })));
 
   const sincronizar = () => executar(async () => {
     const r = await api('/calendario/sincronizar', { method: 'POST' });
@@ -85,12 +84,7 @@ export function ConexaoApple() {
               <p className="vazio">Os eventos novos vão para o calendário padrão, a menos que você escolha outro ao criar.</p>
             </>
           ) : (
-            <p>Nenhum calendário de eventos encontrado nesta conta. Crie o calendário CRM Madia abaixo.</p>
-          )}
-          {!calendarios.some((c) => c.nome === 'CRM Madia') && (
-            <div className="form--linha">
-              <button type="button" className="btn" disabled={enviando} onClick={criar}>Criar o calendário CRM Madia</button>
-            </div>
+            <p>Nenhum calendário de eventos encontrado nesta conta. Crie um no app Calendário do iPhone e clique em Sincronizar agora.</p>
           )}
         </div>
       )}

@@ -4,7 +4,7 @@ import { criarExecutorUnico } from '../instagram/executor.js';
 import { ErroHttp, ErroValidacao } from '../http/erros.js';
 import { criarClienteCaldav, ErroCaldav } from './caldav.js';
 import { criarSync } from './sync.js';
-import { calendarioPadrao, lerCalendarios, lerOcultos, salvarCalendarios, salvarOcultos } from './calendarios.js';
+import { calendarioPadrao, lerCalendarios, lerOcultos, salvarOcultos } from './calendarios.js';
 
 // 'apple_calendario_href' e 'apple_calendario_nome' são do tempo do calendário único: só são apagados.
 const CHAVES = [
@@ -81,17 +81,6 @@ export function criarServicoCalendario({ db, fetch, hoje }) {
     definirConfig(db, 'apple_calendario_padrao', href);
   }
 
-  async function criarCalendario({ nome }) {
-    exigirConexao();
-    try {
-      await clienteCaldav().criarCalendario(nome);
-      salvarCalendarios(db, await clienteCaldav().listarCalendarios());
-    } catch (erro) {
-      throw falha(erro);
-    }
-    await sincronizarEmSilencio(); // o que estava pendente sem calendário sobe agora
-  }
-
   function desconectar() {
     soltarEventos();
     apagarChaves();
@@ -128,7 +117,7 @@ export function criarServicoCalendario({ db, fetch, hoje }) {
   }
 
   return {
-    estado, conectar, esconder, definirPadrao, criarCalendario, desconectar, sincronizar, aposGravar, aposApagar,
+    estado, conectar, esconder, definirPadrao, desconectar, sincronizar, aposGravar, aposApagar,
     // Para o agendador de 5 minutos: só roda conectado e nunca lança.
     sincronizarSeConectado: () => (conectado() ? executor.executar() : null),
   };

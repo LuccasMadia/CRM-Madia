@@ -26,13 +26,6 @@ describe('descoberta', () => {
     ]);
   });
 
-  it('cria um calendário novo com MKCALENDAR e devolve o endereço', async () => {
-    const { icloud, cliente } = montar();
-    const href = await cliente.criarCalendario('CRM Madia');
-    expect(href).toMatch(/^https:\/\/p01-caldav\.icloud\.com\/123\/calendars\/[\w-]+\/$/);
-    expect(icloud.chamadas('MKCALENDAR')[0].corpo).toContain('CRM Madia');
-    expect((await cliente.listarCalendarios()).map((c) => c.nome)).toContain('CRM Madia');
-  });
 });
 
 describe('leitura', () => {
