@@ -7,7 +7,7 @@ const SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 's�
 const nomeDoDia = (dia) => `${SEMANA[new Date(`${dia}T00:00:00Z`).getUTCDay()]}, ${formatarData(dia)}`;
 
 // Só os dias que têm algo, em ordem; é a visão padrão no celular.
-export function ListaEventos({ de, ate, hoje, eventos, prazos, clientes = [], onAbrir }) {
+export function ListaEventos({ de, ate, hoje, eventos, prazos, cores = {}, clientes = [], onAbrir }) {
   const dias = [];
   for (let dia = de; dia <= ate; dia = somarDias(dia, 1)) {
     const doDia = eventosDoDia(eventos, dia);
@@ -26,6 +26,7 @@ export function ListaEventos({ de, ate, hoje, eventos, prazos, clientes = [], on
             {doDia.map((e) => (
               <li key={e.id}>
                 <button type="button" className="agenda__linha" onClick={() => onAbrir(e)}>
+                  {cores[e.calendario_href] && <span className="agenda__ponto" style={{ background: cores[e.calendario_href] }} aria-hidden="true" />}
                   <span className="agenda__hora">{rotuloHora(e, dia)}</span>
                   <strong>{e.titulo}</strong>
                   {e.local && <span className="vazio">{e.local}</span>}

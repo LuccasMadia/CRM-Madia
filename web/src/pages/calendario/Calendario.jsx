@@ -39,6 +39,7 @@ export function Calendario({ hoje: hojeFixo }) {
   const [aberto, setAberto] = useState(null); // { dia } = evento novo; { evento } = existente
   const [erroSync, setErroSync] = useState(null);
   const [sincronizando, setSincronizando] = useState(false);
+  const [appleLocal, setAppleLocal] = useState(null); // estado devolvido ao esconder/mostrar um calendário
   const jaSincronizou = useRef(false);
   const { de, ate } = intervalo(modo, ancora);
 
@@ -58,6 +59,7 @@ export function Calendario({ hoje: hojeFixo }) {
       setErroSync(erro);
     } finally {
       setSincronizando(false);
+      setAppleLocal(null);
       eventos.recarregar();
       apple.recarregar();
     }
@@ -65,19 +67,33 @@ export function Calendario({ hoje: hojeFixo }) {
 
   // Ao abrir a tela, lê o iCloud uma vez (se estiver conectado e com calendário escolhido).
   useEffect(() => {
-    if (!jaSincronizou.current && apple.dados?.conectado && apple.dados.calendario) {
+    if (!jaSincronizou.current && apple.dados?.conectado) {
       jaSincronizou.current = true;
       sincronizar();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apple.dados]);
 
-  const lista = eventos.dados ?? [];
+  const estadoApple = appleLocal ?? apple.dados;
+  const calendarios = estadoApple?.calendarios ?? [];
+  const ocultos = new Set(calendarios.filter((c) => !c.visivel).map((c) => c.href));
+  const cores = Object.fromEntries(calendarios.map((c) => [c.href, c.cor]));
+  const lista = (eventos.dados ?? []).filter((e) => !ocultos.has(e.calendario_href));
+
+  // Esconder só tira da tela; o calendário continua sincronizando em segundo plano.
+  async function alternar(href) {
+    const novos = ocultos.has(href) ? [...ocultos].filter((h) => h !== href) : [...ocultos, href];
+    try {
+      setAppleLocal(await api('/calendario/ocultos', { method: 'PUT', body: { ocultos: novos } }));
+    } catch (erro) {
+      setErroSync(erro);
+    }
+  }
   const prazos = mostrarPrazos && outros.dados ? prazosDe(outros.dados) : [];
-  const conectado = apple.dados?.conectado;
+  const conectado = estadoApple?.conectado;
   const fechar = () => setAberto(null);
   const salvo = () => { fechar(); eventos.recarregar(); };
-  const props = { ancora, hoje, eventos: lista, prazos, onNovo: (dia) => setAberto({ dia }), onAbrir: (evento) => setAberto({ evento }) };
+  const props = { ancora, hoje, eventos: lista, prazos, cores, onNovo: (dia) => setAberto({ dia }), onAbrir: (evento) => setAberto({ evento }) };
   const nomeAviso = UNIDADE[modo];
 
   return (
@@ -90,14 +106,11 @@ export function Calendario({ hoje: hojeFixo }) {
         </div>
       </header>
 
-      {apple.dados && !conectado && (
+      {estadoApple && !conectado && (
         <p className="aviso">Conecte o Apple Calendário para ver e criar eventos também no iPhone. <Link to="/configuracoes">Conectar o Apple Calendário</Link></p>
       )}
-      {conectado && !apple.dados.calendario && (
-        <p className="aviso">Escolha o calendário do iCloud para sincronizar. <Link to="/configuracoes">Escolher o calendário</Link></p>
-      )}
       <Aviso erro={erroSync} />
-      {!erroSync && apple.dados?.erro && <p className="aviso aviso--erro" role="alert">Última sincronização falhou: {apple.dados.erro}</p>}
+      {!erroSync && estadoApple?.erro && <p className="aviso aviso--erro" role="alert">Última sincronização falhou: {estadoApple.erro}</p>}
       <Aviso erro={eventos.erro} />
 
       <div className="agenda__controles">
@@ -111,6 +124,17 @@ export function Calendario({ hoje: hojeFixo }) {
           <input type="checkbox" checked={mostrarPrazos} onChange={(e) => setMostrarPrazos(e.target.checked)} /> Mostrar prazos e parcelas
         </label>
       </div>
+
+      {conectado && calendarios.length > 0 && (
+        <div className="agenda__filtros" role="group" aria-label="Calendários">
+          {calendarios.map((c) => (
+            <label key={c.href} className="campo--marcar">
+              <input type="checkbox" checked={c.visivel} onChange={() => alternar(c.href)} />
+              <span className="agenda__ponto" style={{ background: c.cor }} aria-hidden="true" /> {c.nome}
+            </label>
+          ))}
+        </div>
+      )}
 
       <div role="tablist" className="abas">
         {MODOS.map(([chave, rotulo]) => (
@@ -126,6 +150,7 @@ export function Calendario({ hoje: hojeFixo }) {
         <Modal titulo={aberto.evento ? (aberto.evento.recorrente ? 'Evento' : 'Editar evento') : 'Novo evento'} onFechar={fechar}>
           <FormEvento
             evento={aberto.evento ?? null} diaInicial={aberto.dia} clientes={outros.dados?.clientes} projetos={outros.dados?.projetos}
+            calendarios={calendarios} padrao={estadoApple?.padrao}
             onSalvo={salvo} onExcluido={salvo}
           />
         </Modal>

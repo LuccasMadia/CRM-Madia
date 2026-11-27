@@ -17,7 +17,28 @@ function abrir(props = {}) {
 }
 const mudar = (rotulo, valor) => fireEvent.change(screen.getByLabelText(rotulo), { target: { value: valor } });
 
+const CALENDARIOS = [{ href: 'https://x/t/', nome: 'Trabalho', cor: '#38bdf8' }, { href: 'https://x/p/', nome: 'Pessoal', cor: '#f472b6' }];
+
 describe('FormEvento', () => {
+  it('evento novo: escolhe o calendário (o padrão já vem marcado) e envia calendario_href', async () => {
+    const { chamadas } = mockApi({ 'POST /eventos': { ...EVENTO, id: 9 } });
+    abrir({ calendarios: CALENDARIOS, padrao: 'https://x/t/' });
+    const user = userEvent.setup();
+    expect(screen.getByLabelText('Calendário')).toHaveValue('https://x/t/');
+    await user.type(screen.getByLabelText('Título'), 'Aniversário');
+    await user.selectOptions(screen.getByLabelText('Calendário'), 'Pessoal');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(() => expect(chamadas.some((c) => c.metodo === 'POST')).toBe(true));
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toMatchObject({ titulo: 'Aniversário', calendario_href: 'https://x/p/' });
+  });
+
+  it('evento existente mostra o calendário dele só para ler', () => {
+    mockApi({});
+    abrir({ evento: { ...EVENTO, calendario_href: 'https://x/p/' }, calendarios: CALENDARIOS, padrao: 'https://x/t/' });
+    expect(screen.queryByLabelText('Calendário')).toBeNull();
+    expect(screen.getByText(/Calendário: Pessoal/)).toBeInTheDocument();
+  });
+
   it('cria um evento no dia escolhido com horário padrão', async () => {
     const { chamadas } = mockApi({ 'POST /eventos': { ...EVENTO, id: 9 } });
     const { aoSalvar } = abrir();

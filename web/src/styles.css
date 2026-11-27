@@ -1073,3 +1073,8 @@ a.cartao:hover, .faixa__item:hover { border-color: var(--primaria); transform: t
   .agenda__semana { grid-template-columns: minmax(0, 1fr); }
   .agenda__coluna { min-height: 0; }
 }
+.agenda__ponto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.agenda__filtros { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 12px; }
+.agenda__filtros .campo--marcar { align-items: center; }
+.agenda__calendarios { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.agenda__chip--calendario { border-left: 3px solid var(--cor); border-radius: 3px 6px 6px 3px; }

@@ -3,11 +3,11 @@ import { Icone } from '../../components/Icone.jsx';
 import { rotuloHora } from './datasCalendario.js';
 
 // Evento do calendário (abre a edição) e prazo de tarefa/parcela (somente leitura, leva ao item).
-export function ChipEvento({ evento, dia, onAbrir }) {
+export function ChipEvento({ evento, dia, cor, onAbrir }) {
   const hora = rotuloHora(evento, dia);
-  const classes = ['agenda__chip', evento.pendente && 'agenda__chip--pendente', evento.recorrente && 'agenda__chip--recorrente'].filter(Boolean).join(' ');
+  const classes = ['agenda__chip', evento.pendente && 'agenda__chip--pendente', evento.recorrente && 'agenda__chip--recorrente', cor && 'agenda__chip--calendario'].filter(Boolean).join(' ');
   return (
-    <button type="button" className={classes} onClick={() => onAbrir(evento)} title={evento.titulo}>
+    <button type="button" className={classes} onClick={() => onAbrir(evento)} title={evento.titulo} style={cor ? { '--cor': cor } : undefined}>
       {hora === 'Dia inteiro' ? '' : `${hora} `}{evento.titulo}
     </button>
   );

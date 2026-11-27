@@ -1,25 +1,28 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConexaoApple } from './ConexaoApple.jsx';
 import { mockApi, resposta } from '../../test/mockApi.js';
 
-const SEM_CONEXAO = { conectado: false, usuario: null, calendario: null, ultima_sync: null, erro: null };
-const SEM_CALENDARIO = { ...SEM_CONEXAO, conectado: true, usuario: 'eu@icloud.com' };
-const PRONTO = { ...SEM_CALENDARIO, calendario: { href: 'https://x/trabalho/', nome: 'Trabalho' }, ultima_sync: '2026-10-15T13:30:00.000Z' };
-const CALENDARIOS = [{ href: 'https://x/trabalho/', nome: 'Trabalho' }, { href: 'https://x/pessoal/', nome: 'Pessoal' }];
+const TRABALHO = { href: 'https://x/trabalho/', nome: 'Trabalho', cor: '#38bdf8', visivel: true };
+const PESSOAL = { href: 'https://x/pessoal/', nome: 'Pessoal', cor: '#f472b6', visivel: true };
+const SEM_CONEXAO = { conectado: false, usuario: null, calendarios: [], padrao: null, ultima_sync: null, erro: null };
+const PRONTO = { conectado: true, usuario: 'eu@icloud.com', calendarios: [TRABALHO, PESSOAL], padrao: TRABALHO.href, ultima_sync: '2026-10-15T13:30:00.000Z', erro: null };
 
 describe('ConexaoApple', () => {
-  it('conecta com o Apple ID e a senha de app e passa para a escolha do calendário', async () => {
-    const { chamadas } = mockApi({ 'GET /calendario': SEM_CONEXAO, 'PUT /calendario/conexao': SEM_CALENDARIO, 'GET /calendario/calendarios': CALENDARIOS });
+  it('conecta com o Apple ID e a senha de app e mostra os calendários encontrados', async () => {
+    const { chamadas } = mockApi({ 'GET /calendario': SEM_CONEXAO, 'PUT /calendario/conexao': PRONTO });
     render(<ConexaoApple />);
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Apple ID'), 'eu@icloud.com');
     await user.type(screen.getByLabelText('Senha de app'), 'abcd-efgh-ijkl-mnop');
     await user.click(screen.getByRole('button', { name: 'Conectar' }));
-    expect(await screen.findByLabelText('Calendário')).toBeInTheDocument();
+    expect(await screen.findByText(/Conectado como eu@icloud\.com/)).toBeInTheDocument();
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ usuario: 'eu@icloud.com', senha: 'abcd-efgh-ijkl-mnop' });
     expect(screen.queryByLabelText('Senha de app')).toBeNull();
+    expect(screen.getByRole('list', { name: 'Calendários da conta' })).toHaveTextContent('Trabalho');
+    expect(screen.getByRole('list', { name: 'Calendários da conta' })).toHaveTextContent('Pessoal');
+    expect(screen.getByText(/todos os calendários.*sincronizam/i)).toBeInTheDocument();
   });
 
   it('a senha de app fica escondida e a tela explica onde ela fica guardada', async () => {
@@ -41,42 +44,43 @@ describe('ConexaoApple', () => {
     expect(await screen.findByText('Apple ID ou senha de app inválidos.')).toBeInTheDocument();
   });
 
-  it('escolhe um calendário da lista', async () => {
-    const { chamadas } = mockApi({ 'GET /calendario': SEM_CALENDARIO, 'GET /calendario/calendarios': CALENDARIOS, 'PUT /calendario/calendario': PRONTO });
+  it('escolhe o calendário onde caem os eventos novos', async () => {
+    const { chamadas } = mockApi({ 'GET /calendario': PRONTO, 'PUT /calendario/padrao': { ...PRONTO, padrao: PESSOAL.href } });
     render(<ConexaoApple />);
     const user = userEvent.setup();
-    await screen.findByRole('option', { name: 'Pessoal' });
-    await user.selectOptions(screen.getByLabelText('Calendário'), 'Pessoal');
-    await user.click(screen.getByRole('button', { name: 'Usar este calendário' }));
-    expect(await screen.findByText(/Conectado como eu@icloud\.com/)).toBeInTheDocument();
-    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ href: 'https://x/pessoal/' });
+    expect(await screen.findByLabelText('Calendário padrão')).toHaveValue(TRABALHO.href);
+    await user.selectOptions(screen.getByLabelText('Calendário padrão'), 'Pessoal');
+    await userEvent.setup().click(document.body);
+    await screen.findByDisplayValue('Pessoal');
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ href: PESSOAL.href });
   });
 
-  it('sem nenhum calendário de eventos na conta, avisa em vez de mostrar uma lista vazia', async () => {
-    mockApi({ 'GET /calendario': SEM_CALENDARIO, 'GET /calendario/calendarios': [] });
+  it('pode criar o calendário "CRM Madia", que some do botão depois de existir', async () => {
+    const comCrm = { ...PRONTO, calendarios: [...PRONTO.calendarios, { href: 'https://x/crm/', nome: 'CRM Madia', cor: '#a3e635', visivel: true }], padrao: 'https://x/crm/' };
+    const { chamadas } = mockApi({ 'GET /calendario': PRONTO, 'POST /calendario/calendarios': comCrm });
+    render(<ConexaoApple />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Criar o calendário CRM Madia' }));
+    await vi.waitFor(() => expect(screen.getByRole('list', { name: 'Calendários da conta' })).toHaveTextContent('CRM Madia'));
+    expect(chamadas.find((c) => c.metodo === 'POST').corpo).toEqual({ nome: 'CRM Madia' });
+    expect(screen.queryByRole('button', { name: 'Criar o calendário CRM Madia' })).toBeNull();
+  });
+
+  it('sem nenhum calendário de eventos na conta, avisa e oferece criar o CRM Madia', async () => {
+    mockApi({ 'GET /calendario': { ...PRONTO, calendarios: [], padrao: null } });
     render(<ConexaoApple />);
     expect(await screen.findByText(/Nenhum calendário de eventos encontrado/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Calendário')).toBeNull();
+    expect(screen.queryByLabelText('Calendário padrão')).toBeNull();
     expect(screen.getByRole('button', { name: 'Criar o calendário CRM Madia' })).toBeInTheDocument();
   });
 
-  it('pode pedir para criar o calendário "CRM Madia"', async () => {
-    const { chamadas } = mockApi({ 'GET /calendario': SEM_CALENDARIO, 'GET /calendario/calendarios': CALENDARIOS, 'PUT /calendario/calendario': { ...PRONTO, calendario: { href: 'https://x/crm/', nome: 'CRM Madia' } } });
-    render(<ConexaoApple />);
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'Criar o calendário CRM Madia' }));
-    expect(await screen.findByText(/CRM Madia/)).toBeInTheDocument();
-    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ criar: 'CRM Madia' });
-  });
-
-  it('pronto: mostra conta, calendário e a última sincronização', async () => {
+  it('pronto: mostra a conta e a última sincronização', async () => {
     mockApi({ 'GET /calendario': PRONTO });
     render(<ConexaoApple />);
     expect(await screen.findByText(/Conectado como eu@icloud\.com/)).toBeInTheDocument();
-    expect(screen.getByText(/Trabalho/)).toBeInTheDocument();
     expect(screen.getByText(/última sincronização/i)).toBeInTheDocument();
   });
 
-  it('Sincronizar agora mostra o resumo; falha mostra o erro', async () => {
+  it('Sincronizar agora mostra o resumo', async () => {
     mockApi({ 'GET /calendario': PRONTO, 'POST /calendario/sincronizar': { lidos: 4, enviados: 1, conflitos: 0 } });
     render(<ConexaoApple />);
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Sincronizar agora' }));
@@ -91,18 +95,15 @@ describe('ConexaoApple', () => {
   });
 
   it('mostra o erro guardado da última sincronização', async () => {
-    mockApi({ 'GET /calendario': { ...PRONTO, erro: 'O calendário escolhido não existe mais no iCloud.' } });
+    mockApi({ 'GET /calendario': { ...PRONTO, erro: 'O iCloud respondeu 500.' } });
     render(<ConexaoApple />);
-    expect(await screen.findByText(/O calendário escolhido não existe mais no iCloud\./)).toBeInTheDocument();
+    expect(await screen.findByText(/O iCloud respondeu 500\./)).toBeInTheDocument();
   });
 
-  it('Trocar calendário reabre a lista; Desconectar volta ao formulário', async () => {
-    mockApi({ 'GET /calendario': PRONTO, 'GET /calendario/calendarios': CALENDARIOS, 'DELETE /calendario/conexao': SEM_CONEXAO });
+  it('Desconectar volta ao formulário', async () => {
+    mockApi({ 'GET /calendario': PRONTO, 'DELETE /calendario/conexao': SEM_CONEXAO });
     render(<ConexaoApple />);
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Trocar calendário' }));
-    expect(await screen.findByLabelText('Calendário')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Desconectar' }));
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Desconectar' }));
     expect(await screen.findByLabelText('Apple ID')).toBeInTheDocument();
   });
 });

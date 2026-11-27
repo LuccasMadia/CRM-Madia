@@ -9,21 +9,16 @@ import { Aviso } from '../../components/Aviso.jsx';
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 const quando = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
-// Calendário de eventos do CRM ligado ao app Calendário do iPhone (iCloud, CalDAV), de ida e volta.
+// Eventos do CRM ligados ao app Calendário do iPhone (iCloud, CalDAV), de ida e volta, em todos os calendários da conta.
 export function ConexaoApple() {
   const carregado = useCarregar(() => api('/calendario'), []);
   const [estado, setEstado] = useState(null);
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
-  const [href, setHref] = useState('');
-  const [trocando, setTrocando] = useState(false);
   const [resumo, setResumo] = useState(null);
   const { erros, erro, enviando, executar } = useEnvio();
   const atual = estado ?? carregado.dados;
-  const escolhendo = Boolean(atual?.conectado && (!atual.calendario || trocando));
-  const calendarios = useCarregar(() => (escolhendo ? api('/calendario/calendarios') : Promise.resolve([])), [escolhendo]);
-  const lista = calendarios.dados ?? [];
-  const escolhido = href || lista[0]?.href || '';
+  const calendarios = atual?.calendarios ?? [];
 
   function conectar(e) {
     e.preventDefault();
@@ -33,11 +28,8 @@ export function ConexaoApple() {
     });
   }
 
-  const escolher = (corpo) => executar(async () => {
-    setEstado(await api('/calendario/calendario', { method: 'PUT', body: corpo }));
-    setTrocando(false);
-    setResumo(null);
-  });
+  const padrao = (href) => executar(async () => setEstado(await api('/calendario/padrao', { method: 'PUT', body: { href } })));
+  const criar = () => executar(async () => setEstado(await api('/calendario/calendarios', { method: 'POST', body: { nome: 'CRM Madia' } })));
 
   const sincronizar = () => executar(async () => {
     const r = await api('/calendario/sincronizar', { method: 'POST' });
@@ -47,7 +39,6 @@ export function ConexaoApple() {
 
   const desconectar = () => executar(async () => {
     setEstado(await api('/calendario/conexao', { method: 'DELETE' }));
-    setTrocando(false);
     setResumo(null);
   });
 
@@ -69,34 +60,38 @@ export function ConexaoApple() {
         </form>
       )}
       {atual?.conectado && (
-        <div className="form--linha">
-          <p>
-            {`Conectado como ${atual.usuario}`}
-            {atual.calendario && ` · calendário ${atual.calendario.nome}`}
-            {atual.ultima_sync && ` · última sincronização ${quando(atual.ultima_sync)}`}
-          </p>
-          {atual.calendario && !trocando && <button type="button" className="btn" disabled={enviando} onClick={sincronizar}>Sincronizar agora</button>}
-          {atual.calendario && !trocando && <button type="button" className="btn" disabled={enviando} onClick={() => setTrocando(true)}>Trocar calendário</button>}
-          <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
-        </div>
-      )}
-      {escolhendo && (
         <div className="form">
-          <Aviso erro={calendarios.erro} />
-          {lista.length > 0 && (
-            <Campo rotulo="Calendário" nome="href" erros={erros}>
-              <select value={escolhido} onChange={(e) => setHref(e.target.value)}>
-                {lista.map((c) => <option key={c.href} value={c.href}>{c.nome}</option>)}
-              </select>
-            </Campo>
-          )}
-          {!calendarios.carregando && !calendarios.erro && !lista.length && (
+          <div className="form--linha">
+            <p>
+              {`Conectado como ${atual.usuario}`}
+              {atual.ultima_sync && ` · última sincronização ${quando(atual.ultima_sync)}`}
+            </p>
+            <button type="button" className="btn" disabled={enviando} onClick={sincronizar}>Sincronizar agora</button>
+            <button type="button" className="btn" disabled={enviando} onClick={desconectar}>Desconectar</button>
+          </div>
+          {calendarios.length > 0 ? (
+            <>
+              <p>Todos os calendários de eventos da conta sincronizam. Na tela Calendário você escolhe quais aparecem.</p>
+              <ul className="agenda__calendarios" aria-label="Calendários da conta">
+                {calendarios.map((c) => (
+                  <li key={c.href}><span className="agenda__ponto" style={{ background: c.cor }} aria-hidden="true" /> {c.nome}</li>
+                ))}
+              </ul>
+              <Campo rotulo="Calendário padrão" nome="padrao" erros={erros}>
+                <select value={atual.padrao ?? ''} disabled={enviando} onChange={(e) => padrao(e.target.value)}>
+                  {calendarios.map((c) => <option key={c.href} value={c.href}>{c.nome}</option>)}
+                </select>
+              </Campo>
+              <p className="vazio">Os eventos novos vão para o calendário padrão, a menos que você escolha outro ao criar.</p>
+            </>
+          ) : (
             <p>Nenhum calendário de eventos encontrado nesta conta. Crie o calendário CRM Madia abaixo.</p>
           )}
-          <div className="form--linha">
-            {lista.length > 0 && <button type="button" className="btn btn--primario" disabled={enviando || !escolhido} onClick={() => escolher({ href: escolhido })}>Usar este calendário</button>}
-            <button type="button" className="btn" disabled={enviando} onClick={() => escolher({ criar: 'CRM Madia' })}>Criar o calendário CRM Madia</button>
-          </div>
+          {!calendarios.some((c) => c.nome === 'CRM Madia') && (
+            <div className="form--linha">
+              <button type="button" className="btn" disabled={enviando} onClick={criar}>Criar o calendário CRM Madia</button>
+            </div>
+          )}
         </div>
       )}
       {resumo && <p>{resumo}</p>}

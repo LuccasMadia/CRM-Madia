@@ -4,7 +4,7 @@ import { ChipEvento, ChipPrazo } from './Itens.jsx';
 
 const DIAS_DA_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-export function GradeMes({ ancora, hoje, eventos, prazos, onNovo, onAbrir }) {
+export function GradeMes({ ancora, hoje, eventos, prazos, cores = {}, onNovo, onAbrir }) {
   const [ano, mes] = ancora.slice(0, 7).split('-').map(Number);
   return (
     <div className="calendario">
@@ -16,7 +16,7 @@ export function GradeMes({ ancora, hoje, eventos, prazos, onNovo, onAbrir }) {
             <button type="button" className="agenda__numero" aria-label={`Novo evento em ${formatarData(dia.data)}`} onClick={() => onNovo(dia.data)}>
               {Number(dia.data.slice(8))}
             </button>
-            {eventosDoDia(eventos, dia.data).map((e) => <ChipEvento key={e.id} evento={e} dia={dia.data} onAbrir={onAbrir} />)}
+            {eventosDoDia(eventos, dia.data).map((e) => <ChipEvento key={e.id} evento={e} dia={dia.data} cor={cores[e.calendario_href]} onAbrir={onAbrir} />)}
             {prazos.filter((p) => p.dia === dia.data).map((p) => <ChipPrazo key={p.chave} prazo={p} />)}
           </div>
         );

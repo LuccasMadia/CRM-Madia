@@ -8,9 +8,11 @@ import { renderizar } from '../../test/renderizar.jsx';
 afterEach(() => vi.unstubAllGlobals());
 
 const MES = 'GET /eventos?de=2026-09-27&ate=2026-10-31';
-const CONECTADO = { conectado: true, usuario: 'eu@icloud.com', calendario: { href: 'https://x/c/', nome: 'Trabalho' }, ultima_sync: '2026-10-15T10:00:00.000Z', erro: null };
-const DESCONECTADO = { conectado: false, usuario: null, calendario: null, ultima_sync: null, erro: null };
-const EVENTO = { id: 5, titulo: 'Reunião', inicio: '2026-10-15T14:00', fim: '2026-10-15T15:00', dia_inteiro: 0, local: 'Sala 2', notas: null, cliente_id: null, projeto_id: null, recorrente: 0, pendente: 0, origem: 'crm' };
+const TRABALHO = { href: 'https://x/t/', nome: 'Trabalho', cor: '#38bdf8', visivel: true };
+const PESSOAL = { href: 'https://x/p/', nome: 'Pessoal', cor: '#f472b6', visivel: true };
+const CONECTADO = { conectado: true, usuario: 'eu@icloud.com', calendarios: [TRABALHO, PESSOAL], padrao: TRABALHO.href, ultima_sync: '2026-10-15T10:00:00.000Z', erro: null };
+const DESCONECTADO = { conectado: false, usuario: null, calendarios: [], padrao: null, ultima_sync: null, erro: null };
+const EVENTO = { id: 5, calendario_href: TRABALHO.href, titulo: 'Reunião', inicio: '2026-10-15T14:00', fim: '2026-10-15T15:00', dia_inteiro: 0, local: 'Sala 2', notas: null, cliente_id: null, projeto_id: null, recorrente: 0, pendente: 0, origem: 'crm' };
 const TAREFA = { id: 1, texto: 'Enviar proposta', prazo: '2026-10-16', concluida: 0, etapa: 'a_fazer' };
 const PARCELA = { id: 1, tipo: 'parcela', vencimento: '2026-10-20', valor_centavos: 150000, estado: 'pendente', cliente_nome: 'Ana', projeto_id: 10 };
 const SYNC_OK = { lidos: 0, enviados: 0, conflitos: 0 };
@@ -146,6 +148,39 @@ describe('Calendário', () => {
     mockApi(base({ 'GET /eventos?de=2026-10-01&ate=2026-10-31': [EVENTO] }));
     abrir();
     expect(await screen.findByRole('tab', { name: 'Lista', selected: true })).toBeInTheDocument();
+  });
+
+  it('mostra uma caixa por calendário; desmarcar esconde os eventos dele sem apagar nada', async () => {
+    const { chamadas } = mockApi(base({
+      [MES]: [EVENTO, { ...EVENTO, id: 6, titulo: 'Aniversário', calendario_href: PESSOAL.href, inicio: '2026-10-16T10:00', fim: '2026-10-16T11:00' }],
+      'PUT /calendario/ocultos': { ...CONECTADO, calendarios: [{ ...TRABALHO, visivel: false }, PESSOAL] },
+    }));
+    abrir();
+    const user = userEvent.setup();
+    expect(await screen.findByRole('button', { name: /Reunião/ })).toBeInTheDocument();
+    const grupo = screen.getByRole('group', { name: 'Calendários' });
+    expect(within(grupo).getByLabelText('Trabalho')).toBeChecked();
+    expect(within(grupo).getByLabelText('Pessoal')).toBeChecked();
+    await user.click(within(grupo).getByLabelText('Trabalho'));
+    await vi.waitFor(() => expect(screen.queryByRole('button', { name: /Reunião/ })).toBeNull());
+    expect(screen.getByRole('button', { name: /Aniversário/ })).toBeInTheDocument();
+    expect(within(grupo).getByLabelText('Trabalho')).not.toBeChecked();
+    expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ ocultos: [TRABALHO.href] });
+  });
+
+  it('calendário já escondido vem desmarcado e sem os eventos', async () => {
+    mockApi(base({ 'GET /calendario': { ...CONECTADO, calendarios: [{ ...TRABALHO, visivel: false }, PESSOAL] } }));
+    abrir();
+    expect(await screen.findByLabelText('Trabalho')).not.toBeChecked();
+    expect(screen.queryByRole('button', { name: /Reunião/ })).toBeNull();
+    expect(screen.getByRole('link', { name: /Enviar proposta/ })).toBeInTheDocument();
+  });
+
+  it('sem conexão não mostra a linha de calendários', async () => {
+    mockApi(base({ 'GET /calendario': DESCONECTADO }));
+    abrir();
+    await screen.findByRole('link', { name: 'Conectar o Apple Calendário' });
+    expect(screen.queryByRole('group', { name: 'Calendários' })).toBeNull();
   });
 
   it('mostra o erro da última sincronização que ficou guardado', async () => {

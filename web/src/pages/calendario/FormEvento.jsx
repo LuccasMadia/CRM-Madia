@@ -17,7 +17,7 @@ function quando(evento) {
 }
 
 // Formulário de um evento (novo ou existente). Evento recorrente vem somente leitura.
-export function FormEvento({ evento = null, diaInicial, clientes = [], projetos = [], onSalvo, onExcluido }) {
+export function FormEvento({ evento = null, diaInicial, clientes = [], projetos = [], calendarios = [], padrao = null, onSalvo, onExcluido }) {
   const { erros, erro, enviando, executar, setErros } = useEnvio();
   const [confirmar, dialogo] = useConfirmacao();
   const [titulo, setTitulo] = useState(evento?.titulo ?? '');
@@ -28,6 +28,7 @@ export function FormEvento({ evento = null, diaInicial, clientes = [], projetos 
   const [notas, setNotas] = useState(evento?.notas ?? '');
   const [clienteId, setClienteId] = useState(evento?.cliente_id ? String(evento.cliente_id) : '');
   const [projetoId, setProjetoId] = useState(evento?.projeto_id ? String(evento.projeto_id) : '');
+  const [calendarioHref, setCalendarioHref] = useState(padrao ?? calendarios[0]?.href ?? '');
 
   if (evento?.recorrente) {
     return (
@@ -59,6 +60,7 @@ export function FormEvento({ evento = null, diaInicial, clientes = [], projetos 
       titulo, dia_inteiro: diaInteiro, inicio, fim: fim || null, local: local || null, notas: notas || null,
       cliente_id: clienteId ? Number(clienteId) : null, projeto_id: projetoId ? Number(projetoId) : null,
     };
+    if (!evento && calendarioHref) corpo.calendario_href = calendarioHref;
     executar(async () => {
       const salvo = evento ? await api(`/eventos/${evento.id}`, { method: 'PUT', body: corpo }) : await api('/eventos', { method: 'POST', body: corpo });
       onSalvo(salvo);
@@ -87,6 +89,16 @@ export function FormEvento({ evento = null, diaInicial, clientes = [], projetos 
       <Campo rotulo="Notas" nome="notas" erros={erros}>
         <textarea rows={3} value={notas} onChange={(e) => setNotas(e.target.value)} />
       </Campo>
+      {!evento && calendarios.length > 0 && (
+        <Campo rotulo="Calendário" nome="calendario_href" erros={erros}>
+          <select value={calendarioHref} onChange={(e) => setCalendarioHref(e.target.value)}>
+            {calendarios.map((c) => <option key={c.href} value={c.href}>{c.nome}</option>)}
+          </select>
+        </Campo>
+      )}
+      {evento?.calendario_href && calendarios.some((c) => c.href === evento.calendario_href) && (
+        <p className="vazio">Calendário: {calendarios.find((c) => c.href === evento.calendario_href).nome}</p>
+      )}
       <Campo rotulo="Cliente" nome="cliente_id" erros={erros}>
         <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setProjetoId(''); }}>
           <option value="">Nenhum</option>
