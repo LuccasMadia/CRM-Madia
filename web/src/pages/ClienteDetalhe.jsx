@@ -17,6 +17,7 @@ import { AbaGmn } from './cliente/AbaGmn.jsx';
 import { AbaPlacas } from './cliente/AbaPlacas.jsx';
 import { AbaOrcamentos } from './cliente/AbaOrcamentos.jsx';
 import { LojasCliente } from './cliente/LojasCliente.jsx';
+import { CartaoEmails } from './cliente/CartaoEmails.jsx';
 
 // O terceiro item é o serviço contado no rótulo; Orçamentos não tem serviço, então fica sem contagem.
 const ABAS = [
@@ -98,6 +99,7 @@ export function ClienteDetalhe() {
         </div>
       </header>
       <LojasCliente cliente={cliente} editando={editandoLoja} setEditando={setEditandoLoja} onMudou={mudou} />
+      <CartaoEmails cliente={cliente} />
       <div role="tablist" className="abas">
         {ABAS.map(([chave, rotulo, servico]) => (
           <button
