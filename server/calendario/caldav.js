@@ -30,7 +30,8 @@ const hrefDentro = (xml, nome) => {
   const dentro = conteudo(xml, nome);
   return dentro === null ? null : conteudo(dentro, 'href');
 };
-const temElemento = (xml, nome) => new RegExp(`<${PREFIXO}${nome}\\s*/?>`).test(xml);
+// Elemento vazio ou com atributos (o iCloud escreve <calendar xmlns="..."/>); `calendar` não casa com `calendar-data`.
+const temElemento = (xml, nome) => new RegExp(`<${PREFIXO}${nome}(?:\\s[^>]*)?/?>`).test(xml);
 
 const basico = (ms) => new Date(ms).toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
 

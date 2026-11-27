@@ -52,6 +52,14 @@ describe('ConexaoApple', () => {
     expect(chamadas.find((c) => c.metodo === 'PUT').corpo).toEqual({ href: 'https://x/pessoal/' });
   });
 
+  it('sem nenhum calendário de eventos na conta, avisa em vez de mostrar uma lista vazia', async () => {
+    mockApi({ 'GET /calendario': SEM_CALENDARIO, 'GET /calendario/calendarios': [] });
+    render(<ConexaoApple />);
+    expect(await screen.findByText(/Nenhum calendário de eventos encontrado/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Calendário')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Criar o calendário CRM Madia' })).toBeInTheDocument();
+  });
+
   it('pode pedir para criar o calendário "CRM Madia"', async () => {
     const { chamadas } = mockApi({ 'GET /calendario': SEM_CALENDARIO, 'GET /calendario/calendarios': CALENDARIOS, 'PUT /calendario/calendario': { ...PRONTO, calendario: { href: 'https://x/crm/', nome: 'CRM Madia' } } });
     render(<ConexaoApple />);

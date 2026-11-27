@@ -83,13 +83,18 @@ export function ConexaoApple() {
       {escolhendo && (
         <div className="form">
           <Aviso erro={calendarios.erro} />
-          <Campo rotulo="Calendário" nome="href" erros={erros}>
-            <select value={escolhido} onChange={(e) => setHref(e.target.value)}>
-              {lista.map((c) => <option key={c.href} value={c.href}>{c.nome}</option>)}
-            </select>
-          </Campo>
+          {lista.length > 0 && (
+            <Campo rotulo="Calendário" nome="href" erros={erros}>
+              <select value={escolhido} onChange={(e) => setHref(e.target.value)}>
+                {lista.map((c) => <option key={c.href} value={c.href}>{c.nome}</option>)}
+              </select>
+            </Campo>
+          )}
+          {!calendarios.carregando && !calendarios.erro && !lista.length && (
+            <p>Nenhum calendário de eventos encontrado nesta conta. Crie o calendário CRM Madia abaixo.</p>
+          )}
           <div className="form--linha">
-            <button type="button" className="btn btn--primario" disabled={enviando || !escolhido} onClick={() => escolher({ href: escolhido })}>Usar este calendário</button>
+            {lista.length > 0 && <button type="button" className="btn btn--primario" disabled={enviando || !escolhido} onClick={() => escolher({ href: escolhido })}>Usar este calendário</button>}
             <button type="button" className="btn" disabled={enviando} onClick={() => escolher({ criar: 'CRM Madia' })}>Criar o calendário CRM Madia</button>
           </div>
         </div>
