@@ -35,6 +35,7 @@ import { rotasSupabase } from './routes/supabase.js';
 import { criarServicoSupabase } from './supabase/servico.js';
 import { rotasConexoes } from './routes/conexoes.js';
 import { rotasGmail } from './routes/gmail.js';
+import { rotasEventos } from './routes/eventos.js';
 import { criarServicoGmail } from './gmail/servico.js';
 import { criarServicoConexoes } from './conexoes/servico.js';
 
@@ -82,6 +83,7 @@ export function criarApp({ db, dataDir, hoje = () => hojeLocal(), fetch = global
   app.use('/api', rotasSupabase(ctx));
   app.use('/api', rotasConexoes(ctx));
   app.use('/api', rotasGmail(ctx));
+  app.use('/api', rotasEventos(ctx));
   app.use('/uploads', express.static(path.join(dataDir, 'uploads')));
 
   app.use('/api', (req, res) => res.status(404).json({ erro: 'Rota não encontrada' }));
