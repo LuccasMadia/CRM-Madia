@@ -73,7 +73,7 @@ export function criarClienteCaldav({ usuario, senha, fetch = globalThis.fetch, t
     const { calendarHome } = await descobrir();
     const xml = await propfind(calendarHome, '1', '<D:displayname/><D:resourcetype/><C:supported-calendar-component-set/>');
     return respostas(xml)
-      .filter((r) => temElemento(r, 'calendar') && (!/supported-calendar-component-set/.test(r) || /name="VEVENT"/.test(r)))
+      .filter((r) => temElemento(r, 'calendar') && (!/supported-calendar-component-set/.test(r) || /name=["']VEVENT["']/.test(r)))
       .map((r) => ({ href: new URL(conteudo(r, 'href'), calendarHome).href, nome: conteudo(r, 'displayname') || 'Sem nome' }));
   }
 

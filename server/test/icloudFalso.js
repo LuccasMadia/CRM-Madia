@@ -41,7 +41,7 @@ export function icloudFalso({ usuario = 'eu@icloud.com', senha = 'abcd-efgh-ijkl
       const linhas = [`<D:response><D:href>/123/calendars/</D:href><D:propstat><D:prop><D:displayname>Home</D:displayname><D:resourcetype><D:collection/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`,
         `<D:response><D:href>/123/calendars/inbox/</D:href><D:propstat><D:prop><D:displayname>Entrada</D:displayname><D:resourcetype><D:collection/><C:schedule-inbox/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`];
       for (const [href, c] of calendarios) {
-        const comps = c.componentes.map((n) => `<C:comp name="${n}"/>`).join('');
+        const comps = c.componentes.map((n) => `<comp name='${n}' xmlns='urn:ietf:params:xml:ns:caldav'/>`).join('');
         linhas.push(`<D:response><D:href>${new URL(href).pathname}</D:href><D:propstat><D:prop><D:displayname>${xml(c.nome)}</D:displayname><D:resourcetype><D:collection/><calendar xmlns="urn:ietf:params:xml:ns:caldav"/></D:resourcetype><C:supported-calendar-component-set>${comps}</C:supported-calendar-component-set></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`);
       }
       return resposta(207, multistatus(linhas));
